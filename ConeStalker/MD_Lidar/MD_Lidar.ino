@@ -31,7 +31,7 @@ void setup()
 {
 
   setupSerial(); // Keep this at or near top.
-  
+
   Serial.println("Starting sketch.");
 
 
@@ -124,6 +124,29 @@ void setupI2CDevices() {
 void loop()
 {
   motorLoop();
+  lidarLoop();
+}
+
+void lidarLoop(){
+  distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
+  while (!distanceSensor.checkForDataReady())
+  {
+    delay(1);
+  }
+  int distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
+  distanceSensor.clearInterrupt();
+  distanceSensor.stopRanging();
+
+  Serial.print("Distance(mm): ");
+  Serial.print(distance);
+
+  float distanceInches = distance * 0.0393701;
+  float distanceFeet = distanceInches / 12.0;
+
+  Serial.print("\tDistance(ft): ");
+  Serial.print(distanceFeet, 2);
+
+  Serial.println();
 }
 
 void motorLoop(){
