@@ -13,6 +13,16 @@
 #include "SCMD.h"
 #include "SCMD_config.h" //Contains #defines for common SCMD register names and values
 #include "Wire.h"
+#include "SparkFun_VL53L1X.h" //Click here to get the library: http://librarymanager/All#SparkFun_VL53L1Xs
+
+//Optional interrupt and shutdown pins.
+#define SHUTDOWN_PIN 2
+#define INTERRUPT_PIN 3
+SFEVL53L1X distanceSensor;
+//Uncomment the following line to use the optional shutdown and interrupt pins.
+//SFEVL53L1X distanceSensor(Wire, SHUTDOWN_PIN, INTERRUPT_PIN);
+
+
 
 
 SCMD myMotorDriver; //This creates the main object of one motor driver and connected peripherals.
@@ -20,17 +30,28 @@ SCMD myMotorDriver; //This creates the main object of one motor driver and conne
 void setup()
 {
 
-
-  pinMode(8, INPUT_PULLUP); //Use to halt motor movement (ground)
-
-  Serial.begin(9600);
+  setupSerial(); // Keep this at or near top.
+  
   Serial.println("Starting sketch.");
 
-  //***** Configure the Motor Driver's Settings *****//
-  //  .commInter face is I2C_MODE 
-  myMotorDriver.settings.commInterface = I2C_MODE;
 
-  //  set address if I2C configuration selected with the config jumpers
+  setupMotorDriver();
+
+  setupI2CDevices();
+
+
+  
+}
+
+void setupSerial(){
+    Serial.begin(9600);
+}
+
+void setupMotorDriver(){
+
+    Serial.println("\nStart setupMotorDriver() ----------------------------");
+
+//  set address if I2C configuration selected with the config jumpers
   myMotorDriver.settings.I2CAddress = 0x5D; //config pattern is "1000" (default) on board for address 0x5D
 
   //  set chip select if SPI selected with the config jumpers
@@ -63,6 +84,37 @@ void setup()
   while ( myMotorDriver.busy() );
   myMotorDriver.enable(); //Enables the output driver hardware
 
+  pinMode(8, INPUT_PULLUP); //Use to halt motor movement (ground)
+
+
+  //***** Configure the Motor Driver's Settings *****//
+  //  .commInter face is I2C_MODE 
+  myMotorDriver.settings.commInterface = I2C_MODE;
+
+  Serial.println("End setupMotorDriver() ----------------------------\n");
+
+}
+
+void setupI2CDevices() {
+
+  
+  Wire1.begin();
+
+
+  Serial.println("\nStart setupI2CDevices() ----------------------------");
+
+  Serial.println("VL53L1X Qwiic Test");
+
+  if (distanceSensor.begin(Wire1) != 0) //Begin returns 0 on a good init
+  {
+    Serial.println("Sensor failed to begin. Please check wiring. Freezing...");
+    while (1)
+      ;
+  }
+  Serial.println("Lidar Sensor online!");
+
+  Serial.println("End setupI2CDevices() ----------------------------\n");
+
 }
 
 #define LEFT_MOTOR 0
@@ -71,6 +123,10 @@ void setup()
 #define MIN_POWER 0
 void loop()
 {
+  motorLoop();
+}
+
+void motorLoop(){
   //pass setDrive() a motor number, direction as 0(call 0 forward) or 1, and level from 0 to 255
   myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
   myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
@@ -106,4 +162,5 @@ void loop()
     myMotorDriver.setDrive( RIGHT_MOTOR, 0, i);
     delay(5);
   }
+
 }
