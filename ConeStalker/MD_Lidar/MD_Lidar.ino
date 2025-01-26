@@ -23,6 +23,9 @@ SFEVL53L1X distanceSensor;
 //SFEVL53L1X distanceSensor(Wire, SHUTDOWN_PIN, INTERRUPT_PIN);
 
 
+// Current lidar distances
+float distanceInches = 0;
+float distanceFeet = 0;
 
 
 SCMD myMotorDriver; //This creates the main object of one motor driver and connected peripherals.
@@ -42,6 +45,110 @@ void setup()
 
   
 }
+
+
+#define LEFT_MOTOR 0
+#define RIGHT_MOTOR 1
+#define MAX_POWER 255
+#define MIN_POWER 0
+#define DIR_FORWARD 0
+#define DIR_BACKWARD 0
+
+
+void loop()
+{
+  motorLoop();
+  lidarLoop();
+}
+
+void lidarLoop(){
+  distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
+  while (!distanceSensor.checkForDataReady())
+  {
+    delay(1);
+  }
+  int distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
+  distanceInches = distance * 0.0393701;
+  distanceFeet = distanceInches / 12.0;
+
+  distanceSensor.clearInterrupt();
+  distanceSensor.stopRanging();
+
+//  Serial.print("Distance(mm): ");
+//  Serial.print(distance);
+
+//  float distanceInches = distance * 0.0393701;
+//  float distanceFeet = distanceInches / 12.0;
+
+  Serial.print("\tDistance(ft): ");
+  Serial.print(distanceFeet, 2);
+
+  Serial.print("\tDistance(in): ");
+  Serial.print(distanceInches, 0);
+
+
+  Serial.println();
+}
+
+void motorLoop(){
+
+  myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
+  myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
+  while (digitalRead(8) == 0); //Hold if jumper is placed between pin 8 and ground
+
+  if(distanceInches > 6.0 && distanceInches <36.0){
+    myMotorDriver.setDrive( LEFT_MOTOR, DIR_FORWARD, MAX_POWER * 0.75);
+    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_FORWARD, MAX_POWER * 0.75);
+  }
+  else {
+    // Turn in place right/clockwise
+    myMotorDriver.setDrive( LEFT_MOTOR, DIR_BACKWARD, MAX_POWER * 0.2);
+    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_FORWARD, MAX_POWER * 0.2);
+  }
+
+  delay(5);
+
+}
+
+void motorTestLoop(){
+  //pass setDrive() a motor number, direction as 0(call 0 forward) or 1, and level from 0 to 255
+  myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
+  myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
+  while (digitalRead(8) == 0); //Hold if jumper is placed between pin 8 and ground
+
+  //***** Operate the Motor Driver *****//
+  //  This walks through all 34 motor positions driving them forward and back.
+  //  It uses .setDrive( motorNum, direction, level ) to drive the motors.
+
+  //Smoothly move one motor up to speed and back (drive level 0 to 255)
+  for (int i = MIN_POWER; i < MAX_POWER; i++)
+  {
+    myMotorDriver.setDrive( LEFT_MOTOR, 0, i);
+    myMotorDriver.setDrive( RIGHT_MOTOR, 0, 20 + (i / 2));
+    delay(5);
+  }
+  for (int i = MAX_POWER; i >= MIN_POWER; i--)
+  {
+    myMotorDriver.setDrive( LEFT_MOTOR, 0, i);
+    myMotorDriver.setDrive( RIGHT_MOTOR, 0, 20 + (i / 2));
+    delay(5);
+  }
+  //Smoothly move the other motor up to speed and back
+  for (int i = 0; i < 256; i++)
+  {
+    myMotorDriver.setDrive( LEFT_MOTOR, 0, 20 + (i / 2));
+    myMotorDriver.setDrive( RIGHT_MOTOR, 0, i);
+    delay(5);
+  }
+  for (int i = 255; i >= 0; i--)
+  {
+    myMotorDriver.setDrive( LEFT_MOTOR, 0, 20 + (i / 2));
+    myMotorDriver.setDrive( RIGHT_MOTOR, 0, i);
+    delay(5);
+  }
+
+}
+
 
 void setupSerial(){
     Serial.begin(9600);
@@ -117,73 +224,3 @@ void setupI2CDevices() {
 
 }
 
-#define LEFT_MOTOR 0
-#define RIGHT_MOTOR 1
-#define MAX_POWER 256
-#define MIN_POWER 0
-void loop()
-{
-  motorLoop();
-  lidarLoop();
-}
-
-void lidarLoop(){
-  distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
-  while (!distanceSensor.checkForDataReady())
-  {
-    delay(1);
-  }
-  int distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
-  distanceSensor.clearInterrupt();
-  distanceSensor.stopRanging();
-
-  Serial.print("Distance(mm): ");
-  Serial.print(distance);
-
-  float distanceInches = distance * 0.0393701;
-  float distanceFeet = distanceInches / 12.0;
-
-  Serial.print("\tDistance(ft): ");
-  Serial.print(distanceFeet, 2);
-
-  Serial.println();
-}
-
-void motorLoop(){
-  //pass setDrive() a motor number, direction as 0(call 0 forward) or 1, and level from 0 to 255
-  myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
-  myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
-  while (digitalRead(8) == 0); //Hold if jumper is placed between pin 8 and ground
-
-  //***** Operate the Motor Driver *****//
-  //  This walks through all 34 motor positions driving them forward and back.
-  //  It uses .setDrive( motorNum, direction, level ) to drive the motors.
-
-  //Smoothly move one motor up to speed and back (drive level 0 to 255)
-  for (int i = MIN_POWER; i < MAX_POWER; i++)
-  {
-    myMotorDriver.setDrive( LEFT_MOTOR, 0, i);
-    myMotorDriver.setDrive( RIGHT_MOTOR, 0, 20 + (i / 2));
-    delay(5);
-  }
-  for (int i = MAX_POWER; i >= MIN_POWER; i--)
-  {
-    myMotorDriver.setDrive( LEFT_MOTOR, 0, i);
-    myMotorDriver.setDrive( RIGHT_MOTOR, 0, 20 + (i / 2));
-    delay(5);
-  }
-  //Smoothly move the other motor up to speed and back
-  for (int i = 0; i < 256; i++)
-  {
-    myMotorDriver.setDrive( LEFT_MOTOR, 0, 20 + (i / 2));
-    myMotorDriver.setDrive( RIGHT_MOTOR, 0, i);
-    delay(5);
-  }
-  for (int i = 255; i >= 0; i--)
-  {
-    myMotorDriver.setDrive( LEFT_MOTOR, 0, 20 + (i / 2));
-    myMotorDriver.setDrive( RIGHT_MOTOR, 0, i);
-    delay(5);
-  }
-
-}
