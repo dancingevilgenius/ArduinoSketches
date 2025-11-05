@@ -2,7 +2,10 @@
 // Needs the "Fork of PS3 Controller Host" not the "PS3 Controller Host" library
 #include <Ps3Controller.h>
 
-#define PS3_BLACK_BLACK_1 "00:19:c1:c2:d8:9b"
+#define PS3_BLACK_BLACK_1   "00:19:c1:c2:d8:9b"
+#define PS3_BLACK_BLACK_2   "00:19:c1:c2:d8:02" 
+#define PS3_BLACK_BLACK_3   "00:19:c1:c2:d8:03" 
+#define PS3_BLUE_BLACK_1    "00:19:c1:c2:ee:01"
 
 int player = 0;
 int battery = 0;
@@ -204,10 +207,10 @@ void setup()
 
     Ps3.attach(notify);
     Ps3.attachOnConnect(onConnect);
-    //Ps3.begin("00:19:c1:c2:d8:9b");
-    Ps3.begin(PS3_BLACK_BLACK_1);
 
-    //
+    Ps3.begin(PS3_BLUE_BLACK_1);
+
+    
 
     Serial.println("Ready.");
 }
