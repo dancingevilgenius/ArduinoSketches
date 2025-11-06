@@ -41,6 +41,7 @@ Servo servo2;
 Servo servo3;
 Servo servo4;
 Servo servo5;
+
 // Published values for SG90 servos; adjust if needed
 int minUs = 1000;
 int maxUs = 2000;
@@ -107,6 +108,7 @@ void loop() {
 		servo1.write(pos);
 		delay(1);             // waits 20ms for the servo to reach the position
 	}
+	
 	for (pos = 180; pos >= 0; pos -= 1) { // sweep from 180 degrees to 0 degrees
 		servo1.write(pos);
 		delay(1);
