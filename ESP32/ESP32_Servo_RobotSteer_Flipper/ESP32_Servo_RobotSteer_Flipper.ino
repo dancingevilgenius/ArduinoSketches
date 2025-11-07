@@ -68,8 +68,8 @@ int maxUs = 2000;
 
 int servo1Pin = H1; 
 int servo2Pin = H2; 
-int servo3Pin = H3; 
-int servo4Pin = H7; 
+int servo3Pin = H7; 
+int servo4Pin = H8; 
 
 
 int pos = 0;      // position in degrees
@@ -102,16 +102,61 @@ void loop() {
 	servo4.attach(servo4Pin, minUs, maxUs);
 
 	test180Sweeps();
+	//testMotor1_2();
 
-
+	/* TODO find a place to put this in shutdown/exit function */
 	servo1.detach();
-	servo2.detach();;
+	servo2.detach();
 	servo3.detach();
 	servo4.detach();
 	pwm.detachPin(27);
-
+	
 	delay(5000);
 
+}
+
+void testMotor1_2(){
+	for (pos = 0; pos <= 180; pos += 1) { // sweep from 0 degrees to 180 degrees
+		// in steps of 1 degree
+		servo1.write(pos);
+		delay(1);             // waits 20ms for the servo to reach the position
+	}
+	
+	for (pos = 180; pos >= 0; pos -= 1) { // sweep from 180 degrees to 0 degrees
+		servo1.write(pos);
+		delay(1);
+	}
+
+	for (pos = 0; pos <= 180; pos += 1) { // sweep from 0 degrees to 180 degrees
+		// in steps of 1 degree
+		servo2.write(pos);
+		delay(1);             // waits 20ms for the servo to reach the position
+	}
+	for (pos = 180; pos >= 0; pos -= 1) { // sweep from 180 degrees to 0 degrees
+		servo2.write(pos);
+		delay(1);
+	}
+
+	for (pos = 0; pos <= 180; pos += 1) { // sweep from 0 degrees to 180 degrees
+		// in steps of 1 degree
+		servo3.write(pos);
+		delay(1);             // waits 20ms for the servo to reach the position
+	}
+	for (pos = 180; pos >= 0; pos -= 1) { // sweep from 180 degrees to 0 degrees
+		servo3.write(pos);
+		delay(1);
+	}
+
+	for (pos = 0; pos <= 180; pos += 1) { // sweep from 0 degrees to 180 degrees
+		// in steps of 1 degree
+		servo4.write(pos);
+		delay(1);             // waits 20ms for the servo to reach the position
+	}
+	for (pos = 180; pos >= 0; pos -= 1) { // sweep from 180 degrees to 0 degrees
+		servo4.write(pos);
+		delay(1);
+	}
+	           
 }
 
 void test180Sweeps(){
