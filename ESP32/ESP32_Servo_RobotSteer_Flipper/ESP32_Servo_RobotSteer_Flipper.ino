@@ -36,10 +36,9 @@
 #include <ESP32Servo.h>
 
 // create four servo objects 
-Servo servo1;
-Servo servo2;
-Servo servo3;
-Servo servo4;
+Servo servo1; // left motor
+Servo servo2; // right motor
+Servo flipper; // Flipper
 
 
 // Published values for SG90 servos; adjust if needed
@@ -66,10 +65,10 @@ int maxUs = 2000;
 #define H10 25
 #define H11 26
 
-int servo1Pin = H1; 
-int servo2Pin = H2; 
-int servo3Pin = H7; 
-int servo4Pin = H8; 
+int servo1Pin = H7; 
+int servo2Pin = H8; 
+int servo3Pin = H11; 
+
 
 
 int pos = 0;      // position in degrees
@@ -87,28 +86,30 @@ void setupServos(){
 	ESP32PWM::allocateTimer(0);
 	ESP32PWM::allocateTimer(1);
 	ESP32PWM::allocateTimer(2);
-	ESP32PWM::allocateTimer(3);
+	
 	servo1.setPeriodHertz(50);      // Standard 50hz servo
-	servo2.setPeriodHertz(50);      // Standard 50hz servo
-	servo3.setPeriodHertz(50);      // Standard 50hz servo
-	servo4.setPeriodHertz(50);      // Standard 50hz servo
+	servo2.setPeriodHertz(50);      // Standard 50hz servo	
+	flipper.setPeriodHertz(50);      // Standard 50hz servo
+
+
+	servo1.attach(servo1Pin, minUs, maxUs);
+	servo2.attach(servo2Pin, minUs, maxUs);
+	flipper.attach(servo3Pin, minUs, maxUs);
+	
 }
 
 
 void loop() {
-	servo1.attach(servo1Pin, minUs, maxUs);
-	servo2.attach(servo2Pin, minUs, maxUs);
-	servo3.attach(servo3Pin, minUs, maxUs);
-	servo4.attach(servo4Pin, minUs, maxUs);
 
-	test180Sweeps();
-	//testMotor1_2();
+	//test180Sweeps();
+	testMotor1_2();
 
 	/* TODO find a place to put this in shutdown/exit function */
+	/*
 	servo1.detach();
 	servo2.detach();
-	servo3.detach();
-	servo4.detach();
+	flipper.detach();
+	*/
 	pwm.detachPin(27);
 	
 	delay(5000);
@@ -116,17 +117,23 @@ void loop() {
 }
 
 void testMotor1_2(){
+
 	for (pos = 0; pos <= 180; pos += 1) { // sweep from 0 degrees to 180 degrees
 		// in steps of 1 degree
 		servo1.write(pos);
-		delay(1);             // waits 20ms for the servo to reach the position
+		delay(40);             
+		Serial.print("fw pos:"); Serial.println(pos);
 	}
 	
+	
 	for (pos = 180; pos >= 0; pos -= 1) { // sweep from 180 degrees to 0 degrees
-		servo1.write(pos);
-		delay(1);
+		servo1.write(pos);		
+		delay(40);
+		Serial.print("rv pos:"); Serial.println(pos);
 	}
+	
 
+	/*
 	for (pos = 0; pos <= 180; pos += 1) { // sweep from 0 degrees to 180 degrees
 		// in steps of 1 degree
 		servo2.write(pos);
@@ -136,26 +143,8 @@ void testMotor1_2(){
 		servo2.write(pos);
 		delay(1);
 	}
+	*/
 
-	for (pos = 0; pos <= 180; pos += 1) { // sweep from 0 degrees to 180 degrees
-		// in steps of 1 degree
-		servo3.write(pos);
-		delay(1);             // waits 20ms for the servo to reach the position
-	}
-	for (pos = 180; pos >= 0; pos -= 1) { // sweep from 180 degrees to 0 degrees
-		servo3.write(pos);
-		delay(1);
-	}
-
-	for (pos = 0; pos <= 180; pos += 1) { // sweep from 0 degrees to 180 degrees
-		// in steps of 1 degree
-		servo4.write(pos);
-		delay(1);             // waits 20ms for the servo to reach the position
-	}
-	for (pos = 180; pos >= 0; pos -= 1) { // sweep from 180 degrees to 0 degrees
-		servo4.write(pos);
-		delay(1);
-	}
 	           
 }
 
@@ -183,21 +172,13 @@ void test180Sweeps(){
 
 	for (pos = 0; pos <= 180; pos += 1) { // sweep from 0 degrees to 180 degrees
 		// in steps of 1 degree
-		servo3.write(pos);
+		flipper.write(pos);
 		delay(1);             // waits 20ms for the servo to reach the position
 	}
 	for (pos = 180; pos >= 0; pos -= 1) { // sweep from 180 degrees to 0 degrees
-		servo3.write(pos);
+		flipper.write(pos);
 		delay(1);
 	}
 
-	for (pos = 0; pos <= 180; pos += 1) { // sweep from 0 degrees to 180 degrees
-		// in steps of 1 degree
-		servo4.write(pos);
-		delay(1);             // waits 20ms for the servo to reach the position
-	}
-	for (pos = 180; pos >= 0; pos -= 1) { // sweep from 180 degrees to 0 degrees
-		servo4.write(pos);
-		delay(1);
-	}
+
 }
