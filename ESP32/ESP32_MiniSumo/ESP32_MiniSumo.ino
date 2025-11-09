@@ -10,8 +10,55 @@
 int player = 0;
 int battery = 0;
 
+
+void setup()
+{
+    Serial.begin(115200);
+
+    Ps3.attach(notify);
+    Ps3.attachOnConnect(onConnect);
+
+    Ps3.begin(PS3_BLACK_BLACK_1);
+
+    
+
+    Serial.println("Setup complete.");
+}
+
+void loop()
+{
+    if(!Ps3.isConnected())
+        return;
+
+    //-------------------- Player LEDs -------------------
+    Serial.print("Setting LEDs to player "); Serial.println(player, DEC);
+    Ps3.setPlayer(player);
+
+    player += 1;
+    if(player > 10) player = 0;
+
+
+    printControllerCombos();
+
+    delay(2000);
+}
+
+
 void notify()
 {
+    printDigitalEvents();
+
+    printAnalogStickValues();
+
+    printAnalogControllerEvents();
+
+
+   //---------------------- Battery events ---------------------
+    printBatteryStatus();
+
+}
+
+void printDigitalEvents(){
     //--- Digital cross/square/triangle/circle button events ---
     if( Ps3.event.button_down.cross )
         Serial.println("Started pressing the cross button");
@@ -102,16 +149,6 @@ void notify()
         Serial.println("Started pressing the Playstation button");
     if( Ps3.event.button_up.ps )
         Serial.println("Released the Playstation button");
-
-
-    //---------------- Analog stick value events ---------------
-    printAnalogStickValues();
-
-    printAnalogControllerEvents();
-
-
-   //---------------------- Battery events ---------------------
-    printBatteryStatus();
 
 }
 
@@ -218,34 +255,10 @@ void onConnect(){
     Serial.println("Connected.");
 }
 
-void setup()
-{
-    Serial.begin(115200);
-
-    Ps3.attach(notify);
-    Ps3.attachOnConnect(onConnect);
-
-    Ps3.begin(PS3_BLACK_BLACK_1);
-
-    
-
-    Serial.println("Ready.");
-}
-
-void loop()
-{
-    if(!Ps3.isConnected())
-        return;
-
-    //-------------------- Player LEDs -------------------
-    Serial.print("Setting LEDs to player "); Serial.println(player, DEC);
-    Ps3.setPlayer(player);
-
-    player += 1;
-    if(player > 10) player = 0;
 
 
-    //------ Digital cross/square/triangle/circle buttons ------
+void printControllerCombos(){
+   //------ Digital cross/square/triangle/circle buttons ------
     if( Ps3.data.button.cross && Ps3.data.button.down )
         Serial.println("Pressing both the down and cross buttons");
     if( Ps3.data.button.square && Ps3.data.button.left )
@@ -264,5 +277,4 @@ void loop()
     if( Ps3.data.button.select && Ps3.data.button.start )
         Serial.println("Pressing both the select and start buttons");
 
-    delay(2000);
 }
