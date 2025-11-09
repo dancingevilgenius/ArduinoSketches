@@ -105,11 +105,15 @@ void notify()
 
 
     //---------------- Analog stick value events ---------------
+    /*
    if( abs(Ps3.event.analog_changed.stick.lx) + abs(Ps3.event.analog_changed.stick.ly) > 2 ){
        Serial.print("Moved the left stick:");
        Serial.print(" x="); Serial.print(Ps3.data.analog.stick.lx, DEC);
        Serial.print(" y="); Serial.print(Ps3.data.analog.stick.ly, DEC);
        Serial.println();
+
+       long ljsX = map(Ps3.data.analog.stick.lx, 127, 127, 100, -100);
+       long ljsY = map(Ps3.data.analog.stick.ly, 127, 127, 100, -100);
     }
 
    if( abs(Ps3.event.analog_changed.stick.rx) + abs(Ps3.event.analog_changed.stick.ry) > 2 ){
@@ -117,7 +121,12 @@ void notify()
        Serial.print(" x="); Serial.print(Ps3.data.analog.stick.rx, DEC);
        Serial.print(" y="); Serial.print(Ps3.data.analog.stick.ry, DEC);
        Serial.println();
+
+       long rjsX = map(Ps3.data.analog.stick.lx, 127, 127, 100, -100);
+       long rjsY = map(Ps3.data.analog.stick.ly, 127, 127, 100, -100);
    }
+   */
+   printJoystickRawValues();
 
    //--------------- Analog D-pad button events ----------------
    /*
@@ -193,22 +202,38 @@ void notify()
 
 }
 
-void printRawDualStickValues(){
-    //---------------- Analog stick value events ---------------
+void printJoystickRawValues(){
+    // Left Stick
    if( abs(Ps3.event.analog_changed.stick.lx) + abs(Ps3.event.analog_changed.stick.ly) > 2 ){
        Serial.print("Moved the left stick:");
-       Serial.print(" x="); Serial.print(Ps3.data.analog.stick.lx, DEC);
-       Serial.print(" y="); Serial.print(Ps3.data.analog.stick.ly, DEC);
-       Serial.println();
+
+        long rawX = Ps3.data.analog.stick.lx;
+        long rawY = Ps3.data.analog.stick.ly;
+
+        long jsX = map(rawX, -127, 127, -100, 100);
+        long jsY = map(rawY, 127, -127, -100, 100);
+
+        Serial.print(" percentX="); Serial.print(jsX, DEC); Serial.print(" rawX="); Serial.print(rawX, DEC);
+        Serial.print(" percentY="); Serial.print(jsY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
+        Serial.println();
+
     }
 
+    // Right Stick
    if( abs(Ps3.event.analog_changed.stick.rx) + abs(Ps3.event.analog_changed.stick.ry) > 2 ){
-       Serial.print("Moved the right stick:");
-       Serial.print(" x="); Serial.print(Ps3.data.analog.stick.rx, DEC);
-       Serial.print(" y="); Serial.print(Ps3.data.analog.stick.ry, DEC);
-       Serial.println();
-   }
+        Serial.print("Moved the right stick:");
 
+        long rawX = Ps3.data.analog.stick.rx;
+        long rawY = Ps3.data.analog.stick.ry;
+
+        long jsX = map(rawX, -127, 127, -100, 100);
+        long jsY = map(rawY, 127, -127, -100, 100);
+
+        Serial.print(" percentX="); Serial.print(jsX, DEC); Serial.print(" rawX="); Serial.print(rawX, DEC);
+        Serial.print(" percentY="); Serial.print(jsY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
+        Serial.println();
+
+   }
 }
 
 void printBatteryStatus(){
@@ -236,7 +261,7 @@ void setup()
     Ps3.attach(notify);
     Ps3.attachOnConnect(onConnect);
 
-    Ps3.begin(PS3_BLACK_BLACK_1);
+    Ps3.begin(PS3_BLUE_BLACK_1);
 
     Ps3.setPlayer(player);
 
