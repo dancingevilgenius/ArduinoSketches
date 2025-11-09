@@ -1,12 +1,12 @@
 
+
 // Include the Adafruit Neopixel Library 
 #include <Adafruit_NeoPixel.h>
 
-// The default pin for the NeoPixel on the Metro Express is Pin #40
 
-#define NUM_PIXELS 1
 
-Adafruit_NeoPixel metroPixel = Adafruit_NeoPixel(NUM_PIXELS, PIN_NEOPIXEL);
+// metroPixel takes in both the number of pixels (1, the built-in) and the pin)
+Adafruit_NeoPixel metroPixel = Adafruit_NeoPixel(1, PIN_NEOPIXEL);
 
 /* Colors */ 
 // note: the max. of colors in these arrays is 220 instead of 255 (super-bright!!)
@@ -16,6 +16,8 @@ const int BLUE[ ] = {0, 0, 255};
 const int BLACK [ ] = {0, 0, 0};
 
 void setup() {
+  Serial.begin(115200);
+
   // init. the NeoPixel library 
   metroPixel.begin(); 
 }
@@ -30,7 +32,7 @@ void loop() {
   // display blue on the Metro Express neopixel
   pixelWrite(BLUE);
   delay(1000);
-  
+  Serial.println("cycle ends");
   // Sparkle the Neopixel 
   // pixelSparkle();
 }
