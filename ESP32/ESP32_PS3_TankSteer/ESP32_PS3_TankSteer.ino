@@ -193,6 +193,24 @@ void notify()
 
 }
 
+void printRawDualStickValues(){
+    //---------------- Analog stick value events ---------------
+   if( abs(Ps3.event.analog_changed.stick.lx) + abs(Ps3.event.analog_changed.stick.ly) > 2 ){
+       Serial.print("Moved the left stick:");
+       Serial.print(" x="); Serial.print(Ps3.data.analog.stick.lx, DEC);
+       Serial.print(" y="); Serial.print(Ps3.data.analog.stick.ly, DEC);
+       Serial.println();
+    }
+
+   if( abs(Ps3.event.analog_changed.stick.rx) + abs(Ps3.event.analog_changed.stick.ry) > 2 ){
+       Serial.print("Moved the right stick:");
+       Serial.print(" x="); Serial.print(Ps3.data.analog.stick.rx, DEC);
+       Serial.print(" y="); Serial.print(Ps3.data.analog.stick.ry, DEC);
+       Serial.println();
+   }
+
+}
+
 void printBatteryStatus(){
     if( battery != Ps3.data.status.battery ){
         battery = Ps3.data.status.battery;
