@@ -14,8 +14,8 @@ void setup()
 {
     Serial.begin(115200);
 
-    Ps3.attach(notify);
-    Ps3.attachOnConnect(onConnect);
+    Ps3.attach(handlePS3EventsPrint);
+    Ps3.attachOnConnect(onConnectPS3);
 
     Ps3.begin(PS3_BLACK_BLACK_2);
 
@@ -23,10 +23,12 @@ void setup()
 
     //-------------------- Player LEDs -------------------
     Serial.print("Setting LEDs to player "); Serial.println(player, DEC);
-    
-    Serial.println("Ready.");
+    delay(1000);
+    Serial.println("Completed setup(). Still need to pair with PS3 Controller.");
+
 }
 
+// Note PS3 Controller Events handled in handlePS3EventsXXX() function
 void loop()
 {
     if(!Ps3.isConnected()){
@@ -38,14 +40,13 @@ void loop()
 
 
 
-
-    delay(2000);
+    delay(500);
 }
 
 
 
 
-void notify()
+void handlePS3EventsPrint()
 {
     printSquareTriangleCircleXEvents();
 
@@ -53,38 +54,26 @@ void notify()
     
     printTriggerEvents();
 
-
     printJoystickButtonEvents();
 
     printStartSelectPS3Events();
 
 
-    //---------------- Analog stick value events ---------------
-    /*
-   if( abs(Ps3.event.analog_changed.stick.lx) + abs(Ps3.event.analog_changed.stick.ly) > 2 ){
-       Serial.print("Moved the left stick:");
-       Serial.print(" x="); Serial.print(Ps3.data.analog.stick.lx, DEC);
-       Serial.print(" y="); Serial.print(Ps3.data.analog.stick.ly, DEC);
-       Serial.println();
+    printJoystickRawValues();
 
-       long ljsX = map(Ps3.data.analog.stick.lx, 127, 127, 100, -100);
-       long ljsY = map(Ps3.data.analog.stick.ly, 127, 127, 100, -100);
-    }
+    // Mostly not useful values of buttons.
+    //printControllerAnalogValues();
 
-   if( abs(Ps3.event.analog_changed.stick.rx) + abs(Ps3.event.analog_changed.stick.ry) > 2 ){
-       Serial.print("Moved the right stick:");
-       Serial.print(" x="); Serial.print(Ps3.data.analog.stick.rx, DEC);
-       Serial.print(" y="); Serial.print(Ps3.data.analog.stick.ry, DEC);
-       Serial.println();
 
-       long rjsX = map(Ps3.data.analog.stick.lx, 127, 127, 100, -100);
-       long rjsY = map(Ps3.data.analog.stick.ly, 127, 127, 100, -100);
-   }
-   */
-   printJoystickRawValues();
+
+}
+
+
+void printControllerAnalogValues(){
+
 
    //--------------- Analog D-pad button events ----------------
-   /*
+   
    if( abs(Ps3.event.analog_changed.button.up) ){
        Serial.print("Pressing the up button: ");
        Serial.println(Ps3.data.analog.button.up, DEC);
@@ -104,10 +93,10 @@ void notify()
        Serial.print("Pressing the left button: ");
        Serial.println(Ps3.data.analog.button.left, DEC);
    }
-   */
+   
 
    //---------- Analog shoulder/trigger button events ----------
-   /*
+   
    if( abs(Ps3.event.analog_changed.button.l1)){
        Serial.print("Pressing the left shoulder button: ");
        Serial.println(Ps3.data.analog.button.l1, DEC);
@@ -127,10 +116,10 @@ void notify()
        Serial.print("Pressing the right trigger button: ");
        Serial.println(Ps3.data.analog.button.r2, DEC);
    }
-   */
+   
 
    //---- Analog cross/square/triangle/circle button events ----
-   /*
+   
    if( abs(Ps3.event.analog_changed.button.triangle)){
        Serial.print("Pressing the triangle button: ");
        Serial.println(Ps3.data.analog.button.triangle, DEC);
@@ -150,10 +139,7 @@ void notify()
        Serial.print("Pressing the square button: ");
        Serial.println(Ps3.data.analog.button.square, DEC);
    }
-    */
-
-   //---------------------- Battery events ---------------------
-    //printBatteryStatus();
+    
 
 }
 
@@ -318,9 +304,11 @@ void printJoystickRawValues(){
 }
 
 void printBatteryStatus(){
+    Serial.println("Enter printBatteryStatus()");
+
     if( battery != Ps3.data.status.battery ){
         battery = Ps3.data.status.battery;
-        Serial.print("The controller battery is ");
+        Serial.print("The PS3 controller battery is ");
         if( battery == ps3_status_battery_charging )      Serial.println("charging");
         else if( battery == ps3_status_battery_full )     Serial.println("FULL");
         else if( battery == ps3_status_battery_high )     Serial.println("HIGH");
@@ -329,9 +317,16 @@ void printBatteryStatus(){
         else if( battery == ps3_status_battery_shutdown ) Serial.println("SHUTDOWN");
         else Serial.println("UNDEFINED");
     }
+
+    Serial.println("Exit printBatteryStatus()");
 }
 
-void onConnect(){
-    Serial.println("Connected.");
+void onConnectPS3(){
+    Serial.print("Connected to PS3 Controller: ");
+    Serial.println(PS3_BLACK_BLACK_2);
+
+
+    printBatteryStatus();
+
 }
 
