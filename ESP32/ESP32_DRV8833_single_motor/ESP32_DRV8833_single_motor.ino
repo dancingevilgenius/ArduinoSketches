@@ -5,9 +5,9 @@
 
 // Basic ON/OFF control of DC motor via DRV8833
 
-#define AIN1   12   // This works for ACEBOTT. og 5
+#define AIN1   14   // This works for ACEBOTT. og 5
 #define AIN2   13   // This works for ACEBOTT. og 6
-#define SLP    14   // This works for ACEBOTT. og 7
+#define SLP    12   // This works for ACEBOTT. og 7
 
 void setup() {
   Serial.begin(115200);
