@@ -26,34 +26,88 @@ void loop(void)
 {
   // Generate a fixed motion sequence to demonstrate the motor modes.
 
+  //forwardRampUp();
+
+  //forwardFullSpeed();
+
+  //reverseFullSpeed();
+
+  //reverseRampUp();
+
+  //forwardFullSpeed();
+
+  //reverseFullSpeed();
+
+
+  demo();
+
+  // Stop. wait for 2 seconds
+  spin_and_wait(0,0,2000);
+}
+
+void forwardFullSpeed(){
+  // Full speed forward.
+  spin_and_wait(255,255,2000);
+}
+
+
+void reverseFullSpeed(){
+  // Full speed reverse.
+  spin_and_wait(-255,-255,2000);
+}
+
+
+void forwardRampUp(){
   // Ramp speed up.
   for (int i = 0; i < 11; i++) {
     spin_and_wait(25*i, 25*i, 500);
   }
-  // Full speed forward.
-  spin_and_wait(255,255,2000);
 
+}
+
+
+void reverseRampUp() {
   // Ramp speed into full reverse.
   for (int i = 0; i < 21 ; i++) {
     spin_and_wait(255 - 25*i, 255 - 25*i, 500);
   }
-
-  // Full speed reverse.
-  spin_and_wait(-255,-255,2000);
-
-  // Stop.
-  spin_and_wait(0,0,2000);
-
-  // Full speed, forward, turn, reverse, and turn for a two-wheeled base.
-  spin_and_wait(255, 255, 2000);
-  spin_and_wait(0, 0, 1000);
-  spin_and_wait(-255, 255, 2000);
-  spin_and_wait(0, 0, 1000);
-  spin_and_wait(-255, -255, 2000);
-  spin_and_wait(0, 0, 1000);
-  spin_and_wait(255, -255, 2000);
-  spin_and_wait(0, 0, 1000);
 }
+
+
+
+
+
+void demo(){
+  // Full speed, forward, turn, reverse, and turn for a two-wheeled base.
+  Serial.println("forward");
+  spin_and_wait(255, 255, 2000);  // forward
+
+  Serial.println("both stop");
+  spin_and_wait(0, 0, 3000);
+
+  Serial.println("turn R");
+  spin_and_wait(-255, 255, 2000); // turn
+
+  Serial.println("both stop");
+  spin_and_wait(0, 0, 3000);
+
+  Serial.println("reverse");
+  spin_and_wait(-255, -255, 2000); // reverse
+
+  Serial.println("both stop");
+  spin_and_wait(0, 0, 2000);
+
+  Serial.println("turn L");
+  spin_and_wait(255, -255, 2000); // turn
+
+  Serial.println("both stop");
+  spin_and_wait(0, 0, 3000);
+
+}
+
+
+
+
 
 /// Set the current on a motor channel using PWM and directional logic.
 ///
