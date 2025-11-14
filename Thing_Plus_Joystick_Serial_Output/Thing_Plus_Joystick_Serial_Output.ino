@@ -35,10 +35,10 @@ uint8_t Address = 0x20; //Start address (Default 0x20)
 JOYSTICK joystick; //Create instance of this object
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("Qwiic Joystick Example");
 
-  if(joystick.begin(Wire, Address) == false)
+  if(joystick.begin(Wire1, Address) == false)
   {
     Serial.println("Joystick does not appear to be connected. Please check wiring. Freezing...");
     while(1);
