@@ -12,6 +12,9 @@
 
 SCMD myMotorDriver; //This creates the main object of one motor driver and connected peripherals.
 
+#define DIR_FW  0
+#define DIR_RV  1
+
 void setup()
 {
   pinMode(8, INPUT_PULLUP); //Use to halt motor movement (ground)
@@ -79,27 +82,27 @@ void loop()
   //Smoothly move one motor up to speed and back (drive level 0 to 255)
   for (int i = 0; i < 256; i++)
   {
-    myMotorDriver.setDrive( LEFT_MOTOR, 0, i);
-    myMotorDriver.setDrive( RIGHT_MOTOR, 0, 20 + (i / 2));
+    myMotorDriver.setDrive( LEFT_MOTOR, DIR_FW, i);
+    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_FW, 20 + (i / 2));
     delay(5);
   }
   for (int i = 255; i >= 0; i--)
   {
-    myMotorDriver.setDrive( LEFT_MOTOR, 0, i);
-    myMotorDriver.setDrive( RIGHT_MOTOR, 0, 20 + (i / 2));
+    myMotorDriver.setDrive( LEFT_MOTOR, DIR_FW, i);
+    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_FW, 20 + (i / 2));
     delay(5);
   }
   //Smoothly move the other motor up to speed and back
   for (int i = 0; i < 256; i++)
   {
-    myMotorDriver.setDrive( LEFT_MOTOR, 1, 20 + (i / 2));
-    myMotorDriver.setDrive( RIGHT_MOTOR, 1, i);
+    myMotorDriver.setDrive( LEFT_MOTOR, DIR_RV, 20 + (i / 2));
+    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_RV, i);
     delay(5);
   }
   for (int i = 255; i >= 0; i--)
   {
-    myMotorDriver.setDrive( LEFT_MOTOR, 1, 20 + (i / 2));
-    myMotorDriver.setDrive( RIGHT_MOTOR, 1, i);
+    myMotorDriver.setDrive( LEFT_MOTOR, DIR_RV, 20 + (i / 2));
+    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_RV, i);
     delay(5);
   }
 }
