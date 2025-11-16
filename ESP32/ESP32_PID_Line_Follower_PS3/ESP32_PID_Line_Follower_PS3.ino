@@ -7,21 +7,14 @@
  * 
  * Hardware requirements:
   an Arduino Pro Mini
- *                        a QTR-8RC Reflectance Sensor Array
-
-  *                        a DRV8835 Dual Motor Driver Carrier 
+  a QTR-8RC Reflectance Sensor Array
+ a DRV8835 Dual Motor Driver Carrier 
  *                        
 
-  * Description: The basic PID control system implemented with 
- *              the
-  line follower with the specified hardware. 
- *              The robot can follow
-  a black line on a white surface 
+ * Description: The basic PID control system implemented with the line follower with the specified hardware. 
+ * The robot can follow a black line on a white surface 
  *              (or vice versa). 
- * Related
-  Document: See the written documentation or the LF video from
- *                   Bot
-  Reboot.
+ * Related Document: See the written documentation or the LF video from Bot Reboot.
  *                   
  * Author: Bot Reboot
  */
@@ -58,8 +51,7 @@ int lastError = 0;
 boolean onoff = false;
 
 /*************************************************************************
-*
-  Motor speed variables (choose between 0 - no speed, and 255 - maximum speed)
+* Motor speed variables (choose between 0 - no speed, and 255 - maximum speed)
 *************************************************************************/
 const uint8_t maxspeeda = 150;
 const uint8_t maxspeedb = 150;
@@ -67,8 +59,7 @@ const uint8_t basespeeda = 100;
 const uint8_t basespeedb = 100;
 
 /*************************************************************************
-*
-  DRV8835 GPIO pins declaration
+* DRV8835 GPIO pins declaration
 *************************************************************************/
 int mode = 8;
 int aphase = 9;
@@ -77,25 +68,19 @@ int bphase = 5;
 int benbl = 3;
 
 /*************************************************************************
-*
-  Buttons pins declaration
+* Buttons pins declaration
 *************************************************************************/
 int buttoncalibrate = 17;  //or pin A3
 int buttonstart = 2;
 
 /*************************************************************************
-*
-  Function Name: setup
+* Function Name: setup
 **************************************************************************
-*
-  Summary:
-* This is the setup function for the Arduino board. It first sets up
-  the 
+* Summary:
+* This is the setup function for the Arduino board. It first sets up the 
 * pins for the sensor array and the motor driver. Then the user needs to
-  
-* slide the sensors across the line for 10 seconds as they need to be 
-*
-  calibrated. 
+* slide the sensors across the line for 10 sec onds as they need to be 
+* calibrated. 
 * 
 * Parameters:
 *  none
@@ -104,53 +89,69 @@ int buttonstart = 2;
 *  none
 *************************************************************************/
 void setup() {
-  qtr.setTypeRC();
-  qtr.setSensorPins((const uint8_t[]){ 10, 11,12, 14, 15, 16, 18, 19 }, SensorCount);
-  qtr.setEmitterPin(7);  //LEDON PIN
+
+  setupLineSensors();
+
+  setupMotors();
+
+  setupReadouts();
+
+  delay(500);
 
 
+
+
+  boolean startInitiated = false;
+  while (startInitiated == false) {  // the main function won't start until the robot is calibrated
+    if (digitalRead(buttoncalibrate) == HIGH) {
+      calibration();  //calibrate the robot for 10 seconds
+      startInitiated = true;
+    }
+  }
+
+  motorsAllStop();
+}
+
+void motorsAllStop(){
+  forward_brake(0, 0);  //stop the motors
+}
+
+void setupReadouts(){
+  pinMode(LED_BUILTIN, OUTPUT);
+}
+
+void setupMotors(){
   pinMode(mode, OUTPUT);
   pinMode(aphase, OUTPUT);
   pinMode(aenbl, OUTPUT);
 
   pinMode(bphase, OUTPUT);
   pinMode(benbl, OUTPUT);
-  digitalWrite(mode,HIGH);  //one of the two control interfaces
-                       //(simplified drive/brake operation)
-  delay(500);
-  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(mode,HIGH);  //one of the two control interfaces (simplified drive/brake operation)
 
+}
 
-  boolean Ok = false;
-  while (Ok == false) {  // the main function won't start until the robot is calibrated
-    if (digitalRead(buttoncalibrate) == HIGH) {
-      calibration();  //calibrate the robot for 10 seconds
-      Ok = true;
-    }
-  }
-  forward_brake(0, 0);  //stop the motors
+void setupLineSensors(){
+  qtr.setTypeRC();
+  qtr.setSensorPins((const uint8_t[]){ 10, 11,12, 14, 15, 16, 18, 19 }, SensorCount);
+  qtr.setEmitterPin(7);  //LEDON PIN
 }
 
 /*************************************************************************
 *
   Function Name: calibration
 **************************************************************************
-*
-  Summary:
-* This is the calibration function for the QTR-8RC Reflectance Sensor
-  Array. 
+* Summary:
+* This is the calibration function for the QTR-8RC Reflectance Sensor Array. 
 * The function calls the method 'qtr.calibrate()' offered by the imported
-  
 * library. For approx. 10 seconds, each of the 8 sensors will calibrate with
-*
-  readings from the track. 
+* readings from the track. 
 * 
 * Parameters:
 *  none
 * 
 * Returns:
-*
-  none
+* none
 *************************************************************************/
 void calibration() {
   digitalWrite(LED_BUILTIN, HIGH);
@@ -158,24 +159,19 @@ void calibration() {
        i < 400; i++) {
     qtr.calibrate();
   }
-  digitalWrite(LED_BUILTIN,
-               LOW);
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 /*************************************************************************
 *
   Function Name: loop
 **************************************************************************
-*
-  Summary:
-* This is the main function of this application. When the start button
-  is
+* Summary:
+* This is the main function of this application. When the start button is
 * pressed, the robot will toggle between following the track and stopping.
-*
-  When following the track, the function calls the PID control method. 
+* When following the track, the function calls the PID control method. 
 * 
-*
-  Parameters:
+* Parameters:
 *  none
 * 
 * Returns:
@@ -184,18 +180,17 @@ void calibration() {
 void loop() {
   if (digitalRead(buttonstart) == HIGH) {
     onoff = !onoff;
-
     if (onoff = true) {
       delay(1000);  //a delay when the robot starts
-
     } else {
       delay(50);
     }
   }
+
   if (onoff == true) {
     PID_control();
   } else {
-    forward_brake(0, 0);  //stop the motors
+    motorsAllStop()   //stop the motors
   }
 }
 
@@ -203,32 +198,22 @@ void loop() {
 *
   Function Name: forward_brake
 **************************************************************************
-*
-  Summary:
-* This is the control interface function of the motor driver. As shown
-  in
+* Summary:
+* This is the control interface function of the motor driver. As shown in
 * the Pololu's documentation of the DRV8835 motor driver, when the MODE is
-  
 * equal to 1 (the pin is set to output HIGH), the robot will go forward at
-*
-  the given speed specified by the parameters. The phase pins control the
-* direction
-  of the spin, and the enbl pins control the speed of the motor.
+* the given speed specified by the parameters. The phase pins control the
+* direction of the spin, and the enbl pins control the speed of the motor.
 * 
-* A warning
-  though, depending on the wiring, you might need to change the 
-* aphase and bphase
-  from LOW to HIGH, in order for the robot to spin forward. 
+* A warning though, depending on the wiring, you might need to change the 
+* aphase and bphase from LOW to HIGH, in order for the robot to spin forward. 
 * 
 * Parameters:
-*
-  int posa: int value from 0 to 255; controls the speed of the motor A.
-*  int
-  posb: int value from 0 to 255; controls the speed of the motor B.
+* int posa: int value from 0 to 255; controls the speed of the motor A.
+*  int posb: int value from 0 to 255; controls the speed of the motor B.
 * 
 * Returns:
-*
-  none
+* none
 *************************************************************************/
 void forward_brake(int posa, int posb) {
   //set the appropriate values for aphase and bphase so that the robot goes straight
@@ -242,19 +227,13 @@ void forward_brake(int posa, int posb) {
 *
   Function Name: PID_control
 **************************************************************************
-*
-  Summary: 
+* Summary: 
 * This is the function of the PID control system. The distinguishing
-  
 * feature of the PID controller is the ability to use the three control 
-*
-  terms of proportional, integral and derivative influence on the controller 
-*
-  output to apply accurate and optimal control. This correction is applied to
-*
-  the speed of the motors, which should be in range of the interval [0, max_speed],
-*
-  max_speed <= 255. 
+* terms of proportional, integral and derivative influence on the controller 
+* output to apply accurate and optimal control. This correction is applied to
+* the speed of the motors, which should be in range of the interval [0, max_speed],
+* max_speed <= 255. 
 * 
 * Parameters:
 * none
