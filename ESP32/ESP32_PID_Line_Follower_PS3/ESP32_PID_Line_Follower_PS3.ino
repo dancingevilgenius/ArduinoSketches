@@ -23,6 +23,7 @@
 
 
 #define LED_BUILTIN 2 // works with ESP32 DEV board, Acebott ESP32-Max
+#define CENTER_LINE_VAL 3500
 
 /*************************************************************************
 *
@@ -70,8 +71,8 @@ int benbl = 3;
 /*************************************************************************
 * Buttons pins declaration
 *************************************************************************/
-int buttoncalibrate = 17;  //or pin A3
-int buttonstart = 2;
+int pinButtonCalibrate = 17;  //or pin A3
+int pinButtonStart = 2;
 
 /*************************************************************************
 * Function Name: setup
@@ -103,8 +104,8 @@ void setup() {
 
   boolean startInitiated = false;
   while (startInitiated == false) {  // the main function won't start until the robot is calibrated
-    if (digitalRead(buttoncalibrate) == HIGH) {
-      calibration();  //calibrate the robot for 10 seconds
+    if (isCalibrateButtonPressed()) {
+      calibrateQTRSensorArray();  //calibrate the robot for 10 seconds
       startInitiated = true;
     }
   }
@@ -112,8 +113,17 @@ void setup() {
   motorsAllStop();
 }
 
+
+void calibrateSensorArray(){
+  calibrateQTRSensorArray();
+}
+
+boolean isCalibrateButtonPressed(){
+  return (digitalRead(pinButtonCalibrate) == HIGH); 
+}
+
 void motorsAllStop(){
-  forward_brake(0, 0);  //stop the motors
+  motorControllerDRV8835(0, 0);  //stop the motors
 }
 
 void setupReadouts(){
@@ -153,10 +163,9 @@ void setupLineSensors(){
 * Returns:
 * none
 *************************************************************************/
-void calibration() {
+void calibrateQTRSensorArray() {
   digitalWrite(LED_BUILTIN, HIGH);
-  for (uint16_t i = 0;
-       i < 400; i++) {
+  for (uint16_t i = 0; i < 400; i++) {
     qtr.calibrate();
   }
   digitalWrite(LED_BUILTIN, LOW);
@@ -178,7 +187,7 @@ void calibration() {
 *  none
 *************************************************************************/
 void loop() {
-  if (digitalRead(buttonstart) == HIGH) {
+  if (isStartButtonPressed()) {
     onoff = !onoff;
     if (onoff = true) {
       delay(1000);  //a delay when the robot starts
@@ -188,10 +197,14 @@ void loop() {
   }
 
   if (onoff == true) {
-    PID_control();
+    PIDControl();
   } else {
-    motorsAllStop()   //stop the motors
+    motorsAllStop();   //stop the motors
   }
+}
+
+boolean isStartButtonPressed(){
+  return digitalRead(pinButtonStart) == HIGH;
 }
 
 /*************************************************************************
@@ -215,12 +228,16 @@ void loop() {
 * Returns:
 * none
 *************************************************************************/
-void forward_brake(int posa, int posb) {
+void motorControllerDRV8835(int posa, int posb) {
   //set the appropriate values for aphase and bphase so that the robot goes straight
   digitalWrite(aphase, LOW);
   digitalWrite(bphase, LOW);
   analogWrite(aenbl, posa);
   analogWrite(benbl, posb);
+}
+
+uint16_t getSensorArrayPosition(){
+  return qtr.readLineBlack(sensorValues);  //read the current position
 }
 
 /*************************************************************************
@@ -241,9 +258,9 @@ void forward_brake(int posa, int posb) {
 * Returns:
 *  none
 *************************************************************************/
-void PID_control() {
-  uint16_t position = qtr.readLineBlack(sensorValues);  //read the current position
-  int error = 3500 - position;     //3500 is the ideal position (the centre)
+void PIDControl() {
+  uint16_t position = getSensorArrayPosition();
+  int error = CENTER_LINE_VAL - position;     //3500 is the ideal position (the centre)
 
   P = error;
   I = I + error;
@@ -269,5 +286,5 @@ void PID_control() {
   if (motorspeedb < 0) {
     motorspeedb = 0;
   }
-  forward_brake(motorspeeda, motorspeedb);
+  motorControllerDRV8835(motorspeeda, motorspeedb);
 }
