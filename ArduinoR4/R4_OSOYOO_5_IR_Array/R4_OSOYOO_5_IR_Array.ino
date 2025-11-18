@@ -4,7 +4,13 @@ const int ledPin = LED_BUILTIN;     // built-in LED is on pin 13
 const uint8_t SensorCount = 5;
 uint16_t sensorValues[SensorCount];
 
-int irPins[SensorCount] = {A0, A1, A2, A3,A4};
+#define SENSOR_OUTER_LEFT   1
+#define SENSOR_INNER_LEFT   0
+#define SENSOR_CENTER       2
+#define SENSOR_INNER_RIGHT  3
+#define SENSOR_OUTER_RIGHT   4
+
+int irPins[SensorCount] = {A4, A3, A2, A1,A0};
 
 
 void setup() {
@@ -34,11 +40,29 @@ void loop() {
   }  
   delay(100); // a small delay for readability
   */
+  int sum=0;
   for(int i=0 ; i<SensorCount ;  i++){
     sensorValues[i] = digitalRead(irPins[i]);    
-    Serial.print(sensorValues[i]); Serial.print(" ");
+    sum += sensorValues[i];
+    //Serial.print(sensorValues[i]); Serial.print(" ");
   }
-  Serial.println();
+    Serial.print("sum:");
+    Serial.println(sum);
+    if(sum == 0){
+      // No sensors, real bad
+    } else if(sum == 1){
+      if(sensorValues[SENSOR_OUTER_LEFT]){
+        Serial.println("Outer left");
+      } else if(sensorValues[SENSOR_INNER_LEFT]){
+        Serial.println("Inner left");
+      } else if(sensorValues[SENSOR_CENTER]){
+        Serial.println("Center");
+      } else if(sensorValues[SENSOR_INNER_RIGHT]){
+        Serial.println("Inner right");
+      } else if(sensorValues[SENSOR_OUTER_RIGHT]){
+        Serial.println("Outer right");
+      }
+  }
 
   delay(2000);
   
