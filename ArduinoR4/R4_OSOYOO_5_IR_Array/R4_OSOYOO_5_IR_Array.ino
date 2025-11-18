@@ -1,8 +1,5 @@
-const int ledPin = LED_BUILTIN;     // built-in LED is on pin 13
 
-const uint8_t SensorCount = 5;
-uint16_t sensorValues[SensorCount];
-
+// Sensor Array defined below
 #define SENSOR_OUTER_LEFT   1
 #define SENSOR_INNER_LEFT   0
 #define SENSOR_CENTER       2
@@ -10,6 +7,7 @@ uint16_t sensorValues[SensorCount];
 #define SENSOR_OUTER_RIGHT   4
 
 
+// Convert sensor values to a relative position of line.
 // Arbitrary scale from left to right of 0-7000, center 3500
 #define SENSOR_POS_MIN 0
 #define SENSOR_POS_CENTER 3500
@@ -21,10 +19,16 @@ uint16_t sensorValues[SensorCount];
 #define SENSOR_POS_83P    5833
 #define SENSOR_POS_100P   7000
 
+const int ledPin = LED_BUILTIN;     // built-in LED is on pin 13
 
+
+int sensorPosition = SENSOR_POS_CENTER; // A single value used represent line relative to sensor array.
+
+// Vars for IR/Color sensor array
+const uint8_t SensorCount = 5;
 int irPins[SensorCount] = {A4, A3, A2, A1,A0};
+uint16_t sensorValues[SensorCount]; // Store sensor array boolean states in here.
 
-int sensorPosition = SENSOR_POS_CENTER;
 
 void setup() {
   Serial.begin(115200);
