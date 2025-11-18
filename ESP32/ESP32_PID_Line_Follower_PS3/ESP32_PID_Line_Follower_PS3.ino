@@ -91,6 +91,8 @@ int pinButtonStart = 2;
 *************************************************************************/
 void setup() {
 
+  Serial.begin(15200);
+
   setupLineSensors();
 
   setupMotors();
