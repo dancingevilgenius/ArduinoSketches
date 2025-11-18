@@ -5,7 +5,7 @@
 
  * File name: PID_LF_example
  * 
- * Hardware requirements:
+ * Original Hardware requirements:
   an Arduino Pro Mini
   a QTR-8RC Reflectance Sensor Array
  a DRV8835 Dual Motor Driver Carrier 
@@ -19,7 +19,6 @@
  * Author: Bot Reboot
  */
 
-#include <QTRSensors.h>  //Make sure to install the library
 
 
 #define LED_BUILTIN 2 // works with ESP32 DEV board, Acebott ESP32-Max
@@ -29,7 +28,6 @@
 *
   Sensor Array object initialisation 
 *************************************************************************/
-QTRSensors qtr;
 const uint8_t SensorCount = 8;
 uint16_t sensorValues[SensorCount];
 
@@ -107,7 +105,7 @@ void setup() {
   boolean startInitiated = false;
   while (startInitiated == false) {  // the main function won't start until the robot is calibrated
     if (isCalibrateButtonPressed()) {
-      calibrateQTRSensorArray();  //calibrate the robot for 10 seconds
+      calibrateSensorArray();  //calibrate the robot for 10 seconds
       startInitiated = true;
     }
   }
@@ -117,7 +115,7 @@ void setup() {
 
 
 void calibrateSensorArray(){
-  calibrateQTRSensorArray();
+  // TODO Calibrate OSOYOO array here
 }
 
 boolean isCalibrateButtonPressed(){
@@ -144,34 +142,9 @@ void setupMotors(){
 }
 
 void setupLineSensors(){
-  qtr.setTypeRC();
-  qtr.setSensorPins((const uint8_t[]){ 10, 11,12, 14, 15, 16, 18, 19 }, SensorCount);
-  qtr.setEmitterPin(7);  //LEDON PIN
+  // OSOYOO setup here
 }
 
-/*************************************************************************
-*
-  Function Name: calibration
-**************************************************************************
-* Summary:
-* This is the calibration function for the QTR-8RC Reflectance Sensor Array. 
-* The function calls the method 'qtr.calibrate()' offered by the imported
-* library. For approx. 10 seconds, each of the 8 sensors will calibrate with
-* readings from the track. 
-* 
-* Parameters:
-*  none
-* 
-* Returns:
-* none
-*************************************************************************/
-void calibrateQTRSensorArray() {
-  digitalWrite(LED_BUILTIN, HIGH);
-  for (uint16_t i = 0; i < 400; i++) {
-    qtr.calibrate();
-  }
-  digitalWrite(LED_BUILTIN, LOW);
-}
 
 /*************************************************************************
 *
@@ -239,7 +212,8 @@ void motorControllerDRV8835(int posa, int posb) {
 }
 
 uint16_t getSensorArrayPosition(){
-  return qtr.readLineBlack(sensorValues);  //read the current position
+  // TODO get OSOYOO value here
+  return 3500;
 }
 
 /*************************************************************************
