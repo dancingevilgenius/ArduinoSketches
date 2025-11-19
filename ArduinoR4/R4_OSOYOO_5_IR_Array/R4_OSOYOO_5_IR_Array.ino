@@ -51,7 +51,8 @@ void setupOsoyooSensorArray(){
 
 void loop() {
 
-  sensorPosition = getOsoyooSensorPosition();
+  bool triggerOnWhite = true;
+  sensorPosition = getOsoyooSensorPosition(triggerOnWhite);
   //handleMotors(sensorPosition);
   delay(2000);
   
@@ -71,7 +72,7 @@ void handleMotors(int position){
 }
 
 
-int getOsoyooSensorPosition(){
+int getOsoyooSensorPosition(boolean triggerOnWhite){
 
   // Get the raw binary values from the 5 sensor array
   int numSensorHits=0;
@@ -81,7 +82,91 @@ int getOsoyooSensorPosition(){
       numSensorHits++;  
     }        
   }
-  
+
+  if(triggerOnWhite) {
+    sensorPosition = getOsoyooPositionByWhiteLine(numSensorHits);    
+  } else {
+    sensorPosition = getOsoyooPositionByBlackLine(numSensorHits);
+  }
+
+
+    return sensorPosition;    
+}
+
+
+int getOsoyooPositionByBlackLine(int numSensorHits){
+    if(numSensorHits == SensorCount){
+      // No sensors, real bad
+      Serial.println("zero sensor hits. Bad if we are on a track racing.");
+    } else if(numSensorHits == 1){
+      if(sensorValues[SENSOR_OUTER_LEFT]){
+        sensorPosition = SENSOR_POS_16P;
+        Serial.print("1 Outer left:"); Serial.println(sensorPosition, DEC);
+        
+      } else if(sensorValues[SENSOR_INNER_LEFT]){
+        sensorPosition = SENSOR_POS_32P;
+        Serial.print("1 Inner left:");Serial.println(sensorPosition, DEC);
+        
+      } else if(sensorValues[SENSOR_CENTER]){
+        sensorPosition = SENSOR_POS_CENTER;
+        Serial.print("1 Center:");Serial.println(sensorPosition, DEC);
+        
+      } else if(sensorValues[SENSOR_INNER_RIGHT]){
+        sensorPosition = SENSOR_POS_66P;
+        Serial.print("1 Inner right:");Serial.println(sensorPosition, DEC);
+        
+      } else if(sensorValues[SENSOR_OUTER_RIGHT]){
+        sensorPosition = SENSOR_POS_83P;
+        Serial.print("1 Outer right:");Serial.println(sensorPosition, DEC);        
+      }
+  } else if(numSensorHits == 2){
+    if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_LEFT]){
+      sensorPosition = SENSOR_POS_32P;
+      Serial.print("2 Hard left:");Serial.println(sensorPosition, DEC);
+      
+    } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_OUTER_LEFT]){
+      sensorPosition = SENSOR_POS_16P;
+      Serial.print("2 Hard left:");Serial.println(sensorPosition, DEC);
+      
+    } else if(sensorValues[SENSOR_INNER_LEFT] && sensorValues[SENSOR_OUTER_LEFT]){
+      sensorPosition = SENSOR_POS_MIN;
+      Serial.print("2 Hard left:");Serial.println(sensorPosition, DEC);
+      
+    } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_RIGHT]){
+      sensorPosition = SENSOR_POS_MAX;
+      Serial.print("2 Hard right:");Serial.println(sensorPosition, DEC);
+      
+    } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_OUTER_RIGHT]){
+      sensorPosition = SENSOR_POS_MAX;
+      Serial.print("2 Hard right:");Serial.println(sensorPosition, DEC);
+    } else if(sensorValues[SENSOR_INNER_RIGHT] && sensorValues[SENSOR_OUTER_RIGHT]){
+      sensorPosition = SENSOR_POS_MAX;
+      Serial.print("2 Hard right:");Serial.println(sensorPosition, DEC);      
+    }
+  } else if(numSensorHits >= 3){
+    // intersection or end zone
+    sensorPosition = SENSOR_POS_CENTER;
+    if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_LEFT] && sensorValues[SENSOR_INNER_RIGHT]){
+      sensorPosition = SENSOR_POS_CENTER;
+      Serial.print("3+ Perpendicular line or end solid shape:");Serial.println(sensorPosition, DEC);      
+    } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_LEFT] && sensorValues[SENSOR_OUTER_LEFT]){
+      sensorPosition = SENSOR_POS_MIN;
+      Serial.print("3 Hard left:"); Serial.println(sensorPosition, DEC);
+    }  else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_RIGHT] && sensorValues[SENSOR_OUTER_RIGHT]){
+      sensorPosition = SENSOR_POS_MAX;
+      Serial.print("3 Hard right:");Serial.println(sensorPosition, DEC);
+    } else {
+      sensorPosition = SENSOR_POS_CENTER;
+      Serial.println("3+ Perpendicular line or end solid shape:"); Serial.println(sensorPosition, DEC);
+    }
+  }
+}
+
+
+
+
+
+int getOsoyooPositionByWhiteLine(int numSensorHits){
     if(numSensorHits == 0){
       // No sensors, real bad
       Serial.println("zero sensor hits. Bad if we are on a track racing.");
@@ -146,8 +231,8 @@ int getOsoyooSensorPosition(){
       sensorPosition = SENSOR_POS_CENTER;
       Serial.println("3+ Perpendicular line or end solid shape:"); Serial.println(sensorPosition, DEC);
     }
-
-    return sensorPosition;    
   }
-
 }
+
+
+
