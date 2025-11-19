@@ -14,14 +14,23 @@ SCMD myMotorDriver; //This creates the main object of one motor driver and conne
 
 #define DIR_FW  0
 #define DIR_RV  1
+#define LEFT_MOTOR 0
+#define RIGHT_MOTOR 1
 
 void setup()
 {
-  pinMode(8, INPUT_PULLUP); //Use to halt motor movement (ground)
 
   Serial.begin(115200);
   Serial.println("Starting sketch.");
 
+  // Kind of like a switch. Use to halt motor movement (ground)
+  pinMode(8, INPUT_PULLUP); 
+
+  setupQwiicMotorDriver();
+
+}
+
+void setupQwiicMotorDriver(){
   //***** Configure the Motor Driver's Settings *****//
   //  .commInter face is I2C_MODE 
   myMotorDriver.settings.commInterface = I2C_MODE;
@@ -59,13 +68,13 @@ void setup()
   while ( myMotorDriver.busy() ); //Waits until the SCMD is available.
   myMotorDriver.inversionMode(1, 1); //invert motor 1
 
-  while ( myMotorDriver.busy() );
+  while ( myMotorDriver.busy() )
+    ; // Do nothing until driver is available
+
   myMotorDriver.enable(); //Enables the output driver hardware
 
 }
 
-#define LEFT_MOTOR 0
-#define RIGHT_MOTOR 1
 void loop()
 {
   //pass setDrive() a motor number, direction as 0(call 0 forward) or 1, and level from 0 to 255
