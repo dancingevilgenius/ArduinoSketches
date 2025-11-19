@@ -24,12 +24,40 @@
 #define LED_BUILTIN 2 // works with ESP32 DEV board, Acebott ESP32-Max
 #define CENTER_LINE_VAL 3500
 
+
+// Sensor Array defined below
+#define SENSOR_OUTER_LEFT   1
+#define SENSOR_INNER_LEFT   0
+#define SENSOR_CENTER       2
+#define SENSOR_INNER_RIGHT  3
+#define SENSOR_OUTER_RIGHT   4
+
+
+// Convert sensor values to a relative position of line.
+// Arbitrary scale from left to right of 0-7000, center 3500
+#define SENSOR_POS_MIN 0
+#define SENSOR_POS_CENTER 3500
+#define SENSOR_POS_MAX 7000
+#define SENSOR_POS_16P    1166
+#define SENSOR_POS_32P    2331
+#define SENSOR_POS_50P    3500
+#define SENSOR_POS_66P    4277
+#define SENSOR_POS_83P    5833
+#define SENSOR_POS_100P   7000
+
+int sensorPosition = SENSOR_POS_CENTER; // A single value used represent line relative to sensor array.
+
+
+
 /*************************************************************************
 *
   Sensor Array object initialisation 
 *************************************************************************/
-const uint8_t SensorCount = 8;
+const uint8_t SensorCount = 5;
 uint16_t sensorValues[SensorCount];
+int irPins[SensorCount] = {A4, A3, A2, A1,A0}; // Added by Carlos
+
+
 
 /*************************************************************************
 *
@@ -89,7 +117,7 @@ int pinButtonStart = 2;
 *************************************************************************/
 void setup() {
 
-  Serial.begin(15200);
+  Serial.begin(115200);
 
   setupLineSensors();
 
@@ -101,7 +129,7 @@ void setup() {
 
 
 
-
+  /*  Not sure this should be in setup()
   boolean startInitiated = false;
   while (startInitiated == false) {  // the main function won't start until the robot is calibrated
     if (isCalibrateButtonPressed()) {
@@ -109,6 +137,7 @@ void setup() {
       startInitiated = true;
     }
   }
+  */
 
   motorsAllStop();
 }
@@ -143,6 +172,17 @@ void setupMotors(){
 
 void setupLineSensors(){
   // OSOYOO setup here
+  setupOsoyooSensorArray();
+}
+
+
+void setupOsoyooSensorArray(){
+  pinMode(A0, INPUT);
+  pinMode(A1, INPUT);
+  pinMode(A2, INPUT);
+  pinMode(A3, INPUT);
+  pinMode(A4, INPUT);
+  Serial.println("setupOsoyooSensorArray() complete.");
 }
 
 
@@ -211,9 +251,10 @@ void motorControllerDRV8835(int posa, int posb) {
   analogWrite(benbl, posb);
 }
 
+// Hardware used is hidden
 uint16_t getSensorArrayPosition(){
   // TODO get OSOYOO value here
-  return 3500;
+  return getOsoyooSensorPosition();
 }
 
 /*************************************************************************
@@ -264,3 +305,87 @@ void PIDControl() {
   }
   motorControllerDRV8835(motorspeeda, motorspeedb);
 }
+
+
+int getOsoyooSensorPosition(){
+
+  // Get the raw binary values from the 5 sensor array
+  int numSensorHits=0;
+  for(int i=0 ; i<SensorCount ;  i++){
+    sensorValues[i] = digitalRead(irPins[i]);
+    if(sensorValues[i]){
+      numSensorHits++;  
+    }        
+  }
+  
+    if(numSensorHits == 0){
+      // No sensors, real bad
+      Serial.println("zero sensor hits. Bad if we are on a track racing.");
+    } else if(numSensorHits == 1){
+      if(sensorValues[SENSOR_OUTER_LEFT]){
+        sensorPosition = SENSOR_POS_16P;
+        Serial.print("1 Outer left:"); Serial.println(sensorPosition, DEC);
+        
+      } else if(sensorValues[SENSOR_INNER_LEFT]){
+        sensorPosition = SENSOR_POS_32P;
+        Serial.print("1 Inner left:");Serial.println(sensorPosition, DEC);
+        
+      } else if(sensorValues[SENSOR_CENTER]){
+        sensorPosition = SENSOR_POS_CENTER;
+        Serial.print("1 Center:");Serial.println(sensorPosition, DEC);
+        
+      } else if(sensorValues[SENSOR_INNER_RIGHT]){
+        sensorPosition = SENSOR_POS_66P;
+        Serial.print("1 Inner right:");Serial.println(sensorPosition, DEC);
+        
+      } else if(sensorValues[SENSOR_OUTER_RIGHT]){
+        sensorPosition = SENSOR_POS_83P;
+        Serial.print("1 Outer right:");Serial.println(sensorPosition, DEC);        
+      }
+  } else if(numSensorHits == 2){
+    if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_LEFT]){
+      sensorPosition = SENSOR_POS_32P;
+      Serial.print("2 Hard left:");Serial.println(sensorPosition, DEC);
+      
+    } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_OUTER_LEFT]){
+      sensorPosition = SENSOR_POS_16P;
+      Serial.print("2 Hard left:");Serial.println(sensorPosition, DEC);
+      
+    } else if(sensorValues[SENSOR_INNER_LEFT] && sensorValues[SENSOR_OUTER_LEFT]){
+      sensorPosition = SENSOR_POS_MIN;
+      Serial.print("2 Hard left:");Serial.println(sensorPosition, DEC);
+      
+    } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_RIGHT]){
+      sensorPosition = SENSOR_POS_MAX;
+      Serial.print("2 Hard right:");Serial.println(sensorPosition, DEC);
+      
+    } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_OUTER_RIGHT]){
+      sensorPosition = SENSOR_POS_MAX;
+      Serial.print("2 Hard right:");Serial.println(sensorPosition, DEC);
+    } else if(sensorValues[SENSOR_INNER_RIGHT] && sensorValues[SENSOR_OUTER_RIGHT]){
+      sensorPosition = SENSOR_POS_MAX;
+      Serial.print("2 Hard right:");Serial.println(sensorPosition, DEC);      
+    }
+  } else if(numSensorHits >= 3){
+    // intersection or end zone
+    sensorPosition = SENSOR_POS_CENTER;
+    if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_LEFT] && sensorValues[SENSOR_INNER_RIGHT]){
+      sensorPosition = SENSOR_POS_CENTER;
+      Serial.print("3+ Perpendicular line or end solid shape:");Serial.println(sensorPosition, DEC);      
+    } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_LEFT] && sensorValues[SENSOR_OUTER_LEFT]){
+      sensorPosition = SENSOR_POS_MIN;
+      Serial.print("3 Hard left:"); Serial.println(sensorPosition, DEC);
+    }  else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_RIGHT] && sensorValues[SENSOR_OUTER_RIGHT]){
+      sensorPosition = SENSOR_POS_MAX;
+      Serial.print("3 Hard right:");Serial.println(sensorPosition, DEC);
+    } else {
+      sensorPosition = SENSOR_POS_CENTER;
+      Serial.println("3+ Perpendicular line or end solid shape:"); Serial.println(sensorPosition, DEC);
+    }
+
+    return sensorPosition;    
+  }
+
+}
+
+
