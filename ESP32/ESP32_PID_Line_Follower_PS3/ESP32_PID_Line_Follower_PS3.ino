@@ -27,7 +27,7 @@
 
 
 
-#define LED_BUILTIN 2 // works with ESP32 DEV board, Acebott ESP32-Max
+//#define LED_BUILTIN 2 // works with ESP32 DEV board, Acebott ESP32-Max
 #define CENTER_LINE_VAL 3500
 
 
@@ -104,7 +104,7 @@ const uint8_t basespeedb = 100;
 * Buttons pins declaration
 *************************************************************************/
 int pinButtonCalibrate = 17;  //or pin A3
-int pinButtonStart = 2;
+int pinButtonStart = D2;
 
 /*************************************************************************
 * Function Name: setup
@@ -124,6 +124,8 @@ int pinButtonStart = 2;
 void setup() {
 
   Serial.begin(115200);
+
+  setupButtons();
 
   setupLineSensors();
 
@@ -146,6 +148,10 @@ void setup() {
   */
 
   motorsAllStop();
+}
+
+void setupButtons(){
+  pinMode(pinButtonStart, INPUT); 
 }
 
 
@@ -208,10 +214,11 @@ void setupOsoyooSensorArray(){
 *  none
 *************************************************************************/
 void loop() {
+
   if (isStartButtonPressed()) {
     onoff = !onoff;
     if (onoff = true) {
-      delay(1000);  //a delay when the robot starts
+      //Serial.println("start button pressed");
     } else {
       delay(50);
     }
@@ -219,20 +226,28 @@ void loop() {
 
   if (onoff == true) {
     PIDControl();
+    delay(2000);
   } else {
     motorsAllStop();   //stop the motors
   }
 }
 
 boolean isStartButtonPressed(){
-  return digitalRead(pinButtonStart) == HIGH;
+  
+  boolean pressed = digitalRead(pinButtonStart) == LOW;
+  if(pressed){
+    //digitalWrite(LED_BUILTIN, HIGH);  
+    //Serial.println("start button pressed");
+  }
+  return pressed;
 }
 
 
 // Hardware used is hidden
 uint16_t getSensorArrayPosition(){
   // TODO get OSOYOO value here
-  return getOsoyooSensorPosition();
+  boolean triggerOnWhite = false;
+  return getOsoyooSensorPosition(triggerOnWhite);
 }
 
 /*************************************************************************
@@ -299,88 +314,111 @@ void qwiicMotorController(uint16_t motorSpeedA, uint16_t motorSpeedB){
   myMotorDriver.setDrive( RIGHT_MOTOR, DIR_FW,  motorSpeedB);
 }
 
+int getOsoyooSensorPosition(boolean triggerOnWhite){
 
+  //const uint8_t SensorCount = 5;
+  uint16_t sensorValues[SensorCount]; // Store sensor array boolean states in here.
 
-int getOsoyooSensorPosition(){
 
   // Get the raw binary values from the 5 sensor array
   int numSensorHits=0;
   for(int i=0 ; i<SensorCount ;  i++){
-    sensorValues[i] = digitalRead(irPins[i]);
+    // Thite line on black background
+    if(triggerOnWhite){
+      sensorValues[i] = digitalRead(irPins[i]);
+    } else {
+      // Flip values for black lines on white background
+      sensorValues[i] = !digitalRead(irPins[i]);
+    }
     if(sensorValues[i]){
       numSensorHits++;  
     }        
   }
-  
+
+  sensorPosition = getOsoyooPositionByArrayValues(numSensorHits, sensorValues);
+
+
+  return sensorPosition;    
+}
+
+
+int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[]){
     if(numSensorHits == 0){
       // No sensors, real bad
       Serial.println("zero sensor hits. Bad if we are on a track racing.");
     } else if(numSensorHits == 1){
       if(sensorValues[SENSOR_OUTER_LEFT]){
         sensorPosition = SENSOR_POS_16P;
-        Serial.print("1 Outer left:"); Serial.println(sensorPosition, DEC);
+        Serial.print("B1 Outer left:"); Serial.println(sensorPosition, DEC);
         
       } else if(sensorValues[SENSOR_INNER_LEFT]){
         sensorPosition = SENSOR_POS_32P;
-        Serial.print("1 Inner left:");Serial.println(sensorPosition, DEC);
+        Serial.print("B1 Inner left:");Serial.println(sensorPosition, DEC);
         
       } else if(sensorValues[SENSOR_CENTER]){
         sensorPosition = SENSOR_POS_CENTER;
-        Serial.print("1 Center:");Serial.println(sensorPosition, DEC);
+        Serial.print("B1 Center:");Serial.println(sensorPosition, DEC);
         
       } else if(sensorValues[SENSOR_INNER_RIGHT]){
         sensorPosition = SENSOR_POS_66P;
-        Serial.print("1 Inner right:");Serial.println(sensorPosition, DEC);
+        Serial.print("B1 Inner right:");Serial.println(sensorPosition, DEC);
         
       } else if(sensorValues[SENSOR_OUTER_RIGHT]){
         sensorPosition = SENSOR_POS_83P;
-        Serial.print("1 Outer right:");Serial.println(sensorPosition, DEC);        
+        Serial.print("B1 Outer right:");Serial.println(sensorPosition, DEC);        
       }
   } else if(numSensorHits == 2){
     if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_LEFT]){
       sensorPosition = SENSOR_POS_32P;
-      Serial.print("2 Hard left:");Serial.println(sensorPosition, DEC);
+      Serial.print("B2 Hard left:");Serial.println(sensorPosition, DEC);
       
     } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_OUTER_LEFT]){
       sensorPosition = SENSOR_POS_16P;
-      Serial.print("2 Hard left:");Serial.println(sensorPosition, DEC);
+      Serial.print("B2 Hard left:");Serial.println(sensorPosition, DEC);
       
     } else if(sensorValues[SENSOR_INNER_LEFT] && sensorValues[SENSOR_OUTER_LEFT]){
       sensorPosition = SENSOR_POS_MIN;
-      Serial.print("2 Hard left:");Serial.println(sensorPosition, DEC);
+      Serial.print("B2 Hard left:");Serial.println(sensorPosition, DEC);
       
     } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_RIGHT]){
       sensorPosition = SENSOR_POS_MAX;
-      Serial.print("2 Hard right:");Serial.println(sensorPosition, DEC);
+      Serial.print("B2 Hard right:");Serial.println(sensorPosition, DEC);
       
     } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_OUTER_RIGHT]){
       sensorPosition = SENSOR_POS_MAX;
-      Serial.print("2 Hard right:");Serial.println(sensorPosition, DEC);
+      Serial.print("B2 Hard right:");Serial.println(sensorPosition, DEC);
     } else if(sensorValues[SENSOR_INNER_RIGHT] && sensorValues[SENSOR_OUTER_RIGHT]){
       sensorPosition = SENSOR_POS_MAX;
-      Serial.print("2 Hard right:");Serial.println(sensorPosition, DEC);      
+      Serial.print("B2 Hard right:");Serial.println(sensorPosition, DEC);      
     }
-  } else if(numSensorHits >= 3){
+  } else if(numSensorHits == 3){
     // intersection or end zone
     sensorPosition = SENSOR_POS_CENTER;
     if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_LEFT] && sensorValues[SENSOR_INNER_RIGHT]){
       sensorPosition = SENSOR_POS_CENTER;
-      Serial.print("3+ Perpendicular line or end solid shape:");Serial.println(sensorPosition, DEC);      
+      Serial.print("B3+ Perpendicular line or end solid shape:");Serial.println(sensorPosition, DEC);      
     } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_LEFT] && sensorValues[SENSOR_OUTER_LEFT]){
       sensorPosition = SENSOR_POS_MIN;
-      Serial.print("3 Hard left:"); Serial.println(sensorPosition, DEC);
+      Serial.print("B3 Hard left:"); Serial.println(sensorPosition, DEC);
     }  else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_RIGHT] && sensorValues[SENSOR_OUTER_RIGHT]){
       sensorPosition = SENSOR_POS_MAX;
-      Serial.print("3 Hard right:");Serial.println(sensorPosition, DEC);
+      Serial.print("B3 Hard right:");Serial.println(sensorPosition, DEC);
     } else {
       sensorPosition = SENSOR_POS_CENTER;
-      Serial.println("3+ Perpendicular line or end solid shape:"); Serial.println(sensorPosition, DEC);
+      Serial.print("B3 Perpendicular line or end solid shape:"); Serial.println(sensorPosition, DEC);
     }
-
-    return sensorPosition;    
+  } else if(numSensorHits == 4){
+      sensorPosition = SENSOR_POS_CENTER;
+      Serial.print("B4 Perpendicular line or end solid shape:"); Serial.println(sensorPosition, DEC);
+  } else if(numSensorHits == 5){
+      sensorPosition = SENSOR_POS_CENTER;
+      Serial.print("B5 Perpendicular line or end solid shape:"); Serial.println(sensorPosition, DEC);
   }
-
 }
+
+
+
+
 
 void setupQwiicMotorDriver(){
   //***** Configure the Motor Driver's Settings *****//
@@ -407,7 +445,7 @@ void setupQwiicMotorDriver(){
   //  Check to make sure the driver is done looking for peripherals before beginning
   Serial.print("Waiting for enumeration...");
   while ( myMotorDriver.ready() == false );
-  Serial.println("Done.");
+  Serial.println("QWIIC motor driver ready.");
   Serial.println();
 
   //*****Set application settings and enable driver*****//
@@ -424,7 +462,7 @@ void setupQwiicMotorDriver(){
     ; // Do nothing until driver is available
 
   myMotorDriver.enable(); //Enables the output driver hardware
-
+  Serial.println("QWIIC motor driver setup complete.");
 }
 
 
