@@ -99,14 +99,6 @@ const uint8_t maxspeedb = 150;
 const uint8_t basespeeda = 100;
 const uint8_t basespeedb = 100;
 
-/*************************************************************************
-* DRV8835 GPIO pins declaration
-*************************************************************************/
-int mode = 8;
-int aphase = 9;
-int aenbl = 6;
-int bphase = 5;
-int benbl = 3;
 
 /*************************************************************************
 * Buttons pins declaration
@@ -166,7 +158,9 @@ boolean isCalibrateButtonPressed(){
 }
 
 void motorsAllStop(){
-  motorControllerDRV8835(0, 0);  //stop the motors
+  //TODO put hardware specific code here
+  myMotorDriver.setDrive( LEFT_MOTOR, DIR_FW, 0);
+  myMotorDriver.setDrive( RIGHT_MOTOR, DIR_FW, 0);
 }
 
 void setupReadouts(){
@@ -180,17 +174,6 @@ void setupMotors(){
 
 }
 
-// Legacy No plans for using this motor driver.
-void setupDRV8835MotorDriver(){
-  pinMode(mode, OUTPUT);
-  pinMode(aphase, OUTPUT);
-  pinMode(aenbl, OUTPUT);
-
-  pinMode(bphase, OUTPUT);
-  pinMode(benbl, OUTPUT);
-  digitalWrite(mode,HIGH);  //one of the two control interfaces (simplified drive/brake operation)
-
-}
 
 
 void setupLineSensors(){
@@ -245,34 +228,6 @@ boolean isStartButtonPressed(){
   return digitalRead(pinButtonStart) == HIGH;
 }
 
-/*************************************************************************
-*
-  Function Name: forward_brake
-**************************************************************************
-* Summary:
-* This is the control interface function of the motor driver. As shown in
-* the Pololu's documentation of the DRV8835 motor driver, when the MODE is
-* equal to 1 (the pin is set to output HIGH), the robot will go forward at
-* the given speed specified by the parameters. The phase pins control the
-* direction of the spin, and the enbl pins control the speed of the motor.
-* 
-* A warning though, depending on the wiring, you might need to change the 
-* aphase and bphase from LOW to HIGH, in order for the robot to spin forward. 
-* 
-* Parameters:
-* int posa: int value from 0 to 255; controls the speed of the motor A.
-*  int posb: int value from 0 to 255; controls the speed of the motor B.
-* 
-* Returns:
-* none
-*************************************************************************/
-void motorControllerDRV8835(int posa, int posb) {
-  //set the appropriate values for aphase and bphase so that the robot goes straight
-  digitalWrite(aphase, LOW);
-  digitalWrite(bphase, LOW);
-  analogWrite(aenbl, posa);
-  analogWrite(benbl, posb);
-}
 
 // Hardware used is hidden
 uint16_t getSensorArrayPosition(){
@@ -299,8 +254,9 @@ uint16_t getSensorArrayPosition(){
 *  none
 *************************************************************************/
 void PIDControl() {
-  uint16_t position = getSensorArrayPosition();
-  int error = CENTER_LINE_VAL - position;     //3500 is the ideal position (the centre)
+
+  uint16_t position = getSensorArrayPosition(); // Returns value between 0-7000
+  int error = CENTER_LINE_VAL - position;       // 3500 is the ideal position (the centre)
 
   P = error;
   I = I + error;
@@ -313,21 +269,36 @@ void PIDControl() {
   int motorspeeda = basespeeda + motorspeed;
   int motorspeedb = basespeedb - motorspeed;
 
-  if (motorspeeda > maxspeeda) {
-    motorspeeda = maxspeeda;
+  // Make sure values are within min and max bounds
+  motorspeeda = getMotorSpeedWithinBounds(motorspeeda);
+  motorspeedb = getMotorSpeedWithinBounds(motorspeedb);
+
+  motorController(motorspeeda, motorspeedb);
+}
+
+int getMotorSpeedWithinBounds(int speed){
+  int newSpeed = speed;
+  if (speed > maxspeedb) {
+      newSpeed = maxspeedb;
   }
-  if (motorspeedb > maxspeedb) {
-    motorspeedb = maxspeedb;
+  else if (speed < 0) {
+    newSpeed = 0;
   }
 
-  if (motorspeeda < 0) {
-    motorspeeda = 0;
-  }
-  if (motorspeedb < 0) {
-    motorspeedb = 0;
-  }
-  motorControllerDRV8835(motorspeeda, motorspeedb);
+  return newSpeed;
 }
+
+void motorController(uint16_t motorSpeedA, uint16_t motorSpeedB){
+
+  qwiicMotorController(motorSpeedA, motorSpeedB);
+}
+
+
+void qwiicMotorController(uint16_t motorSpeedA, uint16_t motorSpeedB){
+  myMotorDriver.setDrive( LEFT_MOTOR, DIR_FW,   motorSpeedA);
+  myMotorDriver.setDrive( RIGHT_MOTOR, DIR_FW,  motorSpeedB);
+}
+
 
 
 int getOsoyooSensorPosition(){
