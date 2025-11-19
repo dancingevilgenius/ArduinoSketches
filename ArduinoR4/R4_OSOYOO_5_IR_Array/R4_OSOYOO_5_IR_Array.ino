@@ -27,7 +27,7 @@ int sensorPosition = SENSOR_POS_CENTER; // A single value used represent line re
 // Vars for IR/Color sensor array
 const uint8_t SensorCount = 5;
 int irPins[SensorCount] = {A4, A3, A2, A1,A0};
-uint16_t sensorValues[SensorCount]; // Store sensor array boolean states in here.
+//uint16_t sensorValues[SensorCount]; // Store sensor array boolean states in here.
 
 
 void setup() {
@@ -74,6 +74,10 @@ void handleMotors(int position){
 
 int getOsoyooSensorPosition(boolean triggerOnWhite){
 
+  //const uint8_t SensorCount = 5;
+  uint16_t sensorValues[SensorCount]; // Store sensor array boolean states in here.
+
+
   // Get the raw binary values from the 5 sensor array
   int numSensorHits=0;
   for(int i=0 ; i<SensorCount ;  i++){
@@ -88,14 +92,14 @@ int getOsoyooSensorPosition(boolean triggerOnWhite){
     }        
   }
 
-  sensorPosition = getOsoyooPosition(numSensorHits);
+  sensorPosition = getOsoyooPositionByArrayValues(numSensorHits, sensorValues);
 
 
   return sensorPosition;    
 }
 
 
-int getOsoyooPosition(int numSensorHits){
+int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[]){
     if(numSensorHits == 0){
       // No sensors, real bad
       Serial.println("zero sensor hits. Bad if we are on a track racing.");
