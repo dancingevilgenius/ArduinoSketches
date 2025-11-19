@@ -34,19 +34,25 @@ void setup() {
   Serial.begin(115200);
 
 
+  setupOsoyooSensorArray();
+
+
+  pinMode(ledPin, OUTPUT);     // set ledPin as OUTPUT
+}
+
+void setupOsoyooSensorArray(){
   pinMode(A0, INPUT);
   pinMode(A1, INPUT);
   pinMode(A2, INPUT);
   pinMode(A3, INPUT);
   pinMode(A4, INPUT);
-
-  pinMode(ledPin, OUTPUT);     // set ledPin as OUTPUT
 }
+
 
 void loop() {
 
   sensorPosition = getSensorPosition();
-  handleMotors(sensorPosition);
+  //handleMotors(sensorPosition);
   delay(2000);
   
 }
