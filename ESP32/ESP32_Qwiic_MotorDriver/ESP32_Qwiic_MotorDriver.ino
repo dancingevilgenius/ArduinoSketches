@@ -75,34 +75,42 @@ void loop()
   while (digitalRead(8) == 0); //Hold if jumper is placed between pin 8 and ground
   */
 
-  //***** Operate the Motor Driver *****//
-  //  This walks through all 34 motor positions driving them forward and back.
-  //  It uses .setDrive( motorNum, direction, level ) to drive the motors.
 
-  //Smoothly move one motor up to speed and back (drive level 0 to 255)
-  for (int i = 0; i < 256; i++)
-  {
-    myMotorDriver.setDrive( LEFT_MOTOR, DIR_FW, i);
-    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_FW, 20 + (i / 2));
-    delay(5);
-  }
-  for (int i = 255; i >= 0; i--)
-  {
-    myMotorDriver.setDrive( LEFT_MOTOR, DIR_FW, i);
-    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_FW, 20 + (i / 2));
-    delay(5);
-  }
-  //Smoothly move the other motor up to speed and back
-  for (int i = 0; i < 256; i++)
-  {
-    myMotorDriver.setDrive( LEFT_MOTOR, DIR_RV, 20 + (i / 2));
-    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_RV, i);
-    delay(5);
-  }
-  for (int i = 255; i >= 0; i--)
-  {
-    myMotorDriver.setDrive( LEFT_MOTOR, DIR_RV, 20 + (i / 2));
-    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_RV, i);
-    delay(5);
-  }
+  motorsTestForwardAndReverse();
+
 }
+
+//***** Operate the Motor Driver *****//
+//  This walks through all 34 motor positions driving them forward and back.
+//  It uses .setDrive( motorNum, direction, level ) to drive the motors.
+void motorsTestForwardAndReverse(){
+  //Smoothly drive both motor FWD up to speed and back (drive level 0 to 255)
+  for (int i = 0; i < 256; i++)
+  {
+    myMotorDriver.setDrive( LEFT_MOTOR, DIR_FW, i);
+    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_FW, 20 + (i / 2));
+    delay(5);
+  }
+  for (int i = 255; i >= 0; i--)
+  {
+    myMotorDriver.setDrive( LEFT_MOTOR, DIR_FW, i);
+    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_FW, 20 + (i / 2));
+    delay(5);
+  }
+  
+  //Smoothly drive both motors REV up to speed and back
+  for (int i = 0; i < 256; i++)
+  {
+    myMotorDriver.setDrive( LEFT_MOTOR, DIR_RV, 20 + (i / 2));
+    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_RV, i);
+    delay(5);
+  }
+  for (int i = 255; i >= 0; i--)
+  {
+    myMotorDriver.setDrive( LEFT_MOTOR, DIR_RV, 20 + (i / 2));
+    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_RV, i);
+    delay(5);
+  }
+  
+}
+
