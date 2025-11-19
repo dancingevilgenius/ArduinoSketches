@@ -51,7 +51,7 @@ void setupOsoyooSensorArray(){
 
 void loop() {
 
-  sensorPosition = getSensorPosition();
+  sensorPosition = getOsoyooSensorPosition();
   //handleMotors(sensorPosition);
   delay(2000);
   
@@ -71,7 +71,7 @@ void handleMotors(int position){
 }
 
 
-int getSensorPosition(){
+int getOsoyooSensorPosition(){
 
   // Get the raw binary values from the 5 sensor array
   int numSensorHits=0;
