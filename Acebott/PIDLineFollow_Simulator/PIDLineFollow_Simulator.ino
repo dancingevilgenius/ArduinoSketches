@@ -1,7 +1,7 @@
 
 // Sensor Array defined below
-#define SENSOR_OUTER_LEFT   1
-#define SENSOR_INNER_LEFT   0
+#define SENSOR_OUTER_LEFT   0
+#define SENSOR_INNER_LEFT   1
 #define SENSOR_CENTER       2
 #define SENSOR_INNER_RIGHT  3
 #define SENSOR_OUTER_RIGHT   4
@@ -11,8 +11,8 @@
 #define SENSOR_POS_MIN 0
 #define SENSOR_POS_CENTER 3500
 #define SENSOR_POS_MAX 7000
-#define SENSOR_POS_16P    1166
-#define SENSOR_POS_32P    2331
+#define SENSOR_POS_16P    1166 // 1166
+#define SENSOR_POS_32P    2331 // 2331
 #define SENSOR_POS_50P    3500
 #define SENSOR_POS_66P    4277
 #define SENSOR_POS_83P    5833
@@ -82,6 +82,7 @@ void loop() {
   delay(100);
   */
   PIDControl();
+  delay(500);
 }
 
 
@@ -98,6 +99,13 @@ void PIDControl() {
   int motorspeed = P * Kp + I * Ki + D * Kd;  //calculate the correction needed to be applied to the speed
 
 
+  Serial.print("position:");
+  Serial.print(position);
+  Serial.print(",");
+  Serial.print("center:");
+  Serial.println(center_line);
+
+
   int motorspeeda = basespeeda + motorspeed;
   int motorspeedb = basespeedb - motorspeed;
 
@@ -106,16 +114,20 @@ void PIDControl() {
   motorspeeda = getMotorSpeedWithinBounds(motorspeeda);
   motorspeedb = getMotorSpeedWithinBounds(motorspeedb);
 
-
-  Serial.print("P/E:");Serial.print(error);
-  Serial.print(" I:");Serial.print(I);
-  Serial.print(" D:");Serial.print(D);
-  Serial.print(" spdA:");Serial.print(motorspeeda);
-  Serial.print(" spdB:");Serial.print(motorspeedb);
-  Serial.println();
+  
 
 
   motorController(motorspeeda, motorspeedb);
+}
+
+
+void printAllPIDVars(int motorspeeda, int motorspeedb){
+  // Serial.print("P/E:");Serial.print(error);
+  // Serial.print(" I:");Serial.print(I);
+  // Serial.print(" D:");Serial.print(D);
+  // Serial.print(" spdA:");Serial.print(motorspeeda);
+  // Serial.print(" spdB:");Serial.print(motorspeedb);
+  // Serial.println();
 }
 
 void motorController(uint16_t motorSpeedA, uint16_t motorSpeedB){
@@ -140,7 +152,7 @@ int getMotorSpeedWithinBounds(int speed){
 
 
 int getSensorArrayPosition(){
-  boolean triggerOnWhite = false;
+  boolean triggerOnWhite = true;
   return getOsoyooSensorPosition(triggerOnWhite);
 }
 
@@ -175,6 +187,7 @@ int getOsoyooSensorPosition(boolean triggerOnWhite){
 int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[], boolean printDebug){
     if(numSensorHits == 0){
       // No sensors, real bad
+      sensorPosition = SENSOR_POS_CENTER; // FOR TESTING ONLY -CARLOS
       if(printDebug){
         Serial.println("zero sensor hits. Bad if we are on a track racing.");
       }
