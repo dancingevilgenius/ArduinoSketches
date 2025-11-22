@@ -82,7 +82,7 @@ void loop() {
   delay(100);
   */
   PIDControl();
-  delay(500);
+  delay(100);
 }
 
 
@@ -96,18 +96,20 @@ void PIDControl() {
   D = error - lastError;
 
   lastError = error;
-  int motorspeed = P * Kp + I * Ki + D * Kd;  //calculate the correction needed to be applied to the speed
+  int pidCorrection = P * Kp + I * Ki + D * Kd;  //calculate the correction needed to be applied to the speed
 
 
-  Serial.print("position:");
-  Serial.print(position);
+  //Serial.print("error:");
+  //Serial.print(SENSOR_POS_CENTER + error);
+  Serial.print("PID:");
+  Serial.print(SENSOR_POS_CENTER + pidCorrection);
   Serial.print(",");
   Serial.print("center:");
   Serial.println(center_line);
 
 
-  int motorspeeda = basespeeda + motorspeed;
-  int motorspeedb = basespeedb - motorspeed;
+  int motorspeeda = basespeeda + pidCorrection;
+  int motorspeedb = basespeedb - pidCorrection;
 
 
   // Make sure values are within min and max bounds
