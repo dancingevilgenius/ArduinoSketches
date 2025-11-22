@@ -28,6 +28,32 @@ const uint8_t SensorCount = 5;
 uint16_t sensorValues[SensorCount];
 int irPins[SensorCount] = {32, 33, 34, 35,36};
 
+/*************************************************************************
+  PID control system variables 
+*************************************************************************/
+float Kp = 0.07;  //related to the proportional control term; change the value by trial - and-error(ex : 0.07).
+float Ki = 0.0008;  //related to the integral control term; change the value by trial-and-error (ex: 0.0008).
+float Kd = 0.6;  //related to the derivative control term; change the value by trial - and-error(ex : 0.6).
+int P;
+int I;
+int D;
+
+/*************************************************************************
+*
+  Global variables
+*************************************************************************/
+int lastError = 0;
+boolean onoff = false;
+
+/*************************************************************************
+* Motor speed variables (choose between 0 - no speed, and 255 - maximum speed)
+*************************************************************************/
+const uint8_t maxspeeda = 254;
+const uint8_t maxspeedb = 254;
+const uint8_t basespeeda = 150;
+const uint8_t basespeedb = 150;
+
+
 
 
 
@@ -45,6 +71,7 @@ void setup() {
 }
 
 void loop() {
+  /*
   position = random(0, 7000);
 
   Serial.print("position:");
@@ -53,9 +80,66 @@ void loop() {
   Serial.print("Variable_2:");
   Serial.println(center_line);
   delay(100);
+  */
+  PIDControl();
 }
 
-int getPosition(){
+
+void PIDControl() {
+
+  uint16_t position = getSensorArrayPosition(); // Returns value between 0-7000
+  int error = SENSOR_POS_CENTER - position;       // 3500 is the ideal position (the centre)
+
+  P = error;
+  I = I + error;
+  D = error - lastError;
+
+  lastError = error;
+  int motorspeed = P * Kp + I * Ki + D * Kd;  //calculate the correction needed to be applied to the speed
+
+
+  int motorspeeda = basespeeda + motorspeed;
+  int motorspeedb = basespeedb - motorspeed;
+
+
+  // Make sure values are within min and max bounds
+  motorspeeda = getMotorSpeedWithinBounds(motorspeeda);
+  motorspeedb = getMotorSpeedWithinBounds(motorspeedb);
+
+
+  Serial.print("P/E:");Serial.print(error);
+  Serial.print(" I:");Serial.print(I);
+  Serial.print(" D:");Serial.print(D);
+  Serial.print(" spdA:");Serial.print(motorspeeda);
+  Serial.print(" spdB:");Serial.print(motorspeedb);
+  Serial.println();
+
+
+  motorController(motorspeeda, motorspeedb);
+}
+
+void motorController(uint16_t motorSpeedA, uint16_t motorSpeedB){
+  // Stub to enable compile. Do nothing
+}
+
+
+int getMotorSpeedWithinBounds(int speed){
+  int newSpeed = speed;
+  if (speed > maxspeedb) {
+      newSpeed = maxspeedb;
+  }
+  else if (speed < 0) {
+    newSpeed = maxspeeda/5;
+  }
+
+  return newSpeed;
+}
+
+
+
+
+
+int getSensorArrayPosition(){
   boolean triggerOnWhite = false;
   return getOsoyooSensorPosition(triggerOnWhite);
 }
