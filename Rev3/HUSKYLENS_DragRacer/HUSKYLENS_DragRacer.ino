@@ -41,24 +41,53 @@ void setup() {
     HUSKYLENSResult result = huskylens.read();
 }
 
+bool raceEnded = false;
+
 void loop() {
         //Serial.println(F("###########"));
-        while (isHuskylensReady())
+        while (isHuskylensReady() && !raceEnded)
         {
             HUSKYLENSResult result = huskylens.read();
+            
             //printResult(result);
             loopLineFollow(result);
             delay(1000);
         }    
+
+    Serial.println("Exiting loop()");
+    delay(500);
+    exit(200);
 }
 
-void loopLineFollow(HUSKYLENSResult result){
+boolean isEndOfRace(){
+    if(!huskylens.available()) {
+        Serial.print(raceEnded);
+        Serial.print(" - ");
+        Serial.println(F("No more line to follow. End of Race."));
+        raceEnded++;
+    }
+}
+
+void loopLineFollow(HUSKYLENSResult result)
+{
+    // if(isEndOfRace()){
+    //     // Visual feedback
+    //     // Audible feedback
+    //     // Stop Motors
+    //     exit(3);
+    // }
 
     int oX = result.xOrigin;
     int oY = result.yOrigin;
 
     int tX = result.xTarget;
     int tY = result.yTarget;
+    if((tY > 100) && (tX > 100) && (tX < 220)){
+        Serial.print("End of race condition found. tY:"); Serial.println(tY);
+        raceEnded = true;
+        delay(250);
+        return;
+    }
 
     Serial.println(String()+F("Arrow:xOrigin=")+oX+F(",yOrigin=")+oY+F(",xTarget=")+tY+F(",yTarget=")+tY +F(",ID=")+result.ID);
 }
@@ -66,6 +95,7 @@ void loopLineFollow(HUSKYLENSResult result){
 boolean isHuskylensReady(){
     HUSKYLENSResult result = huskylens.read();
     boolean ready=true;
+
     if (!huskylens.request()) {
         Serial.println(F("Fail to request data from HUSKYLENS, recheck the connection!"));
         ready = false;
