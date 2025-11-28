@@ -37,6 +37,8 @@ void setup() {
         Serial.println(F("2.Please recheck the connection."));
         delay(1000);
     }
+
+    HUSKYLENSResult result = huskylens.read();
 }
 
 void loop() {
@@ -44,12 +46,25 @@ void loop() {
         while (isHuskylensReady())
         {
             HUSKYLENSResult result = huskylens.read();
-            printResult(result);
+            //printResult(result);
+            loopLineFollow(result);
             delay(1000);
         }    
 }
 
+void loopLineFollow(HUSKYLENSResult result){
+
+    int oX = result.xOrigin;
+    int oY = result.yOrigin;
+
+    int tX = result.xTarget;
+    int tY = result.yTarget;
+
+    Serial.println(String()+F("Arrow:xOrigin=")+oX+F(",yOrigin=")+oY+F(",xTarget=")+tY+F(",yTarget=")+tY +F(",ID=")+result.ID);
+}
+
 boolean isHuskylensReady(){
+    HUSKYLENSResult result = huskylens.read();
     boolean ready=true;
     if (!huskylens.request()) {
         Serial.println(F("Fail to request data from HUSKYLENS, recheck the connection!"));
@@ -62,6 +77,9 @@ boolean isHuskylensReady(){
     else if(!huskylens.available()) {
         Serial.println(F("No block or arrow appears on the screen!"));
         ready = false;
+    }
+    else if (result.command == COMMAND_RETURN_BLOCK){
+        Serial.println("Wrong mode for line following. Set to 'Line Tracking'");   
     }
 
     return ready;
