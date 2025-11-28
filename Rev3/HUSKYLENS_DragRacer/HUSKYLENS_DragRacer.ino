@@ -30,49 +30,35 @@ void printResult(HUSKYLENSResult result);
 void setup() {
     Serial.begin(115200);
     mySerial.begin(9600);
-    Serial.println("setup() started -----------");
-
     while (!huskylens.begin(mySerial))
     {
         Serial.println(F("Begin failed!"));
         Serial.println(F("1.Please recheck the \"Protocol Type\" in HUSKYLENS (General Settings>>Protocol Type>>Serial 9600)"));
         Serial.println(F("2.Please recheck the connection."));
-        delay(2000);
-    }
-
-    // if(!huskylens.isLearned()) {
-
-    //     Serial.println("Nothing learned, press learn button on HUSKYLENS to calibrate line! Exiting program.");
-    //     exit(1);
-    // }
-
-    while(!huskylens.request()) {
-        Serial.println(F("Fail to request data from HUSKYLENS, recheck the connection!"));
-        delay(2000);
-    }
-
-
-    HUSKYLENSResult result = huskylens.read();
-    if (result.command == COMMAND_RETURN_BLOCK){
-        Serial.println("Huskylens in RETURN_BLOCK mode. Change to Line Follow Mode. Exiting program");
-        exit(2);
-    }
-
-    while(!huskylens.available()) {
-        Serial.println(F("No block or arrow appears on the screen!"));
         delay(1000);
     }
-
 }
 
 void loop() {
-    //Serial.println(F("###########"));
-    while (huskylens.available())
+    if (!huskylens.request()) {
+        Serial.println(F("Fail to request data from HUSKYLENS, recheck the connection!"));
+    }
+    else if(!huskylens.isLearned()){
+        Serial.println(F("Nothing learned, press learn button on HUSKYLENS to learn one!"));
+    }
+    else if(!huskylens.available()) {
+        Serial.println(F("No block or arrow appears on the screen!"));
+    }
+    else
     {
-        HUSKYLENSResult result = huskylens.read();
-        printResult(result);
-        delay(1000);
-    }    
+        //Serial.println(F("###########"));
+        while (huskylens.available())
+        {
+            HUSKYLENSResult result = huskylens.read();
+            printResult(result);
+            delay(1000);
+        }    
+    }
 }
 
 void printResult(HUSKYLENSResult result){
