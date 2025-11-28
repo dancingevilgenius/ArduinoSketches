@@ -40,25 +40,31 @@ void setup() {
 }
 
 void loop() {
-    if (!huskylens.request()) {
-        Serial.println(F("Fail to request data from HUSKYLENS, recheck the connection!"));
-    }
-    else if(!huskylens.isLearned()){
-        Serial.println(F("Nothing learned, press learn button on HUSKYLENS to learn one!"));
-    }
-    else if(!huskylens.available()) {
-        Serial.println(F("No block or arrow appears on the screen!"));
-    }
-    else
-    {
         //Serial.println(F("###########"));
-        while (huskylens.available())
+        while (isHuskylensReady())
         {
             HUSKYLENSResult result = huskylens.read();
             printResult(result);
             delay(1000);
         }    
+}
+
+boolean isHuskylensReady(){
+    boolean ready=true;
+    if (!huskylens.request()) {
+        Serial.println(F("Fail to request data from HUSKYLENS, recheck the connection!"));
+        ready = false;
     }
+    else if(!huskylens.isLearned()){
+        Serial.println(F("Nothing learned, press learn button on HUSKYLENS to learn one!"));
+        ready = false;
+    }
+    else if(!huskylens.available()) {
+        Serial.println(F("No block or arrow appears on the screen!"));
+        ready = false;
+    }
+
+    return ready;
 }
 
 void printResult(HUSKYLENSResult result){
