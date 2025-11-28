@@ -1,0 +1,28 @@
+TOP LEFT CORNER:		0	0
+TOP RIGHT CORNER:		320	0
+BOTTOM RIGHT CORNER:	320	240
+BOTTOM LEFT CORNER:		0	240
+
+CENTER_X				160
+TOP_Y					0
+BOTTOM_Y				240
+
+
+
+STRAIGHT
+Arrow:xOrigin=216,yOrigin=72,xTarget=208,yTarget=34,ID=1
+
+STRAIGHT FULL H LENGTH
+Arrow:xOrigin=136,yOrigin=228,xTarget=136,yTarget=0,ID=1
+
+
+
+DIAGONAL RIGHT
+Arrow:xOrigin=48,yOrigin=238,xTarget=64,yTarget=12,ID=1
+
+
+//DIAGONAL LEFT
+Arrow:xOrigin=160,yOrigin=238,xTarget=8,yTarget=52,ID=1
+
+// DIAGONAL RIGHT ORIGIN LOWER LEFT
+Arrow:xOrigin=224,yOrigin=230,xTarget=304,yTarget=114,ID=1
