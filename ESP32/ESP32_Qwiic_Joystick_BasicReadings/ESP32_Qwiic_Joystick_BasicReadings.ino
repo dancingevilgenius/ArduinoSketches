@@ -32,7 +32,7 @@
 JOYSTICK joystick; //Create instance of this object
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("Qwiic Joystick Example");
 
   if(joystick.begin() == false)

@@ -28,7 +28,7 @@ void setup()
   Serial.begin(115200);
   Serial.println("SparkFun Qwiic Alphanumeric - Example 1: Print String");
 
-  Wire.begin(); //Join I2C bus
+  Wire1.begin(); //Join I2C bus
 
   if (display.begin() == false)
   {
@@ -37,7 +37,7 @@ void setup()
   }
   Serial.println("Display acknowledged.");
 
-  display.print("Milk");
+  display.print("YOLO!");
 }
 
 void loop()

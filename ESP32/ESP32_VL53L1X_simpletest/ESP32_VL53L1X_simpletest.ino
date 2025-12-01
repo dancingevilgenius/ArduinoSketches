@@ -7,7 +7,10 @@ Adafruit_VL53L1X vl53 = Adafruit_VL53L1X(XSHUT_PIN, IRQ_PIN);
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial) delay(10);
+  while (!Serial) {
+    delay(1000);
+    Serial.println("Serial not ready.");
+  }
 
   Serial.println(F("Adafruit VL53L1X sensor demo"));
 

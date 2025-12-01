@@ -8,6 +8,8 @@
 
 #include <Wire.h>
 
+
+
 TwoWire Wire1(SDA,SCL); //Intialize Wire1 class (SDA, SCL)
 
 void setup()

@@ -122,7 +122,7 @@ void notify()
        Serial.print(" y="); Serial.print(Ps3.data.analog.stick.ry, DEC);
        Serial.println();
 
-       long rjsX = map(Ps3.data.analog.stick.lx, 127, 127, 100, -100);
+       long rjsX = map(Ps3.data.analog.stick.lx, 127, 127, 100, -100);  
        long rjsY = map(Ps3.data.analog.stick.ly, 127, 127, 100, -100);
    }
    */
@@ -261,7 +261,7 @@ void setup()
     Ps3.attach(notify);
     Ps3.attachOnConnect(onConnect);
 
-    Ps3.begin(PS3_BLUE_BLACK_1);
+    Ps3.begin(PS3_BLACK_BLACK_2);
 
     Ps3.setPlayer(player);
 

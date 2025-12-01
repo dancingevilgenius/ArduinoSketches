@@ -31,9 +31,9 @@ int irPins[SensorCount] = {32, 33, 34, 35,36};
 /*************************************************************************
   PID control system variables 
 *************************************************************************/
-float Kp = 0.07;  //related to the proportional control term; change the value by trial - and-error(ex : 0.07).
-float Ki = 0.0008;  //related to the integral control term; change the value by trial-and-error (ex: 0.0008).
-float Kd = 0.6;  //related to the derivative control term; change the value by trial - and-error(ex : 0.6).
+float Kp = 0.05;  //related to the proportional control term; change the value by trial - and-error(ex : 0.07).
+float Ki = 0.0004;  //related to the integral control term; change the value by trial-and-error (ex: 0.0008).
+float Kd = 1.1;  //related to the derivative control term; change the value by trial - and-error(ex : 0.6).
 int P;
 int I;
 int D;
@@ -99,13 +99,22 @@ void PIDControl() {
   int pidCorrection = P * Kp + I * Ki + D * Kd;  //calculate the correction needed to be applied to the speed
 
 
+    float t = millis()/1000.0;
+    
+    // write them all to console with tabs in between them
+    Serial.print(t);         // first variable is program time in seconds. This can be plotted on an x-axis!
+    Serial.print("\t");
+    Serial.print(SENSOR_POS_CENTER );
+    Serial.print("\t");      // this last "\t" isn't required, but doesn't hurt
+    Serial.println(SENSOR_POS_CENTER + pidCorrection); // third varible is cos(t). make sure to finish with a println!
+
   //Serial.print("error:");
   //Serial.print(SENSOR_POS_CENTER + error);
-  Serial.print("PID:");
-  Serial.print(SENSOR_POS_CENTER + pidCorrection);
-  Serial.print(",");
-  Serial.print("center:");
-  Serial.println(center_line);
+  //Serial.print("PID\t");
+  //Serial.print()SENSOR_POS_CENTER + pidCorrection;
+  //Serial.print(" ");
+  //Serial.print("center\t");
+  //Serial.println(center_line);
 
 
   int motorspeeda = basespeeda + pidCorrection;
