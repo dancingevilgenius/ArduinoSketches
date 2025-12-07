@@ -104,98 +104,9 @@ void notify()
         Serial.println("Released the Playstation button");
 
 
-    //---------------- Analog stick value events ---------------
-    /*
-   if( abs(Ps3.event.analog_changed.stick.lx) + abs(Ps3.event.analog_changed.stick.ly) > 2 ){
-       Serial.print("Moved the left stick:");
-       Serial.print(" x="); Serial.print(Ps3.data.analog.stick.lx, DEC);
-       Serial.print(" y="); Serial.print(Ps3.data.analog.stick.ly, DEC);
-       Serial.println();
-
-       long ljsX = map(Ps3.data.analog.stick.lx, 127, 127, 100, -100);
-       long ljsY = map(Ps3.data.analog.stick.ly, 127, 127, 100, -100);
-    }
-
-   if( abs(Ps3.event.analog_changed.stick.rx) + abs(Ps3.event.analog_changed.stick.ry) > 2 ){
-       Serial.print("Moved the right stick:");
-       Serial.print(" x="); Serial.print(Ps3.data.analog.stick.rx, DEC);
-       Serial.print(" y="); Serial.print(Ps3.data.analog.stick.ry, DEC);
-       Serial.println();
-
-       long rjsX = map(Ps3.data.analog.stick.lx, 127, 127, 100, -100);
-       long rjsY = map(Ps3.data.analog.stick.ly, 127, 127, 100, -100);
-   }
-   */
    printJoystickRawValues();
 
-   //--------------- Analog D-pad button events ----------------
-   /*
-   if( abs(Ps3.event.analog_changed.button.up) ){
-       Serial.print("Pressing the up button: ");
-       Serial.println(Ps3.data.analog.button.up, DEC);
-   }
 
-   if( abs(Ps3.event.analog_changed.button.right) ){
-       Serial.print("Pressing the right button: ");
-       Serial.println(Ps3.data.analog.button.right, DEC);
-   }
-
-   if( abs(Ps3.event.analog_changed.button.down) ){
-       Serial.print("Pressing the down button: ");
-       Serial.println(Ps3.data.analog.button.down, DEC);
-   }
-
-   if( abs(Ps3.event.analog_changed.button.left) ){
-       Serial.print("Pressing the left button: ");
-       Serial.println(Ps3.data.analog.button.left, DEC);
-   }
-   */
-
-   //---------- Analog shoulder/trigger button events ----------
-   /*
-   if( abs(Ps3.event.analog_changed.button.l1)){
-       Serial.print("Pressing the left shoulder button: ");
-       Serial.println(Ps3.data.analog.button.l1, DEC);
-   }
-
-   if( abs(Ps3.event.analog_changed.button.r1) ){
-       Serial.print("Pressing the right shoulder button: ");
-       Serial.println(Ps3.data.analog.button.r1, DEC);
-   }
-
-   if( abs(Ps3.event.analog_changed.button.l2) ){
-       Serial.print("Pressing the left trigger button: ");
-       Serial.println(Ps3.data.analog.button.l2, DEC);
-   }
-
-   if( abs(Ps3.event.analog_changed.button.r2) ){
-       Serial.print("Pressing the right trigger button: ");
-       Serial.println(Ps3.data.analog.button.r2, DEC);
-   }
-   */
-
-   //---- Analog cross/square/triangle/circle button events ----
-   /*
-   if( abs(Ps3.event.analog_changed.button.triangle)){
-       Serial.print("Pressing the triangle button: ");
-       Serial.println(Ps3.data.analog.button.triangle, DEC);
-   }
-
-   if( abs(Ps3.event.analog_changed.button.circle) ){
-       Serial.print("Pressing the circle button: ");
-       Serial.println(Ps3.data.analog.button.circle, DEC);
-   }
-
-   if( abs(Ps3.event.analog_changed.button.cross) ){
-       Serial.print("Pressing the cross button: ");
-       Serial.println(Ps3.data.analog.button.cross, DEC);
-   }
-
-   if( abs(Ps3.event.analog_changed.button.square) ){
-       Serial.print("Pressing the square button: ");
-       Serial.println(Ps3.data.analog.button.square, DEC);
-   }
-    */
 
    //---------------------- Battery events ---------------------
     //printBatteryStatus();
@@ -261,7 +172,7 @@ void setup()
     Ps3.attach(notify);
     Ps3.attachOnConnect(onConnect);
 
-    Ps3.begin(PS3_BLUE_BLACK_1);
+    Ps3.begin(PS3_BLACK_BLACK_1);
 
     Ps3.setPlayer(player);
 
