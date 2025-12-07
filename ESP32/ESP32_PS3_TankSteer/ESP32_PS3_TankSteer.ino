@@ -113,7 +113,8 @@ void notify()
         Serial.println("Released the Playstation button");
 
 
-   printJoystickRawValues();
+   //printJoystickRawValues();
+   handleJoystickChanges();
 
 
 
@@ -121,6 +122,44 @@ void notify()
     //printBatteryStatus();
 
 }
+
+
+void handleJoystickChanges(){
+    // Left Stick
+   if( abs(Ps3.event.analog_changed.stick.lx) + abs(Ps3.event.analog_changed.stick.ly) > 5 ){
+       Serial.print("Left stick:");
+
+        long rawX = Ps3.data.analog.stick.lx;
+        long rawY = Ps3.data.analog.stick.ly;
+
+        long jsX = map(rawX, -127, 127, -100, 100);
+        long jsY = map(rawY, 127, -127, -100, 100);
+
+        //Serial.print(" percentX="); Serial.print(jsX, DEC); Serial.print(" rawX="); Serial.print(rawX, DEC);
+        //Serial.print(" percentY="); Serial.print(jsY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
+        //Serial.print("percentX="); Serial.print(jsX, DEC); 
+        Serial.print(" percentY="); Serial.print(jsY, DEC); 
+        Serial.println();
+
+    }
+
+    // Right Stick
+   if( abs(Ps3.event.analog_changed.stick.rx) + abs(Ps3.event.analog_changed.stick.ry) > 5 ){
+        Serial.print("Right stick:");
+
+        long rawX = Ps3.data.analog.stick.rx;
+        long rawY = Ps3.data.analog.stick.ry;
+
+        long jsX = map(rawX, -127, 127, -100, 100);
+        long jsY = map(rawY, 127, -127, -100, 100);
+
+        //Serial.print(" percentX="); Serial.print(jsX, DEC); //Serial.print(" rawX="); Serial.print(rawX, DEC);
+        Serial.print(" percentY="); Serial.print(jsY, DEC); //Serial.print(" rawY="); Serial.print(rawY, DEC);
+        Serial.println();
+
+   }
+}
+
 
 void printJoystickRawValues(){
     // Left Stick
