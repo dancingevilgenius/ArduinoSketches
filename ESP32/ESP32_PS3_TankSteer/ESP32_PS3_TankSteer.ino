@@ -10,6 +10,15 @@
 int player = 0;
 int battery = 0;
 
+
+// Define the control inputs
+#define MOT_A1_PIN 2   // og 10
+#define MOT_A2_PIN 4   // og 9
+#define MOT_B1_PIN 17    // og 6
+#define MOT_B2_PIN 19    // og 5
+
+#define SLP_PIN 13
+
 void notify()
 {
     //--- Digital cross/square/triangle/circle button events ---
@@ -170,6 +179,8 @@ void setup()
     Serial.println("Setup() started");
     Serial.begin(115200);
 
+    setupMotors();
+
     Ps3.attach(notify);
     Ps3.attachOnConnect(onConnect);
 
@@ -181,6 +192,28 @@ void setup()
     Serial.print("Setting LEDs to player "); Serial.println(player, DEC);
     
     Serial.println("Setup() ended");
+}
+
+
+
+void setupMotors(void)
+{
+  // Set all the motor control inputs to OUTPUT
+  pinMode(MOT_A1_PIN, OUTPUT);
+  pinMode(MOT_A2_PIN, OUTPUT);
+  pinMode(MOT_B1_PIN, OUTPUT);
+  pinMode(MOT_B2_PIN, OUTPUT);
+
+  pinMode(SLP_PIN, OUTPUT);
+
+  // Turn off motors - Initial state
+  digitalWrite(MOT_A1_PIN, LOW);
+  digitalWrite(MOT_A2_PIN, LOW);
+  digitalWrite(MOT_B1_PIN, LOW);
+  digitalWrite(MOT_B2_PIN, LOW);
+
+  digitalWrite(SLP_PIN, HIGH);
+
 }
 
 void loop()
