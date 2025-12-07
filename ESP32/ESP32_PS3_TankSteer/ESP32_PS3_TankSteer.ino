@@ -115,7 +115,7 @@ void notify()
 
 void printJoystickRawValues(){
     // Left Stick
-   if( abs(Ps3.event.analog_changed.stick.lx) + abs(Ps3.event.analog_changed.stick.ly) > 2 ){
+   if( abs(Ps3.event.analog_changed.stick.lx) + abs(Ps3.event.analog_changed.stick.ly) > 5 ){
        Serial.print("Moved the left stick:");
 
         long rawX = Ps3.data.analog.stick.lx;
@@ -131,7 +131,7 @@ void printJoystickRawValues(){
     }
 
     // Right Stick
-   if( abs(Ps3.event.analog_changed.stick.rx) + abs(Ps3.event.analog_changed.stick.ry) > 2 ){
+   if( abs(Ps3.event.analog_changed.stick.rx) + abs(Ps3.event.analog_changed.stick.ry) > 5 ){
         Serial.print("Moved the right stick:");
 
         long rawX = Ps3.data.analog.stick.rx;
@@ -167,6 +167,7 @@ void onConnect(){
 
 void setup()
 {
+    Serial.println("Setup() started");
     Serial.begin(115200);
 
     Ps3.attach(notify);
@@ -179,7 +180,7 @@ void setup()
     //-------------------- Player LEDs -------------------
     Serial.print("Setting LEDs to player "); Serial.println(player, DEC);
     
-    Serial.println("Ready.");
+    Serial.println("Setup() ended");
 }
 
 void loop()
