@@ -1,8 +1,10 @@
 // Define the control inputs
-#define MOT_A1_PIN 12   // og 10
-#define MOT_A2_PIN 13   // og 9
-#define MOT_B1_PIN 5    // og 6
-#define MOT_B2_PIN 16    // og 5
+#define MOT_A1_PIN 2   // og 10
+#define MOT_A2_PIN 4   // og 9
+#define MOT_B1_PIN 17    // og 6
+#define MOT_B2_PIN 19    // og 5
+
+#define SLP_PIN 13
 
 void setup(void)
 {
@@ -12,11 +14,15 @@ void setup(void)
   pinMode(MOT_B1_PIN, OUTPUT);
   pinMode(MOT_B2_PIN, OUTPUT);
 
+  pinMode(SLP_PIN, OUTPUT);
+
   // Turn off motors - Initial state
   digitalWrite(MOT_A1_PIN, LOW);
   digitalWrite(MOT_A2_PIN, LOW);
   digitalWrite(MOT_B1_PIN, LOW);
   digitalWrite(MOT_B2_PIN, LOW);
+
+  digitalWrite(SLP_PIN, HIGH);
 
   // Initialize the serial UART at 9600 baud
   Serial.begin(115200);
