@@ -14,7 +14,7 @@ int battery = 0;
 // Define the control inputs
 #define MOT_A1_PIN 2   // og 10
 #define MOT_A2_PIN 4   // og 9
-#define MOT_B1_PIN 17    // og 6
+#define MOT_B1_PIN 18    // og 6
 #define MOT_B2_PIN 19    // og 5
 
 #define SLP_PIN 13
@@ -123,6 +123,7 @@ void notify()
 
 }
 
+#define MAX_JS_RANGE 255
 
 void handleJoystickChanges(){
     // Left Stick
@@ -135,10 +136,7 @@ void handleJoystickChanges(){
         long jsX = map(rawX, -127, 127, -100, 100);
         long jsY = map(rawY, 127, -127, -100, 100);
 
-        //Serial.print(" percentX="); Serial.print(jsX, DEC); Serial.print(" rawX="); Serial.print(rawX, DEC);
-        //Serial.print(" percentY="); Serial.print(jsY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
-        //Serial.print("percentX="); Serial.print(jsX, DEC); 
-        Serial.print(" percentY="); Serial.print(jsY, DEC); 
+        Serial.print(" percentY="); Serial.print(jsY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
         Serial.println();
 
     }
@@ -153,8 +151,7 @@ void handleJoystickChanges(){
         long jsX = map(rawX, -127, 127, -100, 100);
         long jsY = map(rawY, 127, -127, -100, 100);
 
-        //Serial.print(" percentX="); Serial.print(jsX, DEC); //Serial.print(" rawX="); Serial.print(rawX, DEC);
-        Serial.print(" percentY="); Serial.print(jsY, DEC); //Serial.print(" rawY="); Serial.print(rawY, DEC);
+        Serial.print(" percentY="); Serial.print(jsY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
         Serial.println();
 
    }
@@ -285,4 +282,48 @@ void loop()
         Serial.println("Pressing both the select and start buttons");
 
     delay(2000);
+}
+
+/// Set the current on a motor channel using PWM and directional logic.
+///
+/// \param pwm    PWM duty cycle ranging from -255 full reverse to 255 full forward
+/// \param IN1_PIN  pin number xIN1 for the given channel
+/// \param IN2_PIN  pin number xIN2 for the given channel
+void set_motor_pwm(int pwm, int IN1_PIN, int IN2_PIN)
+{
+  if (pwm < 0) {  // reverse speeds
+    analogWrite(IN1_PIN, -pwm);
+    digitalWrite(IN2_PIN, LOW);
+
+  } else { // stop or forward
+    digitalWrite(IN1_PIN, LOW);
+    analogWrite(IN2_PIN, pwm);
+  }
+}
+
+/// Set the current on both motors.
+///
+/// \param pwm_A  motor A PWM, -255 to 255
+/// \param pwm_B  motor B PWM, -255 to 255
+void set_motor_currents(int pwm_A, int pwm_B)
+{
+  set_motor_pwm(pwm_A, MOT_A1_PIN, MOT_A2_PIN);
+  set_motor_pwm(pwm_B, MOT_B1_PIN, MOT_B2_PIN);
+
+  // Print a status message to the console.
+  Serial.print("Set motor A PWM = ");
+  Serial.print(pwm_A);
+  Serial.print(" motor B PWM = ");
+  Serial.println(pwm_B);
+}
+
+/// Simple primitive for the motion sequence to set a speed and wait for an interval.
+///
+/// \param pwm_A  motor A PWM, -255 to 255
+/// \param pwm_B  motor B PWM, -255 to 255
+/// \param duration delay in milliseconds
+void spin_and_wait(int pwm_A, int pwm_B, int duration)
+{
+  set_motor_currents(pwm_A, pwm_B);
+  delay(duration);
 }
