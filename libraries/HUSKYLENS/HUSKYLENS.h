@@ -697,6 +697,7 @@ public:
     #define HUSKYLENS_FIRMWARE_VERSION "0.4.1"
     bool checkFirmwareVersion(){
        writeFirmwareVersion(HUSKYLENS_FIRMWARE_VERSION);
+       return true;
     }
 
      bool writeFirmwareVersion(String version)
