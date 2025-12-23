@@ -25,6 +25,12 @@
 #define PIN_RX 10
 #define PIN_TX 11
 
+// HUSKYLENS coordinate system
+#define MIN_X 0
+#define MAX_X 320
+#define MIN_Y 0
+#define MAX_Y 240
+
 
 HUSKYLENS huskylens;
 SoftwareSerial huskySerial(PIN_RX, PIN_TX); // RX, TX
@@ -55,7 +61,7 @@ void loop() {
     }
     else
     {
-        Serial.println(F("###########"));
+        //Serial.println(F("###########"));
         while (huskylens.available())
         {
             HUSKYLENSResult result = huskylens.read();
@@ -70,12 +76,20 @@ void printResult(HUSKYLENSResult result){
         exit(0);
     }
     else if (result.command == COMMAND_RETURN_ARROW){
-        int startX = result.xOrigin;
-        int startY = result.yOrigin;
-        int endX = result.xTarget;
-        int endY = result.yTarget;
+        long startX = result.xOrigin;
+        long startY = result.yOrigin;
+        long endX = result.xTarget;
+        long endY = result.yTarget;
 
-        Serial.println(String()+F("Arrow:startX=")+startX+F(",startY=")+startY+F(",endX=")+endX+F(",endY=")+endY+F(",ID=")+result.ID);
+        // Change coordinate system so that positive Y is top/up
+        endY = map(endY, MAX_Y, 0, 0, MAX_Y);
+
+        //Serial.println(String()+F("Arrow:startX=")+startX+F(",startY=")+startY+F(",endX=")+endX+F(",endY=")+endY+F(",ID=")+result.ID);
+        float percentX = 100.0*float(endX)/MAX_X;
+        float percentY = 100.0*float(endY)/MAX_Y;
+        Serial.print("pctX:"); Serial.print(percentX); Serial.print(" pctY:"); Serial.println(percentY);
+        delay(200);
+        //Serial.print("mapY:"); Serial.println(mapY);
     }
     else{
         Serial.println("Object unknown!");
