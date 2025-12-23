@@ -56,10 +56,16 @@ void loop() {
 
 void printResult(HUSKYLENSResult result){
     if (result.command == COMMAND_RETURN_BLOCK){
-        Serial.println(String()+F("Block:xCenter=")+result.xCenter+F(",yCenter=")+result.yCenter+F(",width=")+result.width+F(",height=")+result.height+F(",ID=")+result.ID);
+        Serial.println("COMMAND_RETURN_BLOCK is incorrect mode for line following. Exiting.");
+        exit(0);
     }
     else if (result.command == COMMAND_RETURN_ARROW){
-        Serial.println(String()+F("Arrow:xOrigin=")+result.xOrigin+F(",yOrigin=")+result.yOrigin+F(",xTarget=")+result.xTarget+F(",yTarget=")+result.yTarget+F(",ID=")+result.ID);
+        int startX = result.xOrigin;
+        int startY = result.yOrigin;
+        int endX = result.xTarget;
+        int endY = result.yTarget;
+
+        Serial.println(String()+F("Arrow:startX=")+startX+F(",startY=")+startY+F(",endX=")+endX+F(",endY=")+endY+F(",ID=")+result.ID);
     }
     else{
         Serial.println("Object unknown!");
