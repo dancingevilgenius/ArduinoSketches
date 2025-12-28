@@ -55,7 +55,9 @@ HT16K33 display;
 #define DIR_WW 'G'
 #define DIR_NW 'H'
 
-
+// TODO put these vector/target endpoint in a class
+float percentTargetX = 0.0;
+float percentTargetY = 0.0;
 
 
 void setup() {
@@ -151,18 +153,87 @@ void loop() {
     }
     else if(!huskylens.available()) {
         Serial.println(F("No block or arrow appears on the screen!"));
+        
+        // Error
+        percentTargetX = percentTargetY = -1.0;
     }
     else
     {
-        Serial.println(F("###########"));
+        //Serial.println(F("###########"));
         while (huskylens.available())
         {
             HUSKYLENSResult result = huskylens.read();
             printResult(result);
+            alphanumericDisplayFeedback();
         }    
     }
 
+}
 
+void alphanumericDisplayFeedback(){
+    float offset = percentTargetX - 50.0;
+    display.clear();
+    display.updateDisplay();
+    if(abs(offset) < 10){
+        display.colonOn();
+        //Serial.println("center");
+    } else {
+        display.colonOff();
+        //display.clear();
+        //display.updateDisplay();
+
+        Serial.print("offset:"); Serial.println(offset);
+        if(offset > 0.0){
+            //display.clear();
+            if(abs(offset) < 20.0){    
+                display.illuminateSegment(DIR_WW, 2);
+            } else if(abs(offset) < 30.0) {
+                display.illuminateSegment(DIR_WW, 2);
+                display.illuminateSegment(DIR_EE, 2);
+            } else if(abs(offset) < 40.0){
+                display.illuminateSegment(DIR_WW, 2);
+                display.illuminateSegment(DIR_EE, 2);
+                display.illuminateSegment(DIR_WW, 3);
+            } else {
+                display.illuminateSegment(DIR_WW, 2);
+                display.illuminateSegment(DIR_EE, 2);
+                display.illuminateSegment(DIR_WW, 3);
+                display.illuminateSegment(DIR_EE, 3);                
+            }
+        } else{
+            if(abs(offset) < 20.0){    
+                display.illuminateSegment(DIR_EE, 1);
+            } else if(abs(offset) < 30.0) {
+                display.illuminateSegment(DIR_WW, 1);
+                display.illuminateSegment(DIR_EE, 1);
+            } else if(abs(offset) < 40.0){
+                display.illuminateSegment(DIR_WW, 1);
+                display.illuminateSegment(DIR_EE, 1);
+                display.illuminateSegment(DIR_EE, 0);
+            } else {
+                display.illuminateSegment(DIR_WW, 0);
+                display.illuminateSegment(DIR_EE, 0);
+                display.illuminateSegment(DIR_WW, 1);
+                display.illuminateSegment(DIR_EE, 1);                
+            }
+        }
+        
+        // Y offset
+        
+        if(percentTargetY < 70){
+            if(offset > 0){
+                display.illuminateSegment(VER_TOP_RIGHT, 3);
+                display.illuminateSegment(VER_BOTTOM_RIGHT, 3);
+            } else {
+                display.illuminateSegment(VER_TOP_LEFT, 0);
+                display.illuminateSegment(VER_BOTTOM_LEFT, 0);
+               
+            }
+        }
+
+
+    }
+    display.updateDisplay();
 }
 
 
@@ -181,9 +252,9 @@ void printResult(HUSKYLENSResult result){
         endY = map(endY, MAX_Y, 0, 0, MAX_Y);
 
         //Serial.println(String()+F("Arrow:startX=")+startX+F(",startY=")+startY+F(",endX=")+endX+F(",endY=")+endY+F(",ID=")+result.ID);
-        float percentX = 100.0*float(endX)/MAX_X;
-        float percentY = 100.0*float(endY)/MAX_Y;
-        Serial.print("pctX:"); Serial.print(percentX); Serial.print(" pctY:"); Serial.println(percentY);
+        percentTargetX = 100.0*float(endX)/MAX_X;
+        percentTargetY = 100.0*float(endY)/MAX_Y;
+        Serial.print("pctX:"); Serial.print(percentTargetX); Serial.print(" pctY:"); Serial.println(percentTargetY);
         delay(200);
         //Serial.print("mapY:"); Serial.println(mapY);
     }
