@@ -70,6 +70,12 @@ void setup()
   display.illuminateSegment('K', 2);
   display.illuminateSegment('L', 2);
 
+  display.decimalOff();  //Turn decimals on
+  display.decimalOn();   //Turn decimals off
+  display.colonOff();      //Turn colons on
+  display.colonOn();     //Turn colons off
+
+
   display.updateDisplay();
 }
 
