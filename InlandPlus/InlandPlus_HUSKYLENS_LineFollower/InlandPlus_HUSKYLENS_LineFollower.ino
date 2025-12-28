@@ -14,6 +14,8 @@
 
 
 HUSKYLENS huskylens;
+// Hardware Connection is on the horizontal pins labelled 10,11
+// NOT the vertical pin group labelled TX0 RX0 GND 5V
 SoftwareSerial mySerial(10,11); // RX, TX
 //HUSKYLENS green line >> Pin 10; blue line >> Pin 11
 void printResult(HUSKYLENSResult result);
@@ -21,6 +23,29 @@ void printResult(HUSKYLENSResult result);
 
 // Alphanumeric Display. 4 characters
 HT16K33 display;
+
+#define ALPHANUMERIC_MAX_CHARS 4
+// Horizontal Side Segments
+#define HOR_TOP 'A'
+#define HOR_BOTTOM 'D'
+
+// Vertical Side Segments
+#define VER_BOTTOM_RIGHT 'C'
+#define VER_TOP_RIGHT 'B'
+#define VER_BOTTOM_LEFT 'E'
+#define VER_TOP_LEFT 'F'
+
+// Compass Direction Segments on the inside
+#define DIR_NN 'J'
+#define DIR_NE 'K'
+#define DIR_EE 'I'
+#define DIR_SE 'L'
+#define DIR_SS 'M'
+#define DIR_SW 'N'
+#define DIR_WW 'G'
+#define DIR_NW 'H'
+
+
 
 
 void setup() {
@@ -37,12 +62,12 @@ void setup() {
     setupAlphanumericDisplay();
 }
 
-
+// Initialization plus a '0' '+' 'X' test pattern
 void setupAlphanumericDisplay()
 {
   Serial.println("SparkFun Qwiic Alphanumeric - Example 1: Print String");
 
-  Wire.begin(); //Join I2C bus
+  Wire.begin(0x70); //Join I2C bus
 
   
   if (display.begin() == false)
@@ -55,8 +80,53 @@ void setupAlphanumericDisplay()
   }
   Serial.println("Display acknowledged.");
 
-  display.print("Milk");
-  
+    // Outer segments that when all lit look like zero or letter 'O''
+
+    display.clear();
+    display.updateDisplay();
+
+
+    for(int i=0 ; i<ALPHANUMERIC_MAX_CHARS ; i++){
+        display.illuminateSegment(HOR_TOP, i);
+        display.illuminateSegment(HOR_BOTTOM, i);
+        display.illuminateSegment(VER_TOP_RIGHT, i);
+        display.illuminateSegment(VER_BOTTOM_RIGHT, i);
+        display.illuminateSegment(VER_TOP_LEFT, i);
+        display.illuminateSegment(VER_BOTTOM_LEFT, i);
+    }
+    display.updateDisplay();
+    delay(700);
+
+    display.clear();
+    display.updateDisplay();
+    
+    // Inner horizontal and vertical segments that when lit look like plus sign
+    for(int i=0 ; i<ALPHANUMERIC_MAX_CHARS ; i++){
+        display.illuminateSegment(DIR_NN, i);
+        display.illuminateSegment(DIR_EE, i);
+        display.illuminateSegment(DIR_SS, i);
+        display.illuminateSegment(DIR_WW, i);
+    }
+    display.updateDisplay();
+    delay(700);
+
+
+    display.clear();
+    display.updateDisplay();
+
+    // Inner diagonal segments that when lit look like letter 'X'
+    for(int i=0 ; i<ALPHANUMERIC_MAX_CHARS ; i++){
+        display.illuminateSegment(DIR_NE, i);
+        display.illuminateSegment(DIR_SE, i);
+        display.illuminateSegment(DIR_SW, i);
+        display.illuminateSegment(DIR_NW, i);
+    }    
+    display.updateDisplay();
+    delay(700);
+
+    display.clear();
+    display.updateDisplay();
+
 }
 
 
