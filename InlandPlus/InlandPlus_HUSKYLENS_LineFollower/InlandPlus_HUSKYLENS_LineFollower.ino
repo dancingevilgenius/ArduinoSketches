@@ -13,6 +13,16 @@
 #include <SparkFun_Alphanumeric_Display.h>              //Click here to get the library: http://librarymanager/All#SparkFun_Qwiic_Alphanumeric_Display by SparkFun
 
 
+#define PIN_RX 10
+#define PIN_TX 11
+
+// HUSKYLENS coordinate system
+#define MIN_X 0
+#define MAX_X 320
+#define MIN_Y 0
+#define MAX_Y 240
+
+
 HUSKYLENS huskylens;
 // Hardware Connection is on the horizontal pins labelled 10,11
 // NOT the vertical pin group labelled TX0 RX0 GND 5V
@@ -158,12 +168,27 @@ void loop() {
 
 void printResult(HUSKYLENSResult result){
     if (result.command == COMMAND_RETURN_BLOCK){
-        Serial.println(String()+F("Block:xCenter=")+result.xCenter+F(",yCenter=")+result.yCenter+F(",width=")+result.width+F(",height=")+result.height+F(",ID=")+result.ID);
+        Serial.println("COMMAND_RETURN_BLOCK is incorrect mode for line following. Exiting.");
+        exit(0);
     }
     else if (result.command == COMMAND_RETURN_ARROW){
-        Serial.println(String()+F("Arrow:xOrigin=")+result.xOrigin+F(",yOrigin=")+result.yOrigin+F(",xTarget=")+result.xTarget+F(",yTarget=")+result.yTarget+F(",ID=")+result.ID);
+        long startX = result.xOrigin;
+        long startY = result.yOrigin;
+        long endX = result.xTarget;
+        long endY = result.yTarget;
+
+        // Change coordinate system so that positive Y is top/up
+        endY = map(endY, MAX_Y, 0, 0, MAX_Y);
+
+        //Serial.println(String()+F("Arrow:startX=")+startX+F(",startY=")+startY+F(",endX=")+endX+F(",endY=")+endY+F(",ID=")+result.ID);
+        float percentX = 100.0*float(endX)/MAX_X;
+        float percentY = 100.0*float(endY)/MAX_Y;
+        Serial.print("pctX:"); Serial.print(percentX); Serial.print(" pctY:"); Serial.println(percentY);
+        delay(200);
+        //Serial.print("mapY:"); Serial.println(mapY);
     }
     else{
         Serial.println("Object unknown!");
     }
+
 }
