@@ -156,6 +156,10 @@ void loop() {
         
         // Error
         percentTargetX = percentTargetY = -1.0;
+        display.clear();
+        display.print("ERR");
+        display.updateDisplay();
+        delay(1000);
     }
     else
     {
@@ -209,7 +213,7 @@ void alphanumericDisplayFeedback(){
             } else if(abs(offset) < 40.0){
                 display.illuminateSegment(DIR_WW, 1);
                 display.illuminateSegment(DIR_EE, 1);
-                display.illuminateSegment(DIR_EE, 0);
+                 display.illuminateSegment(DIR_EE, 0);
             } else {
                 display.illuminateSegment(DIR_WW, 0);
                 display.illuminateSegment(DIR_EE, 0);
