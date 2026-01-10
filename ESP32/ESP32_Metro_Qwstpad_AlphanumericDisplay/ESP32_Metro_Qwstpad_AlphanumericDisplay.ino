@@ -28,7 +28,13 @@
 #include <iostream>
 #include <array>
 #include <algorithm>
+#include <SparkFun_Alphanumeric_Display.h> //Click here to get the library: http://librarymanager/All#SparkFun_Qwiic_Alphanumeric_Display by SparkFun
 
+// Alphanumeric Display
+HT16K33 display;
+
+
+// QwstPad I2C device
 Adafruit_MAX17048 max_bat;
 extern Adafruit_TestBed TB;
 
@@ -286,9 +292,25 @@ void setup() {
   Serial.begin(115200);  // Or whatever baud rate you're using
   while (!Serial) delay(10);
   
-  
+  Wire.begin();
+
+
+  setupAlphanumericDisplay();
 
   setupQwstPad();
+}
+
+void setupAlphanumericDisplay(){
+
+  if (display.begin() == false)
+  {
+    Serial.println("Device did not acknowledge! Freezing.");
+    while (1);
+  }
+  Serial.println("Alphanumeric Display ready.");
+
+  display.print("Mstr");
+
 }
 
 void setupQwstPad() {
