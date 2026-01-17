@@ -20,6 +20,7 @@
  ****************************************************/
 
 #include "HUSKYLENS.h"
+#include <Adafruit_NeoPixel.h>
 
 HUSKYLENS huskylens;
 //HUSKYLENS green line >> SDA; blue line >> SCL
@@ -30,11 +31,26 @@ void printResult(HUSKYLENSResult result);
 #define MAX_X 320
 #define MIN_Y 0
 #define MAX_Y 240
+#define UNKNOWN_PERCENT  -1.0
+
+
+// Built-in Neopixel
+#define NUMPIXELS 1 // The board has one built-in NeoPixel
+// Initialize the NeoPixel strip object
+Adafruit_NeoPixel pixel(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
+
+
+// TODO put these vector/target endpoint in a class
+float percentTargetX = UNKNOWN_PERCENT;
+float percentTargetY = UNKNOWN_PERCENT;
 
 
 void setup() {
     Serial.begin(115200);
     Wire1.begin();
+
+    setupNeopixel();
+
     while (!huskylens.begin(Wire1))
     {
         Serial.println(F("Begin failed!"));
@@ -44,10 +60,35 @@ void setup() {
     }
 }
 
+void setupNeopixel(){
+  pixel.begin(); // Initialize NeoPixel
+  pixel.setBrightness(50); // Set brightness (0-255)
+
+  // Set the color to dim green at first
+  pixel.setPixelColor(0, pixel.Color(0, 50, 0));
+  pixel.show(); // Show the color
+  delay(500); // Wait 500ms
+
+}
+
+void neopixelError(){
+  pixel.setPixelColor(0, pixel.Color(50, 0, 0));
+  pixel.show(); // Show the color
+}
+
 void loop() {
-    if (!huskylens.request()) Serial.println(F("Fail to request data from HUSKYLENS, recheck the connection!"));
-    else if(!huskylens.isLearned()) Serial.println(F("Nothing learned, press learn button on HUSKYLENS to learn one!"));
-    else if(!huskylens.available()) Serial.println(F("No block or arrow appears on the screen!"));
+    if (!huskylens.request()) {
+        Serial.println(F("Fail to request data from HUSKYLENS, recheck the connection!"));
+        neopixelError();
+    }
+    else if(!huskylens.isLearned()) {
+        Serial.println(F("Nothing learned, press learn button on HUSKYLENS to learn one!"));
+        neopixelError();
+    }
+    else if(!huskylens.available()) {
+        Serial.println(F("No block or arrow appears on the screen!"));
+        neopixelError();
+    }
     else
     {
         Serial.println(F("###########"));
@@ -55,18 +96,36 @@ void loop() {
         {
             HUSKYLENSResult result = huskylens.read();
             printResult(result);
+            neopixelFeedback();
         }    
     }
 }
 
-// TODO put these vector/target endpoint in a class
-float percentTargetX = 0.0;
-float percentTargetY = 0.0;
+void neopixelFeedback(){
+    if(percentTargetX==UNKNOWN_PERCENT || percentTargetY==UNKNOWN_PERCENT){
+        neopixelError();
+        return;
+    }
+
+
+    if(percentTargetX > 40.0 && percentTargetX < 60.0){
+        pixel.setPixelColor(0, pixel.Color(0, 150, 0));
+        pixel.show(); // Show the color
+    } else {
+        pixel.setPixelColor(0, pixel.Color(0, 0, 0));
+        pixel.show(); // Show the color
+    }
+
+}
+
+
 
 
 void printResult(HUSKYLENSResult result){
     if (result.command == COMMAND_RETURN_BLOCK){
         Serial.println("COMMAND_RETURN_BLOCK is incorrect mode for line following. Exiting.");
+        percentTargetX = UNKNOWN_PERCENT;
+        percentTargetY = UNKNOWN_PERCENT;
         exit(0);
     }
     else if (result.command == COMMAND_RETURN_ARROW){
@@ -87,19 +146,8 @@ void printResult(HUSKYLENSResult result){
     }
     else{
         Serial.println("Object unknown!");
+        percentTargetX = UNKNOWN_PERCENT;
+        percentTargetY = UNKNOWN_PERCENT;
     }
 
 }
-/*
-void printResult(HUSKYLENSResult result){
-    if (result.command == COMMAND_RETURN_BLOCK){
-        Serial.println(String()+F("Block:xCenter=")+result.xCenter+F(",yCenter=")+result.yCenter+F(",width=")+result.width+F(",height=")+result.height+F(",ID=")+result.ID);
-    }
-    else if (result.command == COMMAND_RETURN_ARROW){
-        Serial.println(String()+F("Arrow:xOrigin=")+result.xOrigin+F(",yOrigin=")+result.yOrigin+F(",xTarget=")+result.xTarget+F(",yTarget=")+result.yTarget+F(",ID=")+result.ID);
-    }
-    else{
-        Serial.println("Object unknown!");
-    }
-}
-*/
