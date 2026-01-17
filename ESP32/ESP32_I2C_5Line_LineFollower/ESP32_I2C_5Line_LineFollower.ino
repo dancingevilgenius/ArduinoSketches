@@ -2,6 +2,20 @@
 
 #define INFINITE_LOOP_ON_FAILURE InfiniteLoopOnFailure(__FUNCTION__, __LINE__)
 
+#define LINE_1_DETECTED 0xf
+#define LINE_2_DETECTED 0x17
+#define LINE_3_DETECTED 0x1b
+#define LINE_4_DETECTED 0x1d
+#define LINE_5_DETECTED 0x1e
+
+#define LINE_1_HARD_LEFT    "Hard left"
+#define LINE_2_SLIGHT_LEFT  "Slight left"
+#define LINE_3_CENTER       "Center"
+#define LINE_4_DETECTED     "Slight right"
+#define LINE_5_DETECTED     "Hard right"
+
+
+
 namespace {
 
 emakefun::FiveLineTracker g_five_line_tracker;
@@ -49,11 +63,18 @@ void setup() {
 }
 
 void loop() {
+
   uint16_t analog_values[emakefun::FiveLineTracker::kLineNumber] = {0};
   g_five_line_tracker.AnalogValues(analog_values);
 
   const uint8_t digital_values = g_five_line_tracker.DigitalValues();
 
+  printAnalogAndDigitalValues(analog_values, digital_values);
+
+}
+
+
+void printAnalogAndDigitalValues(uint16_t analog_values[5], const uint8_t digital_values){
   String log(F("analog values: "));
   for (uint8_t i = 0; i < emakefun::FiveLineTracker::kLineNumber; i++) {
     log += i;
