@@ -1,7 +1,7 @@
 #include <Adafruit_NeoPixel.h>
 
-// The built-in NeoPixel on the Thing Plus RP2040 is on GPIO 8
-//#define PIN_NEOPIXEL 8
+
+//#define PIN_NEOPIXEL 8 - Already defined in Feather support code
 #define NUMPIXELS 1 // The board has one built-in NeoPixel
 
 // Initialize the NeoPixel strip object
@@ -23,7 +23,7 @@ void loop() {
   pixel.show();
   delay(500); // Wait 500ms
 
-  // Set the color to Red (R, G, B)
+  // Set the color to Green (R, G, B)
   pixel.setPixelColor(0, pixel.Color(0, 255, 0));
   pixel.show(); // Show the color
   delay(500); // Wait 500ms
@@ -34,7 +34,7 @@ void loop() {
   delay(500); // Wait 500ms
 
 
-  // Set the color to Red (R, G, B)
+  // Set the color to Blue (R, G, B)
   pixel.setPixelColor(0, pixel.Color(0, 0, 255));
   pixel.show(); // Show the color
   delay(500); // Wait 500ms
