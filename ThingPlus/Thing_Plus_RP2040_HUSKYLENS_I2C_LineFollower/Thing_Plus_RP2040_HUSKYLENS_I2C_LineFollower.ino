@@ -96,35 +96,35 @@ void loop() {
         {
             HUSKYLENSResult result = huskylens.read();
             printResult(result);
-            neopixelFeedback();
+            neopixelFeedback(percentTargetX, percentTargetY);
         }    
     }
 }
 
-void neopixelFeedback(){
-    if(percentTargetX==UNKNOWN_PERCENT || percentTargetY==UNKNOWN_PERCENT){
+void neopixelFeedback(float percentX, float percentY){
+    if(percentX==UNKNOWN_PERCENT || percentY==UNKNOWN_PERCENT){
         neopixelError();
         return;
     }
 
 
-    if(percentTargetX >= 40.0 && percentTargetX <= 60.0){
+    if(percentX >= 40.0 && percentX <= 60.0){
         // Dim Green
         pixel.setPixelColor(0, pixel.Color(0, 150, 0));
         pixel.show(); // Show the color
-    } else if(percentTargetX < 40.0){
+    } else if(percentX < 40.0){
 
         // Scaled Yellow
         int saturation = 0;
-        saturation = map(percentTargetX, 0, 40, 200, 50);
+        saturation = map(percentX, 0, 40, 200, 50);
         
         pixel.setPixelColor(0, pixel.Color(saturation, saturation, 0));
         pixel.show();
-    } else if(percentTargetX > 60.0){
+    } else if(percentX > 60.0){
 
         // Scaled Blue
         int saturation = 0;
-        saturation = map(percentTargetX, 60.1, 100, 50, 200);        
+        saturation = map(percentX, 60.1, 100, 50, 200);        
         pixel.setPixelColor(0, pixel.Color(0, 0, saturation));
         pixel.show();
         
