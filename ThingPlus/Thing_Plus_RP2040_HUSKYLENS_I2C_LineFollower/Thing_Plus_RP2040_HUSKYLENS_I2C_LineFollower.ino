@@ -25,6 +25,13 @@ HUSKYLENS huskylens;
 //HUSKYLENS green line >> SDA; blue line >> SCL
 void printResult(HUSKYLENSResult result);
 
+// HUSKYLENS coordinate system
+#define MIN_X 0
+#define MAX_X 320
+#define MIN_Y 0
+#define MAX_Y 240
+
+
 void setup() {
     Serial.begin(115200);
     Wire1.begin();
@@ -52,6 +59,38 @@ void loop() {
     }
 }
 
+// TODO put these vector/target endpoint in a class
+float percentTargetX = 0.0;
+float percentTargetY = 0.0;
+
+
+void printResult(HUSKYLENSResult result){
+    if (result.command == COMMAND_RETURN_BLOCK){
+        Serial.println("COMMAND_RETURN_BLOCK is incorrect mode for line following. Exiting.");
+        exit(0);
+    }
+    else if (result.command == COMMAND_RETURN_ARROW){
+        long startX = result.xOrigin;
+        long startY = result.yOrigin;
+        long endX = result.xTarget;
+        long endY = result.yTarget;
+
+        // Change coordinate system so that positive Y is top/up
+        endY = map(endY, MAX_Y, 0, 0, MAX_Y);
+
+        //Serial.println(String()+F("Arrow:startX=")+startX+F(",startY=")+startY+F(",endX=")+endX+F(",endY=")+endY+F(",ID=")+result.ID);
+        percentTargetX = 100.0*float(endX)/MAX_X;
+        percentTargetY = 100.0*float(endY)/MAX_Y;
+        Serial.print("pctX:"); Serial.print(percentTargetX); Serial.print(" pctY:"); Serial.println(percentTargetY);
+        delay(200);
+        //Serial.print("mapY:"); Serial.println(mapY);
+    }
+    else{
+        Serial.println("Object unknown!");
+    }
+
+}
+/*
 void printResult(HUSKYLENSResult result){
     if (result.command == COMMAND_RETURN_BLOCK){
         Serial.println(String()+F("Block:xCenter=")+result.xCenter+F(",yCenter=")+result.yCenter+F(",width=")+result.width+F(",height=")+result.height+F(",ID=")+result.ID);
@@ -63,3 +102,4 @@ void printResult(HUSKYLENSResult result){
         Serial.println("Object unknown!");
     }
 }
+*/
