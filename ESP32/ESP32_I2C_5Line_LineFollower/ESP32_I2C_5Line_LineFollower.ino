@@ -7,12 +7,14 @@
 #define LINE_3_DETECTED 0x1b
 #define LINE_4_DETECTED 0x1d
 #define LINE_5_DETECTED 0x1e
+#define ALL_LINES_DETECTED 0x1f
+#define NO_LINES_DETECTED 0x0
 
 #define LINE_1_HARD_LEFT    "Hard left"
 #define LINE_2_SLIGHT_LEFT  "Slight left"
 #define LINE_3_CENTER       "Center"
-#define LINE_4_DETECTED     "Slight right"
-#define LINE_5_DETECTED     "Hard right"
+#define LINE_4_SLIGHT_RIGHT "Slight right"
+#define LINE_5_HARD_RIGHT     "Hard right"
 
 
 
@@ -69,11 +71,56 @@ void loop() {
 
   const uint8_t digital_values = g_five_line_tracker.DigitalValues();
 
-  printAnalogAndDigitalValues(analog_values, digital_values);
+  //printAnalogAndDigitalValues(analog_values, digital_values);
+  printDigitalValueSingleLine(digital_values);
+  delay(250);
+
+}
+
+void printDigitalValueSingleLine(const uint8_t digital_values){
+
+  if(digital_values == LINE_1_DETECTED){
+      Serial.println(LINE_1_HARD_LEFT);
+      return;
+  }
+
+  if(digital_values == LINE_2_DETECTED){
+      Serial.println(LINE_2_SLIGHT_LEFT);
+      return;
+  }
+
+  if(digital_values == LINE_3_DETECTED){
+      Serial.println(LINE_3_CENTER);
+      return;
+  }
+
+  if(digital_values == LINE_4_DETECTED){
+      Serial.println(LINE_4_SLIGHT_RIGHT);
+      return;
+  }
+
+  if(digital_values == LINE_5_DETECTED){
+      Serial.println(LINE_5_HARD_RIGHT);
+      return;
+  }
+
+  if(digital_values == NO_LINES_DETECTED){
+      Serial.println("No line detected");
+      return;
+  }
+  
+  if(digital_values == ALL_LINES_DETECTED){
+      Serial.println("All line detected");
+      return;
+  }
+
+  // Everything else
+  Serial.println("Unhandled case of multiple lines detected");
 
 }
 
 
+// Original example code block extracted to this function.
 void printAnalogAndDigitalValues(uint16_t analog_values[5], const uint8_t digital_values){
   String log(F("analog values: "));
   for (uint8_t i = 0; i < emakefun::FiveLineTracker::kLineNumber; i++) {
