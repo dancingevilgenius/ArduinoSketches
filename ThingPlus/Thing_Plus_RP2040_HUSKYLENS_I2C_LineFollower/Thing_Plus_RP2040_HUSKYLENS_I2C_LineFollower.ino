@@ -78,15 +78,15 @@ void neopixelError(){
 
 void loop() {
     if (!huskylens.request()) {
-        Serial.println(F("Fail to request data from HUSKYLENS, recheck the connection!"));
+        Serial.println(F("Error: Fail to request data from HUSKYLENS, recheck the connection!"));
         neopixelError();
     }
     else if(!huskylens.isLearned()) {
-        Serial.println(F("Nothing learned, press learn button on HUSKYLENS to learn one!"));
+        Serial.println(F("Error: Nothing learned, press learn button on HUSKYLENS to learn one!"));
         neopixelError();
     }
     else if(!huskylens.available()) {
-        Serial.println(F("No block or arrow appears on the screen!"));
+        Serial.println(F("Error: No line detected"));
         neopixelError();
     }
     else
@@ -108,9 +108,26 @@ void neopixelFeedback(){
     }
 
 
-    if(percentTargetX > 40.0 && percentTargetX < 60.0){
+    if(percentTargetX >= 40.0 && percentTargetX <= 60.0){
+        // Dim Green
         pixel.setPixelColor(0, pixel.Color(0, 150, 0));
         pixel.show(); // Show the color
+    } else if(percentTargetX < 40.0){
+
+        // Scaled Yellow
+        int saturation = 0;
+        saturation = map(percentTargetX, 0, 40, 200, 50);
+        
+        pixel.setPixelColor(0, pixel.Color(saturation, saturation, 0));
+        pixel.show();
+    } else if(percentTargetX > 60.0){
+
+        // Scaled Blue
+        int saturation = 0;
+        saturation = map(percentTargetX, 60.1, 100, 50, 200);        
+        pixel.setPixelColor(0, pixel.Color(0, 0, saturation));
+        pixel.show();
+        
     } else {
         pixel.setPixelColor(0, pixel.Color(0, 0, 0));
         pixel.show(); // Show the color
