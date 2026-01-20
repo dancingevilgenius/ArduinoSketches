@@ -168,8 +168,12 @@ void initDistanceSensors(){
     Serial.print("set port:");
     Serial.print(port);
     int status  = distanceSensorArray[port]->begin(Wire);
-    Serial.print(" status:");
+    
+    Serial.print(" status");
+    Serial.print(port);
+    Serial.print("\t");
     Serial.println(status);
+    
     if (status == INIT_DISTANCE_SENSOR_FAIL)
     {
       Serial.print("ERROR: Sensor ");
@@ -181,7 +185,7 @@ void initDistanceSensors(){
     {
       //Configure each sensor
       distanceSensorArray[port]->setIntermeasurementPeriod(180);
-      distanceSensorArray[port]->setDistanceModeLong();
+      distanceSensorArray[port]->setDistanceModeShort(); // Carlos changed this from Long to Short
       distanceSensorArray[port]->startRanging(); //Write configuration bytes to initiate measurement
       Serial.print("Sensor ");
       Serial.print(port);
@@ -291,6 +295,7 @@ int loopBotSensors(){
   float distanceFeet;
   float distanceCM;
   float distanceMM;
+  int status;
 
   // Loop thru the MUX ports for bot/lidar sensors: 0-2
   for (byte port = 0; port < NUM_DISTANCE_SENSORS; port++)
@@ -302,19 +307,28 @@ int loopBotSensors(){
     distanceCM = distanceMM /10.0;
     distanceFeet = (distance[port] * 0.0393701) / 12.0; // TODO calculate this from distanceMM
 
-
-    // Serial.print("\tDistance");
-    // Serial.print(sensorIndex);
-    // Serial.print("(mm): ");
-    // Serial.print(distanceMM);
-
-    Serial.print("\tDistance");
-    Serial.print(port);
-    Serial.print("(cm): ");
-    Serial.print(distanceCM, 2);
-    if(distanceCM <  MAX_BOT_DIST_CM){
-      botDetectedArray[port];
+    // 1. If the distance is 5cm or less, this is basically out of normal range response
+    // 2. We do not want to track anything further than the width of the ring (roughly 30" / 77cm)
+    if((distanceCM > 5.0) && (distanceCM <  MAX_BOT_DIST_CM)){
+      botDetectedArray[port] = true;
+    } else {
+      botDetectedArray[port] = false;
     }
+
+
+    if(true){
+      Serial.print("\tdetected");
+      Serial.print(port);
+      Serial.print(":");
+      Serial.print(botDetectedArray[port]);
+    } else {
+
+      Serial.print("\tDistance");
+      Serial.print(port);
+      Serial.print("(cm): ");
+      Serial.print(distanceCM, 2);
+    }
+
   }
 
   Serial.println();  
