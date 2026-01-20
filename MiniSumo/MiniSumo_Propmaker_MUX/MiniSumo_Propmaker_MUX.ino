@@ -29,7 +29,7 @@ bool lineDetectedArray[3];
 
 
 // VL53L1X TOF laser sensor
-#define NUM_DISTANCE_SENSORS 1  // @TODO expand this to 3 for final design
+#define NUM_DISTANCE_SENSORS 3  // @TODO expand this to 3 for final design
 SFEVL53L1X **distanceSensorArray; //Create pointer to a set of pointers to the sensor class
 bool botDetectedArray[3];
 #define BOT_NONE          -1
@@ -65,6 +65,7 @@ void setup()
 
 void initLineSensors(){
     
+  Serial.println("start initLineSensors() ---------------");
     // if (!tcs.attach(Wire))
     //     Serial.println("ERROR: TCS34725 NOT FOUND !!!");
 
@@ -88,13 +89,14 @@ void initLineSensors(){
   byte currentPortNumber = myMux.getPort();
   Serial.print("CurrentPort: ");
   Serial.println(currentPortNumber);
+  delay(1000);
 
   //Initialize all the distance sensors
   bool allSensorsSuccess = true;
 
   // @TODO start port number after last of the distance sensors
   int totalSensors = NUM_DISTANCE_SENSORS + NUM_LINE_SENSORS;
-  for (byte port = NUM_DISTANCE_SENSORS ; port < totalSensors; port++)
+  for (byte port = 0 ; port < totalSensors; port++)
   {
     myMux.setPort(port);
     if (lineSensorArray[port]->attach(Wire) == INIT_LINE_SENSOR_FAIL)
@@ -110,10 +112,11 @@ void initLineSensors(){
       lineSensorArray[port]->gain(TCS34725::Gain::X01);
 
       //Configure each sensor
-      Serial.print("Line Sensor ");
+      Serial.print("Line Sensor: ");
       Serial.print(port);
       Serial.println(" configured");
     }
+    delay(500);
   }
 
   if (allSensorsSuccess == false)
@@ -124,10 +127,7 @@ void initLineSensors(){
     ;
   }
 
-  Serial.println("Distance sensors initialized.");  
-
-
-
+  Serial.println("Line sensors initialized.");  
 }
 
 // Setup both line and distance sensors using QWIIC MUX
@@ -137,12 +137,14 @@ void setupSensors() {
 
   initDistanceSensors();
 
-  initLineSensors();
+  //initLineSensors();
 
 }
 
 
 void initDistanceSensors(){
+
+  Serial.println("Enter initDistanceSensors() -------------");
   //Create set of pointers to the class
   distanceSensorArray = new SFEVL53L1X *[NUM_DISTANCE_SENSORS];
 
@@ -163,7 +165,12 @@ void initDistanceSensors(){
   for (byte port = 0; port < NUM_DISTANCE_SENSORS; port++)
   {
     myMux.setPort(port);
-    if (distanceSensorArray[port]->begin(Wire) == INIT_DISTANCE_SENSOR_FAIL)
+    Serial.print("set port:");
+    Serial.print(port);
+    int status  = distanceSensorArray[port]->begin(Wire);
+    Serial.print(" status:");
+    Serial.println(status);
+    if (status == INIT_DISTANCE_SENSOR_FAIL)
     {
       Serial.print("ERROR: Sensor ");
       Serial.print(port);
@@ -180,6 +187,7 @@ void initDistanceSensors(){
       Serial.print(port);
       Serial.println(" configured");
     }
+    delay(500);
   }
 
   if (allSensorsSuccess == false)
@@ -190,7 +198,7 @@ void initDistanceSensors(){
     ;
   }
 
-  Serial.println("Distance sensors initialized.");  
+  Serial.println("Exit initDistanceSensors. Distance sensors initialized. -------------");  
 }
 
 void loop()
@@ -205,10 +213,10 @@ void loop()
 void loopSensors(){
 
   // line sensors have to be first, before bot sensors
-  int lineStatus = loopLineSensors();
-  if(lineStatus != LINE_NONE){
-    return;
-  }
+  //int lineStatus = loopLineSensors();
+  // if(lineStatus != LINE_NONE){
+  //   return;
+  // }
 
   int botStatus = loopBotSensors();
 
