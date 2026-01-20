@@ -18,7 +18,11 @@ QWIICMUX myMux;
 #define NUM_LINE_SENSORS 1        // @TODO expand this to 3 for final design
 //TCS34725 tcs;
 TCS34725 **lineSensorArray;     //Create pointer to a set of pointers to the sensor class
-
+bool lineDetectedArray[3];
+#define LINE_NONE         -1
+#define LINE_FRONT_LEFT   0
+#define LINE_FRONT_RIGHT  1
+#define LINE_REAR_CENTER  2
 
 
 
@@ -27,6 +31,18 @@ TCS34725 **lineSensorArray;     //Create pointer to a set of pointers to the sen
 // VL53L1X TOF laser sensor
 #define NUM_DISTANCE_SENSORS 1  // @TODO expand this to 3 for final design
 SFEVL53L1X **distanceSensorArray; //Create pointer to a set of pointers to the sensor class
+bool botDetectedArray[3];
+#define BOT_NONE          -1
+#define BOT_FRONT_LEFT    0
+#define BOT_FRONT_CENTER  1
+#define BOT_FRONT_RIGHT   2
+
+#define MAX_BOT_DIST_CM 77
+#define MAX_BOT_DIST_MM 770
+#define MAX_BOT_DIST_IN 30
+
+
+
 
 // Defines for sensor initialization.
 // Yes, they are opposite of each other.
@@ -186,29 +202,55 @@ void loop()
 
 
 void loopSensors(){
+
+  // line sensors have to be first, before bot sensors
+  int lineStatus = loopLineSensors();
+  if(lineStatus != LINE_NONE){
+    return;
+  }
+
+  int botStatus = loopBotSensors();
+
+}
+
+int loopLineSensors(){
+  int lineStatus = LINE_NONE;
+
+  return lineStatus;
+}
+
+int loopBotSensors(){
+  int botStatus = BOT_NONE;
   int distance[NUM_DISTANCE_SENSORS];
   float distanceFeet;
+  float distanceCM;
+  float distanceMM;
 
-  for (byte x = 0; x < NUM_DISTANCE_SENSORS; x++)
+  for (byte sensorIndex = 0; sensorIndex < NUM_DISTANCE_SENSORS; sensorIndex++)
   {
-    myMux.setPort(x);                               //Tell mux to connect to this port, and this port only
-    distance[x] = distanceSensorArray[x]->getDistance(); //Get the result of the measurement from the sensor
+    myMux.setPort(sensorIndex);                               //Tell mux to connect to this port, and this port only
+    distance[sensorIndex] = distanceSensorArray[sensorIndex]->getDistance(); //Get the result of the measurement from the sensor
 
     Serial.print("\tDistance");
-    Serial.print(x);
+    Serial.print(sensorIndex);
     Serial.print("(mm): ");
-    Serial.print(distance[x]);
+    Serial.print(distance[sensorIndex]);
+    distanceMM = distance[sensorIndex];
+    distanceCM = distanceMM /10.0;
+    distanceFeet = (distance[sensorIndex] * 0.0393701) / 12.0; // TODO calculate this from distanceMM
 
-    distanceFeet = (distance[x] * 0.0393701) / 12.0;
-
-    Serial.print("\tDistance");
-    Serial.print(x);
-    Serial.print("(ft): ");
-    Serial.print(distanceFeet, 2);
+    // Serial.print("\tDistance");
+    // Serial.print(x);
+    // Serial.print("(ft): ");
+    // Serial.print(distanceFeet, 2);
+    if(distanceCM <  MAX_BOT_DIST_CM){
+      botDetectedArray[sensorIndex];
+    }
   }
 
   Serial.println();  
 
+  return botStatus;
 }
 
 
