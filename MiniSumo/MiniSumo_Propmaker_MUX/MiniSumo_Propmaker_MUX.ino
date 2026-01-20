@@ -200,7 +200,8 @@ void loop()
   delay(180); //Wait for next reading
 }
 
-
+// 1. Handle line sensors
+// 2. Handle bot sensors
 void loopSensors(){
 
   // line sensors have to be first, before bot sensors
@@ -213,10 +214,67 @@ void loopSensors(){
 
 }
 
+
+    // if (tcs.available()) // if current measurement has done
+    // {
+    //     TCS34725::Color color = tcs.color();
+    //     Serial.print("Color Temp : "); Serial.println(tcs.colorTemperature());
+    //     Serial.print("Lux        : "); Serial.println(tcs.lux());
+    //     Serial.print("R          : "); Serial.println(color.r);
+    //     Serial.print("G          : "); Serial.println(color.g);
+    //     Serial.print("B          : "); Serial.println(color.b);
+    //     delay(3000);
+    // }
 int loopLineSensors(){
   int lineStatus = LINE_NONE;
 
+
+
+  // Need this because the port numbering is:3-5, but whe what 0-2
+  int sensorIndex = 0;
+  TCS34725::Color color;
+
+  // Loop thru the MUX ports for line sensors: 3-5
+  byte start= NUM_DISTANCE_SENSORS;
+  byte end= NUM_DISTANCE_SENSORS + NUM_LINE_SENSORS;
+  for (byte port = start; port < end; port++)
+  {
+    myMux.setPort(port);                               //Tell mux to connect to this port, and this port only
+    color = lineSensorArray[port]->color();
+
+    if(isLineDetected(color)){
+      lineDetectedArray[port] = true;
+      Serial.print("line sensor port:");
+      Serial.print(port);
+      Serial.print(" detected:");
+      Serial.println(lineDetectedArray[port]);
+      }
+  }
+
+  Serial.println();  
+
+
+
   return lineStatus;
+}
+
+bool isLineDetected(TCS34725::Color color){
+  bool isLineDetected = false;
+  float r, g, b;
+
+  // guessing at some values.
+  // @TODO also look at lux and temperature to
+  if(r > 100.0 && g > 100.0 && b > 100.0){
+    isLineDetected = true;
+  }
+
+      // Serial.print("Color Temp : "); Serial.println(tcs.colorTemperature());
+      // Serial.print("Lux        : "); Serial.println(tcs.lux());
+      // Serial.print("R          : "); Serial.println(color.r);
+      // Serial.print("G          : "); Serial.println(color.g);
+      // Serial.print("B          : "); Serial.println(color.b);
+
+  return isLineDetected;
 }
 
 int loopBotSensors(){
@@ -226,25 +284,28 @@ int loopBotSensors(){
   float distanceCM;
   float distanceMM;
 
-  for (byte sensorIndex = 0; sensorIndex < NUM_DISTANCE_SENSORS; sensorIndex++)
+  // Loop thru the MUX ports for bot/lidar sensors: 0-2
+  for (byte port = 0; port < NUM_DISTANCE_SENSORS; port++)
   {
-    myMux.setPort(sensorIndex);                               //Tell mux to connect to this port, and this port only
-    distance[sensorIndex] = distanceSensorArray[sensorIndex]->getDistance(); //Get the result of the measurement from the sensor
+    myMux.setPort(port);                               //Tell mux to connect to this port, and this port only
+    distance[port] = distanceSensorArray[port]->getDistance(); //Get the result of the measurement from the sensor
 
-    Serial.print("\tDistance");
-    Serial.print(sensorIndex);
-    Serial.print("(mm): ");
-    Serial.print(distance[sensorIndex]);
-    distanceMM = distance[sensorIndex];
+    distanceMM = distance[port];
     distanceCM = distanceMM /10.0;
-    distanceFeet = (distance[sensorIndex] * 0.0393701) / 12.0; // TODO calculate this from distanceMM
+    distanceFeet = (distance[port] * 0.0393701) / 12.0; // TODO calculate this from distanceMM
+
 
     // Serial.print("\tDistance");
-    // Serial.print(x);
-    // Serial.print("(ft): ");
-    // Serial.print(distanceFeet, 2);
+    // Serial.print(sensorIndex);
+    // Serial.print("(mm): ");
+    // Serial.print(distanceMM);
+
+    Serial.print("\tDistance");
+    Serial.print(port);
+    Serial.print("(cm): ");
+    Serial.print(distanceCM, 2);
     if(distanceCM <  MAX_BOT_DIST_CM){
-      botDetectedArray[sensorIndex];
+      botDetectedArray[port];
     }
   }
 
