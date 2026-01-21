@@ -13,6 +13,13 @@
 QWIICMUX myMux;
 
 
+// User/Boot button
+#define BUILTIN_LED 13    // Normally defined on other Arduino boards.
+const int buttonPin = PIN_BUTTON;  // the number of the pushbutton pin
+const int ledPin = BUILTIN_LED;    // the number of the LED pin. 13
+int buttonState = 0;  // variable for reading the pushbutton status
+
+
 
 // RBG line sensors
 #define NUM_LINE_SENSORS 1        // @TODO expand this to 3 for final design
@@ -57,10 +64,43 @@ void setup()
   Serial.println("Qwiic Mux Shield Read Example");
   delay(2000);
 
-
   Wire.begin();
 
+  setupBuiltInButton();
+
+
   setupSensors();
+}
+
+
+void loop()
+{
+  loopSensors();
+  loopBuiltInButton();
+
+  delay(180); //Wait for next reading
+}
+
+void loopBuiltInButton(){
+  // read the state of the pushbutton value:
+  buttonState = digitalRead(buttonPin);
+
+  // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
+  if (buttonState == HIGH) {
+    // turn LED on:
+    digitalWrite(ledPin, HIGH);
+  } else {
+    // turn LED off:
+    digitalWrite(ledPin, LOW);
+  }  
+}
+
+void setupBuiltInButton(){
+  Serial.println("setupBuiltInButton()");
+  // initialize the LED pin as an output:
+  pinMode(ledPin, OUTPUT);
+  // initialize the pushbutton pin as an input:
+  pinMode(buttonPin, INPUT);
 }
 
 void initLineSensors(){
@@ -205,12 +245,6 @@ void initDistanceSensors(){
   Serial.println("Exit initDistanceSensors. Distance sensors initialized. -------------");  
 }
 
-void loop()
-{
-  loopSensors();
-
-  delay(180); //Wait for next reading
-}
 
 // 1. Handle line sensors
 // 2. Handle bot sensors
