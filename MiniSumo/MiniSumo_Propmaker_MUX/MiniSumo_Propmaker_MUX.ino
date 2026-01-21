@@ -58,6 +58,13 @@ bool botDetectedArray[3];
 #define INIT_LINE_SENSOR_SUCCESS 1
 #define INIT_LINE_SENSOR_FAIL 0
 
+// For timer
+#define TIME_SLICE 180
+long timeElapsed = 0;
+bool firstButtonPress = false;
+time_t timeOfFirstButtonPress = -1;
+
+
 void setup()
 {
   Serial.begin(115200);
@@ -78,7 +85,7 @@ void loop()
   loopSensors();
   loopBuiltInButton();
 
-  delay(180); //Wait for next reading
+  delay(TIME_SLICE); //Wait for next reading
 }
 
 void loopBuiltInButton(){
@@ -90,9 +97,29 @@ void loopBuiltInButton(){
     // turn LED on:
     digitalWrite(ledPin, HIGH);
   } else {
+    float timeElapsedFloat = float(timeElapsed)/ 1000.0;
     // turn LED off:
     digitalWrite(ledPin, LOW);
-  }  
+    //Serial.print("timeElapsed:");
+    //Serial.println(timeElapsedFloat, 1);
+
+    if(!firstButtonPress){
+      firstButtonPress = true;
+      timeElapsed = 0; // timer start
+      
+      timeOfFirstButtonPress = time(nullptr);
+      Serial.print("First button press at:");
+      Serial.println(timeOfFirstButtonPress);      
+    }  else {
+      time_t dt = time(nullptr) - timeOfFirstButtonPress;
+      Serial.print("time since 1st button press:");
+      Serial.println(dt);
+    }
+
+  }
+
+  timeElapsed += TIME_SLICE;
+  
 }
 
 void setupBuiltInButton(){
@@ -256,7 +283,7 @@ void loopSensors(){
   //   return;
   // }
 
-  int botStatus = loopBotSensors();
+  int botStatus = loopBotSensors(false);
 
 }
 
@@ -323,7 +350,7 @@ bool isLineDetected(TCS34725::Color color){
   return isLineDetected;
 }
 
-int loopBotSensors(){
+int loopBotSensors(bool print){
   int botStatus = BOT_NONE;
   int distance[NUM_DISTANCE_SENSORS];
   float distanceFeet;
@@ -351,21 +378,26 @@ int loopBotSensors(){
 
 
     if(true){
-      Serial.print("\tdetected");
-      Serial.print(port);
-      Serial.print(":");
-      Serial.print(botDetectedArray[port]);
+      if(print){
+        Serial.print("\tdetected");
+        Serial.print(port);
+        Serial.print(":");
+        Serial.print(botDetectedArray[port]);
+      }
     } else {
-
-      Serial.print("\tDistance");
-      Serial.print(port);
-      Serial.print("(cm): ");
-      Serial.print(distanceCM, 2);
+      if(print){
+        Serial.print("\tDistance");
+        Serial.print(port);
+        Serial.print("(cm): ");
+        Serial.print(distanceCM, 2);
+      }
     }
 
   }
 
-  Serial.println();  
+  if(print){
+    Serial.println();
+  }
 
   return botStatus;
 }
