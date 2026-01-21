@@ -6,7 +6,7 @@
 #include <Wire.h>
 #include <SparkFun_I2C_Mux_Arduino_Library.h> 
 #include "SparkFun_VL53L1X.h"   // For distance/bot sensor
-#include <TCS34725.h>           // For RGB line/color sensor
+#include "Adafruit_TCS34725.h"  // For RGB line/color sensor
 #include <FS_MX1508.h>          // For DRV8871 motor driver
 #include <Adafruit_NeoPixel.h>
 
@@ -40,8 +40,8 @@ int buttonState = 0;  // variable for reading the pushbutton status
 
 // RBG line sensors
 #define NUM_LINE_SENSORS 1        // @TODO expand this to 3 for final design
-//TCS34725 tcs;
-TCS34725 **lineSensorArray;     //Create pointer to a set of pointers to the sensor class
+//Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
+Adafruit_TCS34725 **lineSensorArray;     //Create pointer to a set of pointers to the sensor class
 bool lineDetectedArray[3];
 #define LINE_NONE         -1
 #define LINE_FRONT_LEFT   0
@@ -96,7 +96,7 @@ void loop()
 
   //loopMotors(fightStarted);
 
-  loopBuiltInNeopixel();
+  //loopBuiltInNeopixel();
 
   delay(TIME_SLICE); //Wait for next reading
 }
@@ -104,6 +104,10 @@ void loop()
 
 
 void loopBuiltInNeopixel() {
+}
+
+
+void loopNeopixelDemo(){
   // Set the color to Red (R, G, B)
   pixel.setPixelColor(0, pixel.Color(255, 0, 0));
   pixel.show(); // Show the color
@@ -134,9 +138,7 @@ void loopBuiltInNeopixel() {
   pixel.setPixelColor(0, pixel.Color(0, 0, 0));
   pixel.show();
   delay(500); // Wait 500ms
-
 }
-
 
 // @TODO check the sensors for what to do.
 // right now, just running MX1508 library example simple_motor.
@@ -305,14 +307,16 @@ void initLineSensors(){
     // tcs.gain(TCS34725::Gain::X01);
 
   //Create set of pointers to the class
-  lineSensorArray = new TCS34725 *[NUM_LINE_SENSORS];
+  lineSensorArray = new Adafruit_TCS34725 *[NUM_LINE_SENSORS];
 
   //Assign pointers to instances of the class
-  for (int x = 0; x < NUM_LINE_SENSORS; x++){
-    lineSensorArray[x] = new TCS34725();
-    lineSensorArray[x]->attach(Wire);
-    lineSensorArray[x]->integrationTime(33); // ms   @TODO change this to match the other sensor array of 180ms
-    lineSensorArray[x]->gain(TCS34725::Gain::X01);
+  for (int index = 0; index < NUM_LINE_SENSORS; index++){
+    lineSensorArray[index] = new Adafruit_TCS34725(
+      TCS34725_INTEGRATIONTIME_614MS,
+      TCS34725_GAIN_1X);;
+    //lineSensorArray[index]->begin(TCS34725_ADDRESS, &Wire);
+    // lineSensorArray[index]->integrationTime(33); // ms   @TODO change this to match the other sensor array of 180ms
+    // lineSensorArray[index]->gain(TCS34725::Gain::X01);
   }
 
 
@@ -327,27 +331,29 @@ void initLineSensors(){
   bool allSensorsSuccess = true;
 
   // @TODO start port number after last of the distance sensors
-  int totalSensors = NUM_DISTANCE_SENSORS + NUM_LINE_SENSORS;
-  for (byte port = 0 ; port < totalSensors; port++)
+  for (byte index = 0 ; index < NUM_LINE_SENSORS ; index++)
   {
-    myMux.setPort(port);
-    if (lineSensorArray[port]->attach(Wire) == INIT_LINE_SENSOR_FAIL)
+    // Port number has to start where distance sensors end.
+    myMux.setPort(index + NUM_DISTANCE_SENSORS); 
+    lineSensorArray[index]->begin(TCS34725_ADDRESS, &Wire);
+    /*
+    if (lineSensorArray[index]->attach(Wire) == INIT_LINE_SENSOR_FAIL)
     {
       Serial.print("ERROR: Line Sensor ");
-      Serial.print(port);
+      Serial.print(index);
       Serial.println(" did not begin! Check wiring");
       allSensorsSuccess = false;
     }
     else
     {
-      lineSensorArray[port]->integrationTime(33); // ms   @TODO change this to match the other sensor array of 180ms
-      lineSensorArray[port]->gain(TCS34725::Gain::X01);
+      lineSensorArray[index]->integrationTime(33); // ms   @TODO change this to match the other sensor array of 180ms
+      lineSensorArray[index]->gain(TCS34725::Gain::X01);
 
       //Configure each sensor
       Serial.print("Line Sensor: ");
-      Serial.print(port);
+      Serial.print(index);
       Serial.println(" configured");
-    }
+    }*/
     delay(500);
   }
 
@@ -369,7 +375,7 @@ void setupSensors() {
 
   initDistanceSensors();
 
-  //initLineSensors();
+  initLineSensors();
 
 }
 
@@ -448,7 +454,9 @@ void loopSensors(bool fightStarted){
   //   return;
   // }
 
-  int botStatus = loopBotSensors(fightStarted);
+  //int botStatus = loopBotSensors(fightStarted);
+
+  loopLineSensors();
 
 }
 
@@ -470,47 +478,49 @@ int loopLineSensors(){
 
   // Need this because the port numbering is:3-5, but whe what 0-2
   int sensorIndex = 0;
-  TCS34725::Color color;
 
   // Loop thru the MUX ports for line sensors: 3-5
   byte start= NUM_DISTANCE_SENSORS;
   byte end= NUM_DISTANCE_SENSORS + NUM_LINE_SENSORS;
+  int index;
   for (byte port = start; port < end; port++)
   {
-    myMux.setPort(port);                               //Tell mux to connect to this port, and this port only
-    color = lineSensorArray[port]->color();
 
-    if(isLineDetected(color)){
-      lineDetectedArray[port] = true;
+    myMux.setPort(port);                               //Tell mux to connect to this port, and this port only
+    index = port - NUM_DISTANCE_SENSORS;
+    if(isLineDetected(lineSensorArray[index])){
+      lineDetectedArray[index] = true;
+      } else {
+        lineDetectedArray[index] = false;
+      }
       Serial.print("line sensor port:");
       Serial.print(port);
-      Serial.print(" detected:");
-      Serial.println(lineDetectedArray[port]);
-      }
+      Serial.print("\tdetected:");
+      Serial.println(lineDetectedArray[index]);
   }
 
-  Serial.println();  
 
 
 
   return lineStatus;
 }
 
-bool isLineDetected(TCS34725::Color color){
+bool isLineDetected(Adafruit_TCS34725 *tcs){
   bool isLineDetected = false;
-  float r, g, b;
 
-  // guessing at some values.
-  // @TODO also look at lux and temperature to
-  if(r > 100.0 && g > 100.0 && b > 100.0){
+
+  uint16_t r, g, b, c, colorTemp, lux;
+
+  tcs->getRawData(&r, &g, &b, &c);
+  //colorTemp = tcs->calculateColorTemperature_dn40(r, g, b, c);
+  lux = tcs->calculateLux(r, g, b);
+
+
+  // Test show that all forms of 'black' show up as 700 lux or lower.
+  if(lux < 2100){
     isLineDetected = true;
   }
 
-      // Serial.print("Color Temp : "); Serial.println(tcs.colorTemperature());
-      // Serial.print("Lux        : "); Serial.println(tcs.lux());
-      // Serial.print("R          : "); Serial.println(color.r);
-      // Serial.print("G          : "); Serial.println(color.g);
-      // Serial.print("B          : "); Serial.println(color.b);
 
   return isLineDetected;
 }
