@@ -73,9 +73,9 @@ void loop()
 
   loopBuiltInButton();
 
-  loopFightCheck();
+  fightStarted = loopFightCheck();
 
-  loopSensors();
+  loopSensors(fightStarted);
 
   delay(TIME_SLICE); //Wait for next reading
 }
@@ -93,9 +93,9 @@ bool loopFightCheck(){
 
       if(dt >= 5 && !fightStarted){
         fightStarted = true;
-        Serial.print("It's time! at ");
+        Serial.print("It's time!");
         Serial.print(dt);
-        Serial.println(" seconds since start/boot button press");
+        Serial.println(" seconds since start/boot button press.");
         return true;
       }
     }
@@ -306,7 +306,7 @@ void initDistanceSensors(){
 
 // 1. Handle line sensors
 // 2. Handle bot sensors
-void loopSensors(){
+void loopSensors(bool fightStarted){
 
   // line sensors have to be first, before bot sensors
   //int lineStatus = loopLineSensors();
@@ -314,7 +314,7 @@ void loopSensors(){
   //   return;
   // }
 
-  int botStatus = loopBotSensors(false);
+  int botStatus = loopBotSensors(fightStarted);
 
 }
 
@@ -381,7 +381,8 @@ bool isLineDetected(TCS34725::Color color){
   return isLineDetected;
 }
 
-int loopBotSensors(bool print){
+int loopBotSensors(bool fightStarted){
+
   int botStatus = BOT_NONE;
   int distance[NUM_DISTANCE_SENSORS];
   float distanceFeet;
@@ -409,15 +410,18 @@ int loopBotSensors(bool print){
 
 
     if(true){
-      if(print){
-        Serial.print("\tdetected");
+      if(fightStarted){
+        if(port > 0){
+          Serial.print("\t");
+        }
+        Serial.print("bot");
         Serial.print(port);
         Serial.print(":");
         Serial.print(botDetectedArray[port]);
       }
     } else {
-      if(print){
-        Serial.print("\tDistance");
+      if(fightStarted){
+        Serial.print("Distance");
         Serial.print(port);
         Serial.print("(cm): ");
         Serial.print(distanceCM, 2);
@@ -426,7 +430,7 @@ int loopBotSensors(bool print){
 
   }
 
-  if(print){
+  if(fightStarted){
     Serial.println();
   }
 
