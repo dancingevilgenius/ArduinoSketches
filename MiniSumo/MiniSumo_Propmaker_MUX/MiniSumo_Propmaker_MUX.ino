@@ -4,10 +4,19 @@
 */
 
 #include <Wire.h>
-#include <SparkFun_I2C_Mux_Arduino_Library.h> //Click here to get the library: http://librarymanager/All#SparkFun_I2C_Mux
-#include "SparkFun_VL53L1X.h" //Click here to get the library: http://librarymanager/All#SparkFun_VL53L1X
-#include <TCS34725.h>
+#include <SparkFun_I2C_Mux_Arduino_Library.h> 
+#include "SparkFun_VL53L1X.h"   // For distance/bot sensor
+#include <TCS34725.h>           // For RGB line/color sensor
+#include <FS_MX1508.h>          // For DRV8871 motor driver
 
+// Motor controllers. One for each side
+#define PIN_MOTOR_L_A 18 // Left Motor
+#define PIN_MOTOR_L_B 19 // Left Motor
+#define PIN_MOTOR_R_A 18 // Right Motor
+#define PIN_MOTOR_R_B 19 // Right Motor
+#define MAX_MOTOR_SPEED 100
+MX1508 motorL(PIN_MOTOR_L_A, PIN_MOTOR_L_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
+MX1508 motorR(PIN_MOTOR_R_A, PIN_MOTOR_R_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
 
 // Sparkfun QWIIC multiplexor
 QWIICMUX myMux;
@@ -77,8 +86,46 @@ void loop()
 
   loopSensors(fightStarted);
 
+  loopMotors(fightStarted);
+
   delay(TIME_SLICE); //Wait for next reading
 }
+
+// @TODO check the sensors for what to do.
+// right now, just running MX1508 library example simple_motor.
+void loopMotors(bool fightStarted){
+  if(fightStarted == false){
+    return;
+  }
+
+
+  loopMotorDemo();
+}
+
+
+void loopMotorDemo(){
+  Serial.println("Ramp up forward 0 to  MAX_MOTOR_SPEED");
+  for (int pct = 0; pct <= 100; pct++) { // ramp up forward.
+    motorL.motorGoP(pct);
+    delay(50);
+  }
+
+  Serial.println("Motor stop: speed decrease slowly (free wheeling)");
+  motorL.motorStop();  // free wheeling. Motor stops slowly
+  delay(5000);
+
+  Serial.println("Ramp up backward 0 to  -MAX_MOTOR_SPEED");
+  for (int pct = 0; pct <= 100; pct++) { // ramp up backward.
+    motorL.motorGoP(-pct);
+    delay(50);
+  }
+
+  Serial.println("Motor brake: speed decrease quickly ");
+  motorL.motorBrake();  //  Fast , strong brake
+  delay(5000);
+}
+
+
 
 bool loopFightCheck(){
 
