@@ -63,29 +63,44 @@ bool botDetectedArray[3];
 long timeElapsed = 0;
 bool firstButtonPress = false;
 time_t timeOfFirstButtonPress = -1;
+bool fightStarted = false;
 
 
-void setup()
-{
-  Serial.begin(115200);
-  Serial.println("Qwiic Mux Shield Read Example");
-  delay(2000);
-
-  Wire.begin();
-
-  setupBuiltInButton();
-
-
-  setupSensors();
-}
 
 
 void loop()
 {
-  loopSensors();
+
   loopBuiltInButton();
 
+  loopFightCheck();
+
+  loopSensors();
+
   delay(TIME_SLICE); //Wait for next reading
+}
+
+bool loopFightCheck(){
+
+    if(fightStarted){
+      return true;
+    }
+
+    if(firstButtonPress){
+
+      time_t dt = time(nullptr) - timeOfFirstButtonPress;
+      Serial.println(dt);
+
+      if(dt >= 5 && !fightStarted){
+        fightStarted = true;
+        Serial.print("It's time! at ");
+        Serial.print(dt);
+        Serial.println(" seconds since start/boot button press");
+        return true;
+      }
+    }
+
+  return false;
 }
 
 void loopBuiltInButton(){
@@ -121,6 +136,22 @@ void loopBuiltInButton(){
   timeElapsed += TIME_SLICE;
   
 }
+
+
+void setup()
+{
+  Serial.begin(115200);
+  Serial.println("Qwiic Mux Shield Read Example");
+  delay(2000);
+
+  Wire.begin();
+
+  setupBuiltInButton();
+
+
+  setupSensors();
+}
+
 
 void setupBuiltInButton(){
   Serial.println("setupBuiltInButton()");
