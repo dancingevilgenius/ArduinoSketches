@@ -8,6 +8,14 @@
 #include "SparkFun_VL53L1X.h"   // For distance/bot sensor
 #include <TCS34725.h>           // For RGB line/color sensor
 #include <FS_MX1508.h>          // For DRV8871 motor driver
+#include <Adafruit_NeoPixel.h>
+
+
+// Built-in Neopixel
+//#define PIN_NEOPIXEL 8 - Already defined in Feather support code
+#define NUMPIXELS 1 // The board has one built-in NeoPixel
+// Initialize the NeoPixel strip object
+Adafruit_NeoPixel pixel(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
 // Motor controllers. One for each side
 #define PIN_MOTOR_L_A 18 // Left Motor
@@ -86,10 +94,49 @@ void loop()
 
   loopSensors(fightStarted);
 
-  loopMotors(fightStarted);
+  //loopMotors(fightStarted);
+
+  loopBuiltInNeopixel();
 
   delay(TIME_SLICE); //Wait for next reading
 }
+
+
+
+void loopBuiltInNeopixel() {
+  // Set the color to Red (R, G, B)
+  pixel.setPixelColor(0, pixel.Color(255, 0, 0));
+  pixel.show(); // Show the color
+  delay(500); // Wait 500ms
+
+  // Turn off
+  pixel.setPixelColor(0, pixel.Color(0, 0, 0));
+  pixel.show();
+  delay(500); // Wait 500ms
+
+  // Set the color to Green (R, G, B)
+  pixel.setPixelColor(0, pixel.Color(0, 255, 0));
+  pixel.show(); // Show the color
+  delay(500); // Wait 500ms
+
+  // Turn off
+  pixel.setPixelColor(0, pixel.Color(0, 0, 0));
+  pixel.show();
+  delay(500); // Wait 500ms
+
+
+  // Set the color to Blue (R, G, B)
+  pixel.setPixelColor(0, pixel.Color(0, 0, 255));
+  pixel.show(); // Show the color
+  delay(500); // Wait 500ms
+
+  // Turn off
+  pixel.setPixelColor(0, pixel.Color(0, 0, 0));
+  pixel.show();
+  delay(500); // Wait 500ms
+
+}
+
 
 // @TODO check the sensors for what to do.
 // right now, just running MX1508 library example simple_motor.
@@ -99,9 +146,42 @@ void loopMotors(bool fightStarted){
   }
 
 
-  loopMotorDemo();
+  //loopMotorDemo();
+
+  int duration=2500;
+  driveMotors(100, 100);
+  delay(duration);
+
+  driveMotors(-100, -100);
+  delay(duration);
+
+  driveMotors(100, -100);
+  delay(duration);
+ 
+  driveMotors(-100, 100);
+  delay(duration);
+
 }
 
+void driveMotors(int pctL, int pctR){
+
+  if(pctL > MAX_MOTOR_SPEED){
+    pctL = MAX_MOTOR_SPEED;
+  }
+  else if(pctL < -MAX_MOTOR_SPEED){
+    pctL = -MAX_MOTOR_SPEED;
+  }
+  if(pctR > MAX_MOTOR_SPEED){
+    pctR = MAX_MOTOR_SPEED;
+  }
+  else if(pctR < -MAX_MOTOR_SPEED){
+    pctR = -MAX_MOTOR_SPEED;
+  }
+
+  motorL.motorGoP(pctL);
+  motorR.motorGoP(pctR);
+
+}
 
 void loopMotorDemo(){
   Serial.println("Ramp up forward 0 to  MAX_MOTOR_SPEED");
@@ -195,8 +275,15 @@ void setup()
 
   setupBuiltInButton();
 
+  setupBuiltInNeopixel();
+
 
   setupSensors();
+}
+
+void setupBuiltInNeopixel(){
+  pixel.begin(); // Initialize NeoPixel
+  pixel.setBrightness(50); // Set brightness (0-255)
 }
 
 
