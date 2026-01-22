@@ -4,29 +4,69 @@
 */
 
 #include <Wire.h>
-#include <SparkFun_I2C_Mux_Arduino_Library.h> //Click here to get the library: http://librarymanager/All#SparkFun_I2C_Mux
-#include "SparkFun_VL53L1X.h" //Click here to get the library: http://librarymanager/All#SparkFun_VL53L1X
-#include <TCS34725.h>
+#include <SparkFun_I2C_Mux_Arduino_Library.h> 
+#include "SparkFun_VL53L1X.h"   // For distance/bot sensor
+#include "Adafruit_TCS34725.h"  // For RGB line/color sensor
+#include <FS_MX1508.h>          // For DRV8871 motor driver
+#include <Adafruit_NeoPixel.h>
 
+
+// Built-in Neopixel
+//#define PIN_NEOPIXEL 8 - Already defined in Feather support code
+#define NUMPIXELS 1 // The board has one built-in NeoPixel
+// Initialize the NeoPixel strip object
+Adafruit_NeoPixel pixel(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
+
+// Motor controllers. One for each side
+#define PIN_MOTOR_L_A 18 // Left Motor
+#define PIN_MOTOR_L_B 19 // Left Motor
+#define PIN_MOTOR_R_A 18 // Right Motor
+#define PIN_MOTOR_R_B 19 // Right Motor
+#define MAX_MOTOR_SPEED 100
+MX1508 motorL(PIN_MOTOR_L_A, PIN_MOTOR_L_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
+MX1508 motorR(PIN_MOTOR_R_A, PIN_MOTOR_R_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
 
 // Sparkfun QWIIC multiplexor
 QWIICMUX myMux;
 
 
+// User/Boot button
+#define BUILTIN_LED 13    // Normally defined on other Arduino boards.
+const int buttonPin = PIN_BUTTON;  // the number of the pushbutton pin
+const int ledPin = BUILTIN_LED;    // the number of the LED pin. 13
+int buttonState = 0;  // variable for reading the pushbutton status
+
+
 
 // RBG line sensors
 #define NUM_LINE_SENSORS 1        // @TODO expand this to 3 for final design
-//TCS34725 tcs;
-TCS34725 **lineSensorArray;     //Create pointer to a set of pointers to the sensor class
-
+//Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
+Adafruit_TCS34725 **lineSensorArray;     //Create pointer to a set of pointers to the sensor class
+bool lineDetectedArray[3];
+#define LINE_NONE         -1
+#define LINE_FRONT_LEFT   0
+#define LINE_FRONT_RIGHT  1
+#define LINE_REAR_CENTER  2
 
 
 
 
 
 // VL53L1X TOF laser sensor
-#define NUM_DISTANCE_SENSORS 1  // @TODO expand this to 3 for final design
+#define NUM_DISTANCE_SENSORS 3  // @TODO expand this to 3 for final design
 SFEVL53L1X **distanceSensorArray; //Create pointer to a set of pointers to the sensor class
+bool botDetectedArray[3];
+#define BOT_NONE          -1
+#define BOT_FRONT_LEFT    0
+#define BOT_FRONT_CENTER  1
+#define BOT_FRONT_RIGHT   2
+
+#define MAX_BOT_DIST_CM 77
+#define MAX_BOT_DIST_MM 770
+#define MAX_BOT_DIST_IN 30
+
+
+
 
 // Defines for sensor initialization.
 // Yes, they are opposite of each other.
@@ -35,20 +75,231 @@ SFEVL53L1X **distanceSensorArray; //Create pointer to a set of pointers to the s
 #define INIT_LINE_SENSOR_SUCCESS 1
 #define INIT_LINE_SENSOR_FAIL 0
 
+// For timer
+#define TIME_SLICE 180
+long timeElapsed = 0;
+bool firstButtonPress = false;
+time_t timeOfFirstButtonPress = -1;
+bool fightStarted = false;
+
+
+
+
+void loop()
+{
+
+  loopBuiltInButton();
+
+  fightStarted = loopFightCheck();
+
+  loopSensors(fightStarted);
+
+  //loopMotors(fightStarted);
+
+  //loopBuiltInNeopixel();
+
+  delay(TIME_SLICE); //Wait for next reading
+}
+
+
+
+void loopBuiltInNeopixel() {
+}
+
+
+void loopNeopixelDemo(){
+  // Set the color to Red (R, G, B)
+  pixel.setPixelColor(0, pixel.Color(255, 0, 0));
+  pixel.show(); // Show the color
+  delay(500); // Wait 500ms
+
+  // Turn off
+  pixel.setPixelColor(0, pixel.Color(0, 0, 0));
+  pixel.show();
+  delay(500); // Wait 500ms
+
+  // Set the color to Green (R, G, B)
+  pixel.setPixelColor(0, pixel.Color(0, 255, 0));
+  pixel.show(); // Show the color
+  delay(500); // Wait 500ms
+
+  // Turn off
+  pixel.setPixelColor(0, pixel.Color(0, 0, 0));
+  pixel.show();
+  delay(500); // Wait 500ms
+
+
+  // Set the color to Blue (R, G, B)
+  pixel.setPixelColor(0, pixel.Color(0, 0, 255));
+  pixel.show(); // Show the color
+  delay(500); // Wait 500ms
+
+  // Turn off
+  pixel.setPixelColor(0, pixel.Color(0, 0, 0));
+  pixel.show();
+  delay(500); // Wait 500ms
+}
+
+// @TODO check the sensors for what to do.
+// right now, just running MX1508 library example simple_motor.
+void loopMotors(bool fightStarted){
+  if(fightStarted == false){
+    return;
+  }
+
+
+  //loopMotorDemo();
+
+  int duration=2500;
+  driveMotors(100, 100);
+  delay(duration);
+
+  driveMotors(-100, -100);
+  delay(duration);
+
+  driveMotors(100, -100);
+  delay(duration);
+ 
+  driveMotors(-100, 100);
+  delay(duration);
+
+}
+
+void driveMotors(int pctL, int pctR){
+
+  if(pctL > MAX_MOTOR_SPEED){
+    pctL = MAX_MOTOR_SPEED;
+  }
+  else if(pctL < -MAX_MOTOR_SPEED){
+    pctL = -MAX_MOTOR_SPEED;
+  }
+  if(pctR > MAX_MOTOR_SPEED){
+    pctR = MAX_MOTOR_SPEED;
+  }
+  else if(pctR < -MAX_MOTOR_SPEED){
+    pctR = -MAX_MOTOR_SPEED;
+  }
+
+  motorL.motorGoP(pctL);
+  motorR.motorGoP(pctR);
+
+}
+
+void loopMotorDemo(){
+  Serial.println("Ramp up forward 0 to  MAX_MOTOR_SPEED");
+  for (int pct = 0; pct <= 100; pct++) { // ramp up forward.
+    motorL.motorGoP(pct);
+    delay(50);
+  }
+
+  Serial.println("Motor stop: speed decrease slowly (free wheeling)");
+  motorL.motorStop();  // free wheeling. Motor stops slowly
+  delay(5000);
+
+  Serial.println("Ramp up backward 0 to  -MAX_MOTOR_SPEED");
+  for (int pct = 0; pct <= 100; pct++) { // ramp up backward.
+    motorL.motorGoP(-pct);
+    delay(50);
+  }
+
+  Serial.println("Motor brake: speed decrease quickly ");
+  motorL.motorBrake();  //  Fast , strong brake
+  delay(5000);
+}
+
+
+
+bool loopFightCheck(){
+
+    if(fightStarted){
+      return true;
+    }
+
+    if(firstButtonPress){
+
+      time_t dt = time(nullptr) - timeOfFirstButtonPress;
+      Serial.println(dt);
+
+      if(dt >= 5 && !fightStarted){
+        fightStarted = true;
+        Serial.print("It's time!");
+        Serial.print(dt);
+        Serial.println(" seconds since start/boot button press.");
+        return true;
+      }
+    }
+
+  return false;
+}
+
+void loopBuiltInButton(){
+  // read the state of the pushbutton value:
+  buttonState = digitalRead(buttonPin);
+
+  // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
+  if (buttonState == HIGH) {
+    // turn LED on:
+    digitalWrite(ledPin, HIGH);
+  } else {
+    float timeElapsedFloat = float(timeElapsed)/ 1000.0;
+    // turn LED off:
+    digitalWrite(ledPin, LOW);
+    //Serial.print("timeElapsed:");
+    //Serial.println(timeElapsedFloat, 1);
+
+    if(!firstButtonPress){
+      firstButtonPress = true;
+      timeElapsed = 0; // timer start
+      
+      timeOfFirstButtonPress = time(nullptr);
+      Serial.print("First button press at:");
+      Serial.println(timeOfFirstButtonPress);      
+    }  else {
+      time_t dt = time(nullptr) - timeOfFirstButtonPress;
+      Serial.print("time since 1st button press:");
+      Serial.println(dt);
+    }
+
+  }
+
+  timeElapsed += TIME_SLICE;
+  
+}
+
+
 void setup()
 {
   Serial.begin(115200);
   Serial.println("Qwiic Mux Shield Read Example");
   delay(2000);
 
-
   Wire.begin();
+
+  setupBuiltInButton();
+
+  setupBuiltInNeopixel();
+
 
   setupSensors();
 }
 
+void setupBuiltInNeopixel(){
+  pixel.begin(); // Initialize NeoPixel
+  pixel.setBrightness(50); // Set brightness (0-255)
+}
+
+
+void setupBuiltInButton(){
+  Serial.println("setupBuiltInButton()");
+  // initialize the LED pin as an output:
+  pinMode(ledPin, OUTPUT);
+  // initialize the pushbutton pin as an input:
+  pinMode(buttonPin, INPUT);
+}
+
 void initLineSensors(){
     
+  Serial.println("start initLineSensors() ---------------");
     // if (!tcs.attach(Wire))
     //     Serial.println("ERROR: TCS34725 NOT FOUND !!!");
 
@@ -56,14 +307,16 @@ void initLineSensors(){
     // tcs.gain(TCS34725::Gain::X01);
 
   //Create set of pointers to the class
-  lineSensorArray = new TCS34725 *[NUM_LINE_SENSORS];
+  lineSensorArray = new Adafruit_TCS34725 *[NUM_LINE_SENSORS];
 
   //Assign pointers to instances of the class
-  for (int x = 0; x < NUM_LINE_SENSORS; x++){
-    lineSensorArray[x] = new TCS34725();
-    lineSensorArray[x]->attach(Wire);
-    lineSensorArray[x]->integrationTime(33); // ms   @TODO change this to match the other sensor array of 180ms
-    lineSensorArray[x]->gain(TCS34725::Gain::X01);
+  for (int index = 0; index < NUM_LINE_SENSORS; index++){
+    lineSensorArray[index] = new Adafruit_TCS34725(
+      TCS34725_INTEGRATIONTIME_614MS,
+      TCS34725_GAIN_1X);;
+    //lineSensorArray[index]->begin(TCS34725_ADDRESS, &Wire);
+    // lineSensorArray[index]->integrationTime(33); // ms   @TODO change this to match the other sensor array of 180ms
+    // lineSensorArray[index]->gain(TCS34725::Gain::X01);
   }
 
 
@@ -72,32 +325,36 @@ void initLineSensors(){
   byte currentPortNumber = myMux.getPort();
   Serial.print("CurrentPort: ");
   Serial.println(currentPortNumber);
+  delay(1000);
 
   //Initialize all the distance sensors
   bool allSensorsSuccess = true;
 
   // @TODO start port number after last of the distance sensors
-  int totalSensors = NUM_DISTANCE_SENSORS + NUM_LINE_SENSORS;
-  for (byte port = NUM_DISTANCE_SENSORS ; port < totalSensors; port++)
+  for (byte index = 0 ; index < NUM_LINE_SENSORS ; index++)
   {
-    myMux.setPort(port);
-    if (lineSensorArray[port]->attach(Wire) == INIT_LINE_SENSOR_FAIL)
+    // Port number has to start where distance sensors end.
+    myMux.setPort(index + NUM_DISTANCE_SENSORS); 
+    lineSensorArray[index]->begin(TCS34725_ADDRESS, &Wire);
+    /*
+    if (lineSensorArray[index]->attach(Wire) == INIT_LINE_SENSOR_FAIL)
     {
       Serial.print("ERROR: Line Sensor ");
-      Serial.print(port);
+      Serial.print(index);
       Serial.println(" did not begin! Check wiring");
       allSensorsSuccess = false;
     }
     else
     {
-      lineSensorArray[port]->integrationTime(33); // ms   @TODO change this to match the other sensor array of 180ms
-      lineSensorArray[port]->gain(TCS34725::Gain::X01);
+      lineSensorArray[index]->integrationTime(33); // ms   @TODO change this to match the other sensor array of 180ms
+      lineSensorArray[index]->gain(TCS34725::Gain::X01);
 
       //Configure each sensor
-      Serial.print("Line Sensor ");
-      Serial.print(port);
+      Serial.print("Line Sensor: ");
+      Serial.print(index);
       Serial.println(" configured");
-    }
+    }*/
+    delay(500);
   }
 
   if (allSensorsSuccess == false)
@@ -108,10 +365,7 @@ void initLineSensors(){
     ;
   }
 
-  Serial.println("Distance sensors initialized.");  
-
-
-
+  Serial.println("Line sensors initialized.");  
 }
 
 // Setup both line and distance sensors using QWIIC MUX
@@ -127,6 +381,8 @@ void setupSensors() {
 
 
 void initDistanceSensors(){
+
+  Serial.println("Enter initDistanceSensors() -------------");
   //Create set of pointers to the class
   distanceSensorArray = new SFEVL53L1X *[NUM_DISTANCE_SENSORS];
 
@@ -147,7 +403,16 @@ void initDistanceSensors(){
   for (byte port = 0; port < NUM_DISTANCE_SENSORS; port++)
   {
     myMux.setPort(port);
-    if (distanceSensorArray[port]->begin(Wire) == INIT_DISTANCE_SENSOR_FAIL)
+    Serial.print("set port:");
+    Serial.print(port);
+    int status  = distanceSensorArray[port]->begin(Wire);
+    
+    Serial.print(" status");
+    Serial.print(port);
+    Serial.print("\t");
+    Serial.println(status);
+    
+    if (status == INIT_DISTANCE_SENSOR_FAIL)
     {
       Serial.print("ERROR: Sensor ");
       Serial.print(port);
@@ -158,12 +423,13 @@ void initDistanceSensors(){
     {
       //Configure each sensor
       distanceSensorArray[port]->setIntermeasurementPeriod(180);
-      distanceSensorArray[port]->setDistanceModeLong();
+      distanceSensorArray[port]->setDistanceModeShort(); // Carlos changed this from Long to Short
       distanceSensorArray[port]->startRanging(); //Write configuration bytes to initiate measurement
       Serial.print("Sensor ");
       Serial.print(port);
       Serial.println(" configured");
     }
+    delay(500);
   }
 
   if (allSensorsSuccess == false)
@@ -174,41 +440,145 @@ void initDistanceSensors(){
     ;
   }
 
-  Serial.println("Distance sensors initialized.");  
-}
-
-void loop()
-{
-  loopSensors();
-
-  delay(180); //Wait for next reading
+  Serial.println("Exit initDistanceSensors. Distance sensors initialized. -------------");  
 }
 
 
-void loopSensors(){
-  int distance[NUM_DISTANCE_SENSORS];
-  float distanceFeet;
+// 1. Handle line sensors
+// 2. Handle bot sensors
+void loopSensors(bool fightStarted){
 
-  for (byte x = 0; x < NUM_DISTANCE_SENSORS; x++)
+  // line sensors have to be first, before bot sensors
+  //int lineStatus = loopLineSensors();
+  // if(lineStatus != LINE_NONE){
+  //   return;
+  // }
+
+  //int botStatus = loopBotSensors(fightStarted);
+
+  loopLineSensors();
+
+}
+
+
+    // if (tcs.available()) // if current measurement has done
+    // {
+    //     TCS34725::Color color = tcs.color();
+    //     Serial.print("Color Temp : "); Serial.println(tcs.colorTemperature());
+    //     Serial.print("Lux        : "); Serial.println(tcs.lux());
+    //     Serial.print("R          : "); Serial.println(color.r);
+    //     Serial.print("G          : "); Serial.println(color.g);
+    //     Serial.print("B          : "); Serial.println(color.b);
+    //     delay(3000);
+    // }
+int loopLineSensors(){
+  int lineStatus = LINE_NONE;
+
+
+
+  // Need this because the port numbering is:3-5, but whe what 0-2
+  int sensorIndex = 0;
+
+  // Loop thru the MUX ports for line sensors: 3-5
+  byte start= NUM_DISTANCE_SENSORS;
+  byte end= NUM_DISTANCE_SENSORS + NUM_LINE_SENSORS;
+  int index;
+  for (byte port = start; port < end; port++)
   {
-    myMux.setPort(x);                               //Tell mux to connect to this port, and this port only
-    distance[x] = distanceSensorArray[x]->getDistance(); //Get the result of the measurement from the sensor
 
-    Serial.print("\tDistance");
-    Serial.print(x);
-    Serial.print("(mm): ");
-    Serial.print(distance[x]);
-
-    distanceFeet = (distance[x] * 0.0393701) / 12.0;
-
-    Serial.print("\tDistance");
-    Serial.print(x);
-    Serial.print("(ft): ");
-    Serial.print(distanceFeet, 2);
+    myMux.setPort(port);                               //Tell mux to connect to this port, and this port only
+    index = port - NUM_DISTANCE_SENSORS;
+    if(isLineDetected(lineSensorArray[index])){
+      lineDetectedArray[index] = true;
+      } else {
+        lineDetectedArray[index] = false;
+      }
+      Serial.print("line sensor port:");
+      Serial.print(port);
+      Serial.print("\tdetected:");
+      Serial.println(lineDetectedArray[index]);
   }
 
-  Serial.println();  
 
+
+
+  return lineStatus;
+}
+
+bool isLineDetected(Adafruit_TCS34725 *tcs){
+  bool isLineDetected = false;
+
+
+  uint16_t r, g, b, c, colorTemp, lux;
+
+  tcs->getRawData(&r, &g, &b, &c);
+  //colorTemp = tcs->calculateColorTemperature_dn40(r, g, b, c);
+  lux = tcs->calculateLux(r, g, b);
+
+
+  // Test show that all forms of 'black' show up as 700 lux or lower.
+  if(lux < 2100){
+    isLineDetected = true;
+  }
+
+
+  return isLineDetected;
+}
+
+int loopBotSensors(bool fightStarted){
+
+  int botStatus = BOT_NONE;
+  int distance[NUM_DISTANCE_SENSORS];
+  float distanceFeet;
+  float distanceCM;
+  float distanceMM;
+  int status;
+
+  // Loop thru the MUX ports for bot/lidar sensors: 0-2
+  for (byte port = 0; port < NUM_DISTANCE_SENSORS; port++)
+  {
+    myMux.setPort(port);                               //Tell mux to connect to this port, and this port only
+    distance[port] = distanceSensorArray[port]->getDistance(); //Get the result of the measurement from the sensor
+
+    distanceMM = distance[port];
+    distanceCM = distanceMM /10.0;
+    distanceFeet = (distance[port] * 0.0393701) / 12.0; // TODO calculate this from distanceMM
+
+    // 1. If the distance is 5cm or less, this is basically out of normal range response
+    // 2. We do not want to track anything further than the width of the ring (roughly 30" / 77cm)
+    if((distanceCM > 5.0) && (distanceCM <  MAX_BOT_DIST_CM)){
+      botDetectedArray[port] = true;
+    } else {
+      botDetectedArray[port] = false;
+    }
+
+
+    if(true){
+      if(fightStarted){
+        if(port > 0){
+          Serial.print("\t");
+        }
+        Serial.print("bot");
+        Serial.print(port);
+        Serial.print(":");
+        Serial.print(botDetectedArray[port]);
+      }
+    } else {
+      if(fightStarted){
+        Serial.print("Distance");
+        Serial.print(port);
+        Serial.print("(cm): ");
+        Serial.print(distanceCM, 2);
+      }
+    }
+
+  }
+
+  if(fightStarted){
+    Serial.println();
+  }
+
+  return botStatus;
 }
 
 

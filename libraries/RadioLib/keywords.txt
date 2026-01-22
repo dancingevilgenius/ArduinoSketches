@@ -306,7 +306,9 @@ beginBLE	KEYWORD2
 setAccessAddress	KEYWORD2
 range	KEYWORD2
 startRanging	KEYWORD2
+finishRanging	KEYWORD2
 getRangingResult	KEYWORD2
+getRangingResultRaw	KEYWORD2
 
 # Hellschreiber
 printGlyph	KEYWORD2
