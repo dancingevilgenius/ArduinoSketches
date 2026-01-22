@@ -8,6 +8,7 @@
 #include "SparkFun_VL53L1X.h"   // For distance/bot sensor
 #include <FS_MX1508.h>          // For DRV8871 motor driver
 #include <Adafruit_NeoPixel.h>
+#include <QTRSensors.h>         // Infrared reflectance/line sensor
 
 #define ONE_SECOND 1000
 
@@ -41,14 +42,16 @@ int buttonState = 0;  // variable for reading the pushbutton status
 
 
 
-// RBG line sensors
+
 #define NUM_LINE_SENSORS 1        // @TODO expand this to 3 for final design
-//Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
 bool lineDetectedArray[NUM_LINE_SENSORS];
 #define LINE_NONE         -1
 #define LINE_FRONT_LEFT   0
 #define LINE_FRONT_RIGHT  1
 #define LINE_REAR_CENTER  2
+QTRSensors qtr;
+uint16_t sensorValues[NUM_LINE_SENSORS];
+
 
 
 
@@ -332,6 +335,53 @@ void setupBuiltInButton(){
 void initLineSensors(){
     
   Serial.println("\nEnter initLineSensors() --------------------");
+  // configure the sensors
+  qtr.setTypeAnalog();
+  qtr.setSensorPins((const uint8_t[]){26, 27, 28}, NUM_LINE_SENSORS); // AO A1 A2
+  //qtr.setEmitterPin(2);
+
+  delay(500);
+
+
+  // turn on Arduino's LED to indicate we are in calibration mode
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH); 
+
+  // analogRead() takes about 0.1 ms on an AVR.
+  // 0.1 ms per sensor * 4 samples per sensor read (default) * 6 sensors
+  // * 10 reads per calibrate() call = ~24 ms per calibrate() call.
+  // Call calibrate() 400 times to make calibration take about 10 seconds.
+  Serial.println("Start calibrating all line sensors for roughly 10 seconds.");
+  for (uint16_t i = 0; i < 400; i++)
+  {
+    qtr.calibrate();
+  }
+  Serial.println("End calibrating all line sensors");
+
+  // turn off Arduino's LED to indicate we are through with calibration
+  digitalWrite(LED_BUILTIN, LOW); 
+
+
+  // print the calibration minimum values measured when emitters were on
+  Serial.println("Min values");
+  for (uint8_t i = 0; i < NUM_LINE_SENSORS; i++)
+  {
+    Serial.print(qtr.calibrationOn.minimum[i]);
+    Serial.print('\t');
+  }
+  Serial.println();
+
+  // print the calibration maximum values measured when emitters were on
+  Serial.println("Max values");
+  for (uint8_t i = 0; i < NUM_LINE_SENSORS; i++)
+  {
+    Serial.print(qtr.calibrationOn.maximum[i]);
+    Serial.print('\t');
+  }
+  Serial.println();
+  delay(ONE_SECOND);
+
+
 
 
   Serial.println("Exit initLineSensors() ---------------------\n");  
@@ -428,16 +478,6 @@ void loopSensors(bool fightStarted){
 }
 
 
-    // if (tcs.available()) // if current measurement has done
-    // {
-    //     TCS34725::Color color = tcs.color();
-    //     Serial.print("Color Temp : "); Serial.println(tcs.colorTemperature());
-    //     Serial.print("Lux        : "); Serial.println(tcs.lux());
-    //     Serial.print("R          : "); Serial.println(color.r);
-    //     Serial.print("G          : "); Serial.println(color.g);
-    //     Serial.print("B          : "); Serial.println(color.b);
-    //     delay(3000);
-    // }
 int loopLineSensors(){
   int lineStatus = LINE_NONE;
 
