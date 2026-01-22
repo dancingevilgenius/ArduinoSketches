@@ -78,7 +78,7 @@ bool botDetectedArray[3];
 #define TIME_SLICE 180
 long timeElapsed = 0;
 bool firstButtonPress = false;
-time_t timeOfFirstButtonPress = -1;
+long timeOfFirstButtonPress = -1;
 bool fightStarted = false;
 
 
@@ -107,10 +107,6 @@ void loopBuiltInNeopixel(bool fightStarted) {
   }  
 
   if(neopixelCountdownTimer <= 0){
-
-  pixel.setPixelColor(0, pixel.Color(0, 0, 0));
-  pixel.show();
-
     return;
   }
 
@@ -125,8 +121,12 @@ void loopBuiltInNeopixel(bool fightStarted) {
   } else {
     Serial.print("loopBuiltInNeopixel() countdown finished.");
     if(neopixelCountdownTimer < 0){
-      neopixelCountdownTimer = 0;
+      neopixelCountdownTimer = 0;                
     }
+
+    pixel.setPixelColor(0, pixel.Color(0, 0, 0));
+    pixel.show();
+
 
   }
 }
@@ -245,10 +245,10 @@ bool loopFightCheck(){
 
     if(firstButtonPress){
 
-      time_t dt = time(nullptr) - timeOfFirstButtonPress;
+      long dt = millis() - timeOfFirstButtonPress;
       Serial.println(dt);
 
-      if(dt >= 5 && !fightStarted){
+      if(dt >= 5000 && !fightStarted){
         fightStarted = true;
         Serial.print("It's time!");
         Serial.print(dt);
@@ -275,15 +275,16 @@ void loopBuiltInButton(){
     //Serial.print("timeElapsed:");
     //Serial.println(timeElapsedFloat, 1);
 
-    if(!firstButtonPress){
+    long currentTimeMs = millis();
+    if(!firstButtonPress){      
       firstButtonPress = true;
       timeElapsed = 0; // timer start
       
-      timeOfFirstButtonPress = time(nullptr);
+      timeOfFirstButtonPress = currentTimeMs;
       Serial.print("First button press at:");
       Serial.println(timeOfFirstButtonPress);      
     }  else {
-      time_t dt = time(nullptr) - timeOfFirstButtonPress;
+      long dt = currentTimeMs - timeOfFirstButtonPress;
       Serial.print("time since 1st button press:");
       Serial.println(dt);
     }
