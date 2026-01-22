@@ -16,6 +16,7 @@
 #define NUMPIXELS 1 // The board has one built-in NeoPixel
 // Initialize the NeoPixel strip object
 Adafruit_NeoPixel pixel(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
+int neopixelCountdownTimer = 3000;
 
 // Motor controllers. One for each side
 #define PIN_MOTOR_L_A 18 // Left Motor
@@ -25,6 +26,8 @@ Adafruit_NeoPixel pixel(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 #define MAX_MOTOR_SPEED 100
 MX1508 motorL(PIN_MOTOR_L_A, PIN_MOTOR_L_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
 MX1508 motorR(PIN_MOTOR_R_A, PIN_MOTOR_R_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
+#define REVERSE_TIME_MS 3000
+int lineReverseCountdown = 3000;
 
 // Sparkfun QWIIC multiplexor
 QWIICMUX myMux;
@@ -50,8 +53,6 @@ bool lineDetectedArray[3];
 
 
 
-
-
 // VL53L1X TOF laser sensor
 #define NUM_DISTANCE_SENSORS 3  // @TODO expand this to 3 for final design
 SFEVL53L1X **distanceSensorArray; //Create pointer to a set of pointers to the sensor class
@@ -64,8 +65,6 @@ bool botDetectedArray[3];
 #define MAX_BOT_DIST_CM 77
 #define MAX_BOT_DIST_MM 770
 #define MAX_BOT_DIST_IN 30
-
-
 
 
 // Defines for sensor initialization.
@@ -83,8 +82,6 @@ time_t timeOfFirstButtonPress = -1;
 bool fightStarted = false;
 
 
-
-
 void loop()
 {
 
@@ -92,18 +89,46 @@ void loop()
 
   fightStarted = loopFightCheck();
 
-  loopSensors(fightStarted);
+  //loopSensors(fightStarted);
 
   //loopMotors(fightStarted);
 
-  //loopBuiltInNeopixel();
+  loopBuiltInNeopixel(fightStarted);
 
   delay(TIME_SLICE); //Wait for next reading
 }
 
 
 
-void loopBuiltInNeopixel() {
+void loopBuiltInNeopixel(bool fightStarted) {
+
+  if(!fightStarted){
+    return;
+  }  
+
+  if(neopixelCountdownTimer <= 0){
+
+  pixel.setPixelColor(0, pixel.Color(0, 0, 0));
+  pixel.show();
+
+    return;
+  }
+
+  neopixelCountdownTimer = neopixelCountdownTimer - TIME_SLICE;
+
+  if(neopixelCountdownTimer > 0){
+    Serial.print("loopBuiltInNeopixel() countdown:");
+    Serial.println(neopixelCountdownTimer);
+    pixel.setPixelColor(0, pixel.Color(0, 255, 0));
+    pixel.show(); // Show the color
+
+  } else {
+    Serial.print("loopBuiltInNeopixel() countdown finished.");
+    if(neopixelCountdownTimer < 0){
+      neopixelCountdownTimer = 0;
+    }
+
+  }
 }
 
 
@@ -150,6 +175,10 @@ void loopMotors(bool fightStarted){
 
   //loopMotorDemo();
 
+
+}
+
+void loopDemo2(){
   int duration=2500;
   driveMotors(100, 100);
   delay(duration);
@@ -162,7 +191,6 @@ void loopMotors(bool fightStarted){
  
   driveMotors(-100, 100);
   delay(duration);
-
 }
 
 void driveMotors(int pctL, int pctR){
