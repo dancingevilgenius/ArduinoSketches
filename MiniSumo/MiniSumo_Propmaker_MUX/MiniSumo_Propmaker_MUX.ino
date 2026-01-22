@@ -6,7 +6,6 @@
 #include <Wire.h>
 #include <SparkFun_I2C_Mux_Arduino_Library.h> 
 #include "SparkFun_VL53L1X.h"   // For distance/bot sensor
-#include "Adafruit_TCS34725.h"  // For RGB line/color sensor
 #include <FS_MX1508.h>          // For DRV8871 motor driver
 #include <Adafruit_NeoPixel.h>
 
@@ -45,8 +44,7 @@ int buttonState = 0;  // variable for reading the pushbutton status
 // RBG line sensors
 #define NUM_LINE_SENSORS 1        // @TODO expand this to 3 for final design
 //Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
-Adafruit_TCS34725 **lineSensorArray;     //Create pointer to a set of pointers to the sensor class
-bool lineDetectedArray[3];
+bool lineDetectedArray[NUM_LINE_SENSORS];
 #define LINE_NONE         -1
 #define LINE_FRONT_LEFT   0
 #define LINE_FRONT_RIGHT  1
@@ -300,7 +298,7 @@ void loopBuiltInButton(){
 void setup()
 {
   Serial.begin(115200);
-  Serial.println("Qwiic Mux Shield Read Example");
+  Serial.println("Entering setup() ---------------");
   delay(2000);
 
   Wire.begin();
@@ -311,6 +309,10 @@ void setup()
 
 
   setupSensors();
+  Serial.println("Exiting setup() ---------------\n");
+
+  Serial.println("Click on User/Boot button to start 5 second timer");
+
 }
 
 void setupBuiltInNeopixel(){
@@ -329,73 +331,10 @@ void setupBuiltInButton(){
 
 void initLineSensors(){
     
-  Serial.println("start initLineSensors() ---------------");
-    // if (!tcs.attach(Wire))
-    //     Serial.println("ERROR: TCS34725 NOT FOUND !!!");
-
-    // tcs.integrationTime(33); // ms
-    // tcs.gain(TCS34725::Gain::X01);
-
-  //Create set of pointers to the class
-  lineSensorArray = new Adafruit_TCS34725 *[NUM_LINE_SENSORS];
-
-  //Assign pointers to instances of the class
-  for (int index = 0; index < NUM_LINE_SENSORS; index++){
-    lineSensorArray[index] = new Adafruit_TCS34725(
-      TCS34725_INTEGRATIONTIME_614MS,
-      TCS34725_GAIN_1X);;
-    //lineSensorArray[index]->begin(TCS34725_ADDRESS, &Wire);
-    // lineSensorArray[index]->integrationTime(33); // ms   @TODO change this to match the other sensor array of 180ms
-    // lineSensorArray[index]->gain(TCS34725::Gain::X01);
-  }
+  Serial.println("\nEnter initLineSensors() --------------------");
 
 
-
-  // Not sure if the next 3 lines are necessary for anything other than sanity check.
-  byte currentPortNumber = myMux.getPort();
-  Serial.print("CurrentPort: ");
-  Serial.println(currentPortNumber);
-  delay(1000);
-
-  //Initialize all the distance sensors
-  bool allSensorsSuccess = true;
-
-  // @TODO start port number after last of the distance sensors
-  for (byte index = 0 ; index < NUM_LINE_SENSORS ; index++)
-  {
-    // Port number has to start where distance sensors end.
-    myMux.setPort(index + NUM_DISTANCE_SENSORS); 
-    lineSensorArray[index]->begin(TCS34725_ADDRESS, &Wire);
-    /*
-    if (lineSensorArray[index]->attach(Wire) == INIT_LINE_SENSOR_FAIL)
-    {
-      Serial.print("ERROR: Line Sensor ");
-      Serial.print(index);
-      Serial.println(" did not begin! Check wiring");
-      allSensorsSuccess = false;
-    }
-    else
-    {
-      lineSensorArray[index]->integrationTime(33); // ms   @TODO change this to match the other sensor array of 180ms
-      lineSensorArray[index]->gain(TCS34725::Gain::X01);
-
-      //Configure each sensor
-      Serial.print("Line Sensor: ");
-      Serial.print(index);
-      Serial.println(" configured");
-    }*/
-    delay(500);
-  }
-
-  if (allSensorsSuccess == false)
-  {
-    Serial.print("ERROR: Line Sensor initialization failed. exiting");
-    // @TODO Error display here
-    while(1)
-    ;
-  }
-
-  Serial.println("Line sensors initialized.");  
+  Serial.println("Exit initLineSensors() ---------------------\n");  
 }
 
 // Setup both line and distance sensors using QWIIC MUX
@@ -412,7 +351,7 @@ void setupSensors() {
 
 void initDistanceSensors(){
 
-  Serial.println("Enter initDistanceSensors() -------------");
+  Serial.println("\nEnter initDistanceSensors() -------------");
   //Create set of pointers to the class
   distanceSensorArray = new SFEVL53L1X *[NUM_DISTANCE_SENSORS];
 
@@ -423,9 +362,9 @@ void initDistanceSensors(){
 
 
   // Not sure if the next 3 lines are necessary for anything other than sanity check.
-  byte currentPortNumber = myMux.getPort();
-  Serial.print("CurrentPort: ");
-  Serial.println(currentPortNumber);
+  byte currentPortNumber = myMux.getPort(); // initial state appears to be 255
+  //Serial.print("CurrentPort: ");
+  //Serial.println(currentPortNumber);
 
   //Initialize all the distance sensors
   bool allSensorsSuccess = true;
@@ -433,14 +372,12 @@ void initDistanceSensors(){
   for (byte port = 0; port < NUM_DISTANCE_SENSORS; port++)
   {
     myMux.setPort(port);
-    Serial.print("set port:");
-    Serial.print(port);
     int status  = distanceSensorArray[port]->begin(Wire);
     
-    Serial.print(" status");
-    Serial.print(port);
-    Serial.print("\t");
-    Serial.println(status);
+    // Serial.print(" status");
+    // Serial.print(port);
+    // Serial.print("\t");
+    // Serial.println(status);
     
     if (status == INIT_DISTANCE_SENSOR_FAIL)
     {
@@ -455,9 +392,9 @@ void initDistanceSensors(){
       distanceSensorArray[port]->setIntermeasurementPeriod(180);
       distanceSensorArray[port]->setDistanceModeShort(); // Carlos changed this from Long to Short
       distanceSensorArray[port]->startRanging(); //Write configuration bytes to initiate measurement
-      Serial.print("Sensor ");
+      Serial.print("Distance Sensor on port ");
       Serial.print(port);
-      Serial.println(" configured");
+      Serial.println(" configured.");
     }
     delay(500);
   }
@@ -470,7 +407,7 @@ void initDistanceSensors(){
     ;
   }
 
-  Serial.println("Exit initDistanceSensors. Distance sensors initialized. -------------");  
+  Serial.println("Exit initDistanceSensors. -------------");  
 }
 
 
@@ -506,50 +443,14 @@ int loopLineSensors(){
 
 
 
-  // Need this because the port numbering is:3-5, but whe what 0-2
-  int sensorIndex = 0;
-
-  // Loop thru the MUX ports for line sensors: 3-5
-  byte start= NUM_DISTANCE_SENSORS;
-  byte end= NUM_DISTANCE_SENSORS + NUM_LINE_SENSORS;
-  int index;
-  for (byte port = start; port < end; port++)
-  {
-
-    myMux.setPort(port);                               //Tell mux to connect to this port, and this port only
-    index = port - NUM_DISTANCE_SENSORS;
-    if(isLineDetected(lineSensorArray[index])){
-      lineDetectedArray[index] = true;
-      } else {
-        lineDetectedArray[index] = false;
-      }
-      Serial.print("line sensor port:");
-      Serial.print(port);
-      Serial.print("\tdetected:");
-      Serial.println(lineDetectedArray[index]);
-  }
-
-
 
 
   return lineStatus;
 }
 
-bool isLineDetected(Adafruit_TCS34725 *tcs){
+bool isLineDetected(){
   bool isLineDetected = false;
 
-
-  uint16_t r, g, b, c, colorTemp, lux;
-
-  tcs->getRawData(&r, &g, &b, &c);
-  //colorTemp = tcs->calculateColorTemperature_dn40(r, g, b, c);
-  lux = tcs->calculateLux(r, g, b);
-
-
-  // Test show that all forms of 'black' show up as 700 lux or lower.
-  if(lux < 2100){
-    isLineDetected = true;
-  }
 
 
   return isLineDetected;
@@ -621,6 +522,6 @@ void initMUX(){
     while (1)
       ;
   }
-  Serial.println("Mux detected");
+  Serial.println("Mux initialized successfully.");
 }
 
