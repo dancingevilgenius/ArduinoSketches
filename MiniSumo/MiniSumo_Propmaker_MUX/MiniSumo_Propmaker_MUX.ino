@@ -91,7 +91,7 @@ void loop()
 
   fightStarted = loopFightCheck();
 
-  //loopSensors(fightStarted);
+  loopSensors(fightStarted);
 
   //loopMotors(fightStarted);
 
@@ -352,9 +352,10 @@ void initLineSensors(){
   // * 10 reads per calibrate() call = ~24 ms per calibrate() call.
   // Call calibrate() 400 times to make calibration take about 10 seconds.
   Serial.println("Start calibrating all line sensors for roughly 10 seconds.");
-  for (uint16_t i = 0; i < 400; i++)
+  for (uint16_t i = 0; i < 1000; i++)
   {
     qtr.calibrate();
+    delay(5);
   }
   Serial.println("End calibrating all line sensors");
 
@@ -482,16 +483,32 @@ int loopLineSensors(){
   int lineStatus = LINE_NONE;
 
 
+  uint16_t position = qtr.readLineBlack(sensorValues);
 
+  // print the sensor values as numbers from 0 to 1000, where 0 means maximum
+  // reflectance and 1000 means minimum reflectance, followed by the line
+  // position
+  for (uint8_t i = 0; i < NUM_LINE_SENSORS; i++)
+  {
+    Serial.print("index:");
+    Serial.print(i);
+    Serial.print("\t");
+    Serial.print(sensorValues[i]);
+    Serial.print('\t');
+  }
+  Serial.print("position (hit index?):");
+  Serial.println(position);
 
 
   return lineStatus;
 }
 
-bool isLineDetected(){
+bool isLineDetected(int value){
   bool isLineDetected = false;
 
-
+  if(value > 850){
+    isLineDetected = true;
+  }
 
   return isLineDetected;
 }
