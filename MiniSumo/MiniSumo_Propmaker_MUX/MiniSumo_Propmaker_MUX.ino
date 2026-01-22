@@ -10,13 +10,14 @@
 #include <FS_MX1508.h>          // For DRV8871 motor driver
 #include <Adafruit_NeoPixel.h>
 
+#define ONE_SECOND 1000
 
 // Built-in Neopixel
 //#define PIN_NEOPIXEL 8 - Already defined in Feather support code
 #define NUMPIXELS 1 // The board has one built-in NeoPixel
 // Initialize the NeoPixel strip object
 Adafruit_NeoPixel pixel(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
-int neopixelCountdownTimer = 3000;
+int neopixelCountdownTimer = 3 * ONE_SECOND;
 
 // Motor controllers. One for each side
 #define PIN_MOTOR_L_A 18 // Left Motor
@@ -222,7 +223,7 @@ void loopMotorDemo(){
 
   Serial.println("Motor stop: speed decrease slowly (free wheeling)");
   motorL.motorStop();  // free wheeling. Motor stops slowly
-  delay(5000);
+  delay(5 * ONE_SECOND);
 
   Serial.println("Ramp up backward 0 to  -MAX_MOTOR_SPEED");
   for (int pct = 0; pct <= 100; pct++) { // ramp up backward.
@@ -232,7 +233,7 @@ void loopMotorDemo(){
 
   Serial.println("Motor brake: speed decrease quickly ");
   motorL.motorBrake();  //  Fast , strong brake
-  delay(5000);
+  delay(5 * ONE_SECOND);
 }
 
 
@@ -248,7 +249,7 @@ bool loopFightCheck(){
       long dt = millis() - timeOfFirstButtonPress;
       Serial.println(dt);
 
-      if(dt >= 5000 && !fightStarted){
+      if(dt >= 5*ONE_SECOND && !fightStarted){
         fightStarted = true;
         Serial.print("It's time!");
         Serial.print(dt);
