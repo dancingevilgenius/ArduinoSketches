@@ -124,23 +124,28 @@ int calculatePositionForOne(int index){
   int sensorPosition = SENSOR_POS_ERROR;
       if(index == SENSOR_OUTER_LEFT){
         sensorPosition = SENSOR_POS_16P;
-        Serial.print("B1 Outer left:"); Serial.println(sensorPosition, DEC);
+        Serial.print(sensorPosition, DEC);
+        Serial.println("\tB1 Outer left:"); 
         
       } else if(index == SENSOR_INNER_LEFT){
         sensorPosition = SENSOR_POS_32P;
-        Serial.print("B1 Inner left:");Serial.println(sensorPosition, DEC);
+        Serial.print(sensorPosition, DEC);
+        Serial.println("\tB1 Inner left:");
         
       } else if(index == SENSOR_CENTER){
         sensorPosition = SENSOR_POS_CENTER;
-        Serial.print("B1 Center:");Serial.println(sensorPosition, DEC);
+        Serial.print(sensorPosition, DEC);
+        Serial.println("\tB1 Center:");
         
       } else if(index == SENSOR_INNER_RIGHT){
         sensorPosition = SENSOR_POS_66P;
-        Serial.print("B1 Inner right:");Serial.println(sensorPosition, DEC);
+        Serial.print(sensorPosition, DEC);
+        Serial.println("\tB1 Inner right:");
         
       } else if(index == SENSOR_OUTER_RIGHT){
         sensorPosition = SENSOR_POS_83P;
-        Serial.print("B1 Outer right:");Serial.println(sensorPosition, DEC);        
+        Serial.print(sensorPosition, DEC);        
+        Serial.println("\tB1 Outer right:");
       }
 
 
@@ -165,7 +170,7 @@ int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[], b
           position = calculatePositionForOne(i);
           Serial.println();
 
-          return positon;
+          return position;
         }
     }
   }
