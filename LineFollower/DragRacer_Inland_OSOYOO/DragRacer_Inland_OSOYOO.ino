@@ -1,10 +1,10 @@
 
 // Sensor Array defined below
-#define SENSOR_OUTER_LEFT   1
-#define SENSOR_INNER_LEFT   0
+#define SENSOR_OUTER_LEFT   0
+#define SENSOR_INNER_LEFT   1
 #define SENSOR_CENTER       2
 #define SENSOR_INNER_RIGHT  3
-#define SENSOR_OUTER_RIGHT   4
+#define SENSOR_OUTER_RIGHT  4
 
 
 // Convert sensor values to a relative position of line.
@@ -18,6 +18,7 @@
 #define SENSOR_POS_66P    4277
 #define SENSOR_POS_83P    5833
 #define SENSOR_POS_100P   7000
+#define SENSOR_POS_ERROR -1
 
 #ifdef ESP32
   // ESP32 board is missing these defines
@@ -69,7 +70,7 @@ void setupOsoyooSensorArray(){
 void loop() {
 
   bool triggerOnWhite = false;
-  bool printRawValues = true;
+  bool printRawValues = false;
   sensorPosition = getOsoyooSensorPosition(triggerOnWhite, printRawValues);
   //handleMotors(sensorPosition);
   delay(250);
@@ -112,42 +113,60 @@ int getOsoyooSensorPosition(boolean triggerOnWhite, bool printValues){
 
 
 
-  sensorPosition = getOsoyooPositionByArrayValues(numSensorHits, sensorValues);
+  sensorPosition = getOsoyooPositionByArrayValues(numSensorHits, sensorValues, false);
 
 
   return sensorPosition;    
 }
 
-// This is just a placeholder. The PID implementation will be defined in a different project
-void handleMotors(int position){
-    Serial.println("handleMotors() TODO not implemented");
+int calculatePositionForOne(int index){
 
-    // Put in a dead zone for center
-    int diff = abs(position - SENSOR_POS_CENTER);
-    if(diff < 200 ){
-      // close enough to center. do nothing
-      return;
-    }
+  int sensorPosition = SENSOR_POS_ERROR;
+      if(index == SENSOR_OUTER_LEFT){
+        sensorPosition = SENSOR_POS_16P;
+        Serial.print("B1 Outer left:"); Serial.println(sensorPosition, DEC);
+        
+      } else if(index == SENSOR_INNER_LEFT){
+        sensorPosition = SENSOR_POS_32P;
+        Serial.print("B1 Inner left:");Serial.println(sensorPosition, DEC);
+        
+      } else if(index == SENSOR_CENTER){
+        sensorPosition = SENSOR_POS_CENTER;
+        Serial.print("B1 Center:");Serial.println(sensorPosition, DEC);
+        
+      } else if(index == SENSOR_INNER_RIGHT){
+        sensorPosition = SENSOR_POS_66P;
+        Serial.print("B1 Inner right:");Serial.println(sensorPosition, DEC);
+        
+      } else if(index == SENSOR_OUTER_RIGHT){
+        sensorPosition = SENSOR_POS_83P;
+        Serial.print("B1 Outer right:");Serial.println(sensorPosition, DEC);        
+      }
+
+
 }
 
+int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[], bool printValues){
 
-int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[]){
+  //return -1;
 
-    // Serial.print("numSensorHits:");                                                                                       
-    // Serial.print(numSensorHits);
-    if(true){
-      return -1;
-    }
+  if(printValues){
+    Serial.print("numSensorHits:");                                                                                       
+    Serial.print(numSensorHits);
+  }
 
   if(numSensorHits == 1){
     for(int i=0 ; i<SENSOR_COUNT ; i++){
-      if(sensorValues[i] || true){
-        Serial.print("\t");
-        Serial.print(sensorValues[i]);
-      }
+        if(printValues){
+          Serial.print("\t");
+          Serial.print(sensorValues[i]);
+        }
+        if(sensorValues[i]){
+          calculatePositionForOne(i);
+        }
     }
-    Serial.println();
   }
+  Serial.println();
 
 
   //   if(numSensorHits == 0){
@@ -224,6 +243,18 @@ int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[]){
 }
 
 
+
+// This is just a placeholder. The PID implementation will be defined in a different project
+void handleMotors(int position){
+    Serial.println("handleMotors() TODO not implemented");
+
+    // Put in a dead zone for center
+    int diff = abs(position - SENSOR_POS_CENTER);
+    if(diff < 200 ){
+      // close enough to center. do nothing
+      return;
+    }
+}
 
 
 
