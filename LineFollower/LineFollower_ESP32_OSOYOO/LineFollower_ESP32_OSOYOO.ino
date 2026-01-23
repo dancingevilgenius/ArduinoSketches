@@ -107,7 +107,6 @@ int getOsoyooSensorPosition(boolean triggerOnWhite, bool printValues){
     } else {
       // Flip values
       sensorValues[i] = !digitalRead(irPins[i]);
-      numSensorHits++;  
     }
     if(sensorValues[i]){
       numSensorHits++;
@@ -133,8 +132,8 @@ int getOsoyooSensorPosition(boolean triggerOnWhite, bool printValues){
 
 int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[]){
 
-    // Serial.print("numSensorHits:");
-    // Serial.println(numSensorHits);
+    Serial.print("numSensorHits:");
+    Serial.println(numSensorHits);
     if(true){
       return -1;
     }
