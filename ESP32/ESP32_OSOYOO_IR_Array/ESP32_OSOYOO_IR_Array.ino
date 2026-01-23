@@ -20,6 +20,7 @@
 #define SENSOR_POS_100P   7000
 
 #ifdef ESP32
+  // ESP32 board is missing these defines
   // Yes the pins are not sequential
   #define A0 33 // 14
   #define A1 25 // 27
@@ -33,7 +34,7 @@
 
 
 
-const int ledPin = LED_BUILTIN;     // built-in LED is on pin 13
+const int ledPin = LED_BUILTIN;
 
 
 int sensorPosition = SENSOR_POS_CENTER; // A single value used represent line relative to sensor array.
@@ -47,11 +48,12 @@ int irPins[SensorCount] = {A4, A3, A2, A1,A0};
 void setup() {
   Serial.begin(115200);
 
-
+  Serial.println("Entering setup() -------------");
   setupOsoyooSensorArray();
 
 
   pinMode(ledPin, OUTPUT);     // set ledPin as OUTPUT
+  Serial.println("Exiting setup() --------------");
 }
 
 
@@ -67,7 +69,8 @@ void setupOsoyooSensorArray(){
 void loop() {
 
   bool triggerOnWhite = false;
-  sensorPosition = getOsoyooSensorPosition(triggerOnWhite);
+  bool printRawValues = true;
+  sensorPosition = getOsoyooSensorPosition(triggerOnWhite, printRawValues);
   //handleMotors(sensorPosition);
   delay(250);
   
@@ -87,31 +90,36 @@ void handleMotors(int position){
 }
 
 
-int getOsoyooSensorPosition(boolean triggerOnWhite){
+int getOsoyooSensorPosition(boolean triggerOnWhite, bool printValues){
 
-  //const uint8_t SensorCount = 5;
   uint16_t sensorValues[SensorCount]; // Store sensor array boolean states in here.
 
 
   // Get the raw binary values from the 5 sensor array
   int numSensorHits=0;
+  if(printValues){
   Serial.print("Sensors");
+  }
+
   for(int i=0 ; i<SensorCount ;  i++){
     if(triggerOnWhite){
       sensorValues[i] = digitalRead(irPins[i]);
     } else {
       // Flip values
       sensorValues[i] = !digitalRead(irPins[i]);
-      numSensorHits++;  
     }
     if(sensorValues[i]){
       numSensorHits++;
     }
-    Serial.print("\t");  
-    Serial.print(sensorValues[i]);  
+    if(printValues){
+      Serial.print("\t");  
+      Serial.print(sensorValues[i]);  
+    }
 
   }
-  Serial.println();
+  if(printValues){
+    Serial.println();
+  }
 
 
 
@@ -124,8 +132,8 @@ int getOsoyooSensorPosition(boolean triggerOnWhite){
 
 int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[]){
 
-    // Serial.print("numSensorHits:");
-    // Serial.println(numSensorHits);
+    Serial.print("numSensorHits:");
+    Serial.println(numSensorHits);
     if(true){
       return -1;
     }
