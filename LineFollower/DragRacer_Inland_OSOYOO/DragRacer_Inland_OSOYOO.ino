@@ -148,7 +148,7 @@ int calculatePositionForOne(int index){
 
 int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[], bool printValues){
 
-  //return -1;
+  int position = SENSOR_POS_ERROR;
 
   if(printValues){
     Serial.print("numSensorHits:");                                                                                       
@@ -162,84 +162,15 @@ int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[], b
           Serial.print(sensorValues[i]);
         }
         if(sensorValues[i]){
-          calculatePositionForOne(i);
+          position = calculatePositionForOne(i);
+          Serial.println();
+
+          return positon;
         }
     }
   }
-  Serial.println();
 
 
-  //   if(numSensorHits == 0){
-  //     // No sensors, real bad
-  //     Serial.println("zero sensor hits. Bad if we are on a track racing.");
-  //   } else if(numSensorHits == 1){
-  //     if(sensorValues[SENSOR_OUTER_LEFT]){
-  //       sensorPosition = SENSOR_POS_16P;
-  //       Serial.print("B1 Outer left:"); Serial.println(sensorPosition, DEC);
-        
-  //     } else if(sensorValues[SENSOR_INNER_LEFT]){
-  //       sensorPosition = SENSOR_POS_32P;
-  //       Serial.print("B1 Inner left:");Serial.println(sensorPosition, DEC);
-        
-  //     } else if(sensorValues[SENSOR_CENTER]){
-  //       sensorPosition = SENSOR_POS_CENTER;
-  //       Serial.print("B1 Center:");Serial.println(sensorPosition, DEC);
-        
-  //     } else if(sensorValues[SENSOR_INNER_RIGHT]){
-  //       sensorPosition = SENSOR_POS_66P;
-  //       Serial.print("B1 Inner right:");Serial.println(sensorPosition, DEC);
-        
-  //     } else if(sensorValues[SENSOR_OUTER_RIGHT]){
-  //       sensorPosition = SENSOR_POS_83P;
-  //       Serial.print("B1 Outer right:");Serial.println(sensorPosition, DEC);        
-  //     }
-  // } else if(numSensorHits == 2){
-  //   if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_LEFT]){
-  //     sensorPosition = SENSOR_POS_32P;
-  //     Serial.print("B2 Hard left:");Serial.println(sensorPosition, DEC);
-      
-  //   } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_OUTER_LEFT]){
-  //     sensorPosition = SENSOR_POS_16P;
-  //     Serial.print("B2 Hard left:");Serial.println(sensorPosition, DEC);
-      
-  //   } else if(sensorValues[SENSOR_INNER_LEFT] && sensorValues[SENSOR_OUTER_LEFT]){
-  //     sensorPosition = SENSOR_POS_MIN;
-  //     Serial.print("B2 Hard left:");Serial.println(sensorPosition, DEC);
-      
-  //   } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_RIGHT]){
-  //     sensorPosition = SENSOR_POS_MAX;
-  //     Serial.print("B2 Hard right:");Serial.println(sensorPosition, DEC);
-      
-  //   } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_OUTER_RIGHT]){
-  //     sensorPosition = SENSOR_POS_MAX;
-  //     Serial.print("B2 Hard right:");Serial.println(sensorPosition, DEC);
-  //   } else if(sensorValues[SENSOR_INNER_RIGHT] && sensorValues[SENSOR_OUTER_RIGHT]){
-  //     sensorPosition = SENSOR_POS_MAX;
-  //     Serial.print("B2 Hard right:");Serial.println(sensorPosition, DEC);      
-  //   }
-  // } else if(numSensorHits == 3){
-  //   // intersection or end zone
-  //   sensorPosition = SENSOR_POS_CENTER;
-  //   if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_LEFT] && sensorValues[SENSOR_INNER_RIGHT]){
-  //     sensorPosition = SENSOR_POS_CENTER;
-  //     Serial.print("B3+ Perpendicular line or end solid shape:");Serial.println(sensorPosition, DEC);      
-  //   } else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_LEFT] && sensorValues[SENSOR_OUTER_LEFT]){
-  //     sensorPosition = SENSOR_POS_MIN;
-  //     Serial.print("B3 Hard left:"); Serial.println(sensorPosition, DEC);
-  //   }  else if(sensorValues[SENSOR_CENTER] && sensorValues[SENSOR_INNER_RIGHT] && sensorValues[SENSOR_OUTER_RIGHT]){
-  //     sensorPosition = SENSOR_POS_MAX;
-  //     Serial.print("B3 Hard right:");Serial.println(sensorPosition, DEC);
-  //   } else {
-  //     sensorPosition = SENSOR_POS_CENTER;
-  //     Serial.print("B3 Perpendicular line or end solid shape:"); Serial.println(sensorPosition, DEC);
-  //   }
-  // } else if(numSensorHits == 4){
-  //     sensorPosition = SENSOR_POS_CENTER;
-  //     Serial.print("B4 Perpendicular line or end solid shape:"); Serial.println(sensorPosition, DEC);
-  // } else if(numSensorHits == 5){
-  //     sensorPosition = SENSOR_POS_CENTER;
-  //     Serial.print("B5 Perpendicular line or end solid shape:"); Serial.println(sensorPosition, DEC);
-  // }
 }
 
 
