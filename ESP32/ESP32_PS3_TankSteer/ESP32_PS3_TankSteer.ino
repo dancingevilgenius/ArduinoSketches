@@ -1,6 +1,6 @@
 
-// Needs the "Fork of PS3 Controller Host" not the "PS3 Controller Host" library
-#include <Ps3Controller.h>
+
+#include <Ps3Controller.h> // Needs the "Fork of PS3 Controller Host" not the "PS3 Controller Host" library
 
 #define PS3_BLACK_BLACK_1   "00:19:c1:c2:d8:01"
 #define PS3_BLACK_BLACK_2   "00:19:c1:c2:d8:02" 
@@ -22,99 +22,130 @@ int battery = 0;
 void notify()
 {
     //--- Digital cross/square/triangle/circle button events ---
-    if( Ps3.event.button_down.cross )
+    if( Ps3.event.button_down.cross ) {
         Serial.println("Started pressing the cross button");
-    if( Ps3.event.button_up.cross )
+    }
+    if( Ps3.event.button_up.cross ){
         Serial.println("Released the cross button");
+    }
 
-    if( Ps3.event.button_down.square )
+    if( Ps3.event.button_down.square ){
         Serial.println("Started pressing the square button");
-    if( Ps3.event.button_up.square )
+    }
+    if( Ps3.event.button_up.square ) {
         Serial.println("Released the square button");
-
-    if( Ps3.event.button_down.triangle )
+    }
+    if( Ps3.event.button_down.triangle ) {
         Serial.println("Started pressing the triangle button");
-    if( Ps3.event.button_up.triangle )
+    }
+    if( Ps3.event.button_up.triangle ) {
         Serial.println("Released the triangle button");
+    }
 
-    if( Ps3.event.button_down.circle )
+    if( Ps3.event.button_down.circle ) {
         Serial.println("Started pressing the circle button");
-    if( Ps3.event.button_up.circle )
+    }
+    if( Ps3.event.button_up.circle ) {
         Serial.println("Released the circle button");
+    }
 
     //--------------- Digital D-pad button events --------------
-    if( Ps3.event.button_down.up )
+    if( Ps3.event.button_down.up ) {
         Serial.println("Started pressing the up button");
-    if( Ps3.event.button_up.up )
+    }
+    if( Ps3.event.button_up.up ) {
         Serial.println("Released the up button");
+    }
 
-    if( Ps3.event.button_down.right )
+    if( Ps3.event.button_down.right ) {
         Serial.println("Started pressing the right button");
-    if( Ps3.event.button_up.right )
+    }
+    if( Ps3.event.button_up.right ) {
         Serial.println("Released the right button");
+    }
 
-    if( Ps3.event.button_down.down )
+    if( Ps3.event.button_down.down ) {
         Serial.println("Started pressing the down button");
-    if( Ps3.event.button_up.down )
+    }
+    if( Ps3.event.button_up.down ) {
         Serial.println("Released the down button");
+    }
 
-    if( Ps3.event.button_down.left )
+    if( Ps3.event.button_down.left ) {
         Serial.println("Started pressing the left button");
-    if( Ps3.event.button_up.left )
+    }
+    if( Ps3.event.button_up.left ) {
         Serial.println("Released the left button");
+    }
 
     //------------- Digital shoulder button events -------------
-    if( Ps3.event.button_down.l1 )
+    if( Ps3.event.button_down.l1 ) {
         Serial.println("Started pressing the left shoulder button");
-    if( Ps3.event.button_up.l1 )
+    }
+    if( Ps3.event.button_up.l1 ) {
         Serial.println("Released the left shoulder button");
+    }
 
-    if( Ps3.event.button_down.r1 )
+    if( Ps3.event.button_down.r1 ) {
         Serial.println("Started pressing the right shoulder button");
-    if( Ps3.event.button_up.r1 )
+    }
+    if( Ps3.event.button_up.r1 ) {
         Serial.println("Released the right shoulder button");
+    }
 
     //-------------- Digital trigger button events -------------
-    if( Ps3.event.button_down.l2 )
+    if( Ps3.event.button_down.l2 ) {
         Serial.println("Started pressing the left trigger button");
-    if( Ps3.event.button_up.l2 )
+    }
+    if( Ps3.event.button_up.l2 ) {
         Serial.println("Released the left trigger button");
+    }
 
-    if( Ps3.event.button_down.r2 )
+    if( Ps3.event.button_down.r2 ) {
         Serial.println("Started pressing the right trigger button");
-    if( Ps3.event.button_up.r2 )
+    }
+    if( Ps3.event.button_up.r2 ) {
         Serial.println("Released the right trigger button");
+    }
 
     //--------------- Digital stick button events --------------
-    if( Ps3.event.button_down.l3 )
+    if( Ps3.event.button_down.l3 ) {
         Serial.println("Started pressing the left stick button");
-    if( Ps3.event.button_up.l3 )
+    }
+    if( Ps3.event.button_up.l3 ) {
         Serial.println("Released the left stick button");
+    }
 
-    if( Ps3.event.button_down.r3 )
+    if( Ps3.event.button_down.r3 ) {
         Serial.println("Started pressing the right stick button");
-    if( Ps3.event.button_up.r3 )
+    }
+    if( Ps3.event.button_up.r3 ) {
         Serial.println("Released the right stick button");
+    }
 
     //---------- Digital select/start/ps button events ---------
-    if( Ps3.event.button_down.select )
+    if( Ps3.event.button_down.select ) {
         Serial.println("Started pressing the select button");
-    if( Ps3.event.button_up.select )
+    }
+    if( Ps3.event.button_up.select ) {
         Serial.println("Released the select button");
+    }
 
-    if( Ps3.event.button_down.start )
+    if( Ps3.event.button_down.start ) {
         Serial.println("Started pressing the start button");
-    if( Ps3.event.button_up.start )
+    }
+    if( Ps3.event.button_up.start ) {
         Serial.println("Released the start button");
-
-    if( Ps3.event.button_down.ps )
+    }
+    if( Ps3.event.button_down.ps ) {
         Serial.println("Started pressing the Playstation button");
-    if( Ps3.event.button_up.ps )
+    }
+    if( Ps3.event.button_up.ps ) {
         Serial.println("Released the Playstation button");
-
+    }
 
    //printJoystickRawValues();
-   handleJoystickChanges();
+   //handleJoystickChanges();
 
 
 
