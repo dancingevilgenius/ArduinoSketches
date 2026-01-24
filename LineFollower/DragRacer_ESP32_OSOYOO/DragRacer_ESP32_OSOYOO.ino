@@ -1,3 +1,6 @@
+// This is the top.
+// No include files yet.
+
 
 // Sensor Array defined below
 #define SENSOR_OUTER_LEFT   1
@@ -161,6 +164,7 @@ int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[]){
       if(sensorValues[i] || true){
         Serial.print("\t");
         Serial.print(sensorValues[i]);
+        
       }
     }
     Serial.println();
