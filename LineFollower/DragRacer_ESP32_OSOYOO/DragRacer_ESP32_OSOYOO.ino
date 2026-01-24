@@ -62,11 +62,15 @@ int battery = 0;
 
 
 // Race timer
-#define TIME_SLICE 250   // Quarter of a second
+#define TIME_SLICE 100   // Tenth of a second
 #define ONE_SECOND 1000
-#define AUTO_TIMEOUT 10000
+#define AUTO_TIMEOUT 15000
+#define IGNORE_START_LINE_TIMEOUT 1500
+#define CROSSED_FINISH_LINE_TIMEOUT 1500
+
 bool isRaceStarted = false;
 long raceStartTimeMS = -1;
+long crossedFinishLineTimeMS = -1;
 
 
 // Define the control inputs
@@ -143,11 +147,11 @@ void loop() {
   bool printRawValues = false;
 
   if(isRaceStarted == false){
-    delay(100);
+    delay(TIME_SLICE);
     return;
   }
 
-  //handleTimeout();
+  handleEndRaceConditions();
 
 
   //Serial.println("raceStarted!");
@@ -161,14 +165,32 @@ void loop() {
 }
 
 
-void handleTimeout(){
+void handleEndRaceConditions(){
 
-  long dt = millis() - raceStartTimeMS;
+  long currentTime = millis();
 
+  long dt = currentTime - raceStartTimeMS;
+
+  // Auto timeout 
   if(dt > AUTO_TIMEOUT){
     isRaceStarted = false;
     Serial.print("Bot stopped automatically after 10 seconds");
   }
+
+
+  // Stop motors a short amount of time after finish line crossed
+  if(crossedFinishLineTimeMS > 0) {
+    dt = currentTime - crossedFinishLineTimeMS;
+    if(dt > CROSSED_FINISH_LINE_TIMEOUT){
+      isRaceStarted = false;
+      Serial.print("Bot stopped a little bit after crossing finish line ");
+      Serial.print(dt);
+      Serial.println(" milliseconds after crossing finish line.");
+    }
+  }
+
+
+
 }
 
 
@@ -234,6 +256,22 @@ int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[]){
     }
     Serial.println();
   }
+
+  // Time since race started
+  long dt = millis() - raceStartTimeMS;
+  bool isTestingForFinishLine = dt > IGNORE_START_LINE_TIMEOUT;
+
+  if(isTestingForFinishLine){
+    if(numSensorHits > 2){
+      if(crossedFinishLineTimeMS < 0){
+        Serial.print("Finish line detected. Motors will stop shortly after ");
+        Serial.print(CROSSED_FINISH_LINE_TIMEOUT);
+        Serial.println(" milliseconds.");
+        crossedFinishLineTimeMS = millis();
+      }
+    }
+  }
+
 
   return SENSOR_POS_CENTER;
 
