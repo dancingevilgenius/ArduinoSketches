@@ -140,19 +140,21 @@ void setupPS3Controller(){
 void loop() {
 
   bool triggerOnWhite = false;
-  bool printRawValues = true;
+  bool printRawValues = false;
 
   if(isRaceStarted == false){
     delay(100);
     return;
   }
 
+  //handleTimeout();
+
+
   //Serial.println("raceStarted!");
   //Serial.println(isRaceStarted);
 
-  //sensorPosition = getOsoyooSensorPosition(triggerOnWhite, printRawValues);
+  sensorPosition = getOsoyooSensorPosition(triggerOnWhite, printRawValues);
   //handleMotors(sensorPosition);
-  handleTimeout();
 
 
   delay(TIME_SLICE);  
@@ -211,34 +213,24 @@ int getOsoyooSensorPosition(boolean triggerOnWhite, bool printValues){
   return sensorPosition;    
 }
 
-// This is just a placeholder. The PID implementation will be defined in a different project
-void handleMotors(int position){
-    Serial.println("handleMotors() TODO not implemented");
-
-    // Put in a dead zone for center
-    int diff = abs(position - SENSOR_POS_CENTER);
-    if(diff < 200 ){
-      // close enough to center. do nothing
-      return;
-    }
-}
-
 
 int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[]){
 
-    Serial.print("numSensorHits:");
-    Serial.print(numSensorHits);
+    //Serial.print("numSensorHits:");
+    //Serial.print(numSensorHits);
     // if(true){
     //   return -1;
     // }
 
   if(numSensorHits == 1){
+
+    Serial.print("hits:");
+    Serial.print(numSensorHits);
+
     for(int i=0 ; i<SENSOR_COUNT ; i++){
-      if(sensorValues[i] || true){
-        Serial.print("\t");
-        Serial.print(sensorValues[i]);
+      Serial.print("\t");
+      Serial.print(sensorValues[i]);
         
-      }
     }
     Serial.println();
   }
@@ -466,6 +458,20 @@ void onConnect(){
     Serial.println("Connected to PS3");
     Serial.println("Press either right trigger to start race.");
 }
+
+// This is just a placeholder. The PID implementation will be defined in a different project
+void handleMotors(int position){
+    Serial.println("handleMotors() TODO not implemented");
+
+    // Put in a dead zone for center
+    int diff = abs(position - SENSOR_POS_CENTER);
+    if(diff < 200 ){
+      // close enough to center. do nothing
+      return;
+    }
+}
+
+
 
 
 
