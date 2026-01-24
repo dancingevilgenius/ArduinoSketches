@@ -109,9 +109,60 @@ void setup() {
   // For start/stop buttons
   setupPS3Controller();
 
+  setupMotors();
 
   Serial.println("Exiting setup() --------------");
 }
+
+
+
+void stopMotors(){
+  // Turn off motors - Initial state
+  digitalWrite(MOT_A1_PIN, LOW);
+  digitalWrite(MOT_A2_PIN, LOW);
+  digitalWrite(MOT_B1_PIN, LOW);
+  digitalWrite(MOT_B2_PIN, LOW);
+
+}
+
+
+/// Set the current on a motor channel using PWM and directional logic.
+///
+/// \param pwm    PWM duty cycle ranging from -255 full reverse to 255 full forward
+/// \param IN1_PIN  pin number xIN1 for the given channel
+/// \param IN2_PIN  pin number xIN2 for the given channel
+void setMotorSpeed(int pwm, int IN1_PIN, int IN2_PIN)
+{
+  if (pwm < 0) {  // reverse speeds
+    analogWrite(IN1_PIN, -pwm);
+    digitalWrite(IN2_PIN, LOW);
+
+  } else { // stop or forward
+    digitalWrite(IN1_PIN, LOW);
+    analogWrite(IN2_PIN, pwm);
+  }
+}
+
+/// Set the current on both motors.
+///
+/// \param pwm_A  motor A PWM, -255 to 255
+/// \param pwm_B  motor B PWM, -255 to 255
+void setMotorSpeeds(int pwm_A, int pwm_B)
+{
+  setMotorSpeed(pwm_A, MOT_A1_PIN, MOT_A2_PIN);
+  setMotorSpeed(pwm_B, MOT_B1_PIN, MOT_B2_PIN);
+
+  // Print a status message to the console.
+  Serial.print("Set motor A PWM = ");
+  Serial.print(pwm_A);
+  Serial.print(" motor B PWM = ");
+  Serial.println(pwm_B);
+}
+
+
+
+
+
 
 
 void setupOsoyooSensorArray(){
@@ -511,6 +562,24 @@ void handleMotors(int position){
 
 
 
+void setupMotors(void)
+{
+  // Set all the motor control inputs to OUTPUT
+  pinMode(MOT_A1_PIN, OUTPUT);
+  pinMode(MOT_A2_PIN, OUTPUT);
+  pinMode(MOT_B1_PIN, OUTPUT);
+  pinMode(MOT_B2_PIN, OUTPUT);
+
+  pinMode(SLP_PIN, OUTPUT);
+
+  // Turn off motors - Initial state
+  stopMotors();
+
+  digitalWrite(SLP_PIN, HIGH);
+
+  Serial.println("Exiting setupMotors()");
+
+}
 
 
 
