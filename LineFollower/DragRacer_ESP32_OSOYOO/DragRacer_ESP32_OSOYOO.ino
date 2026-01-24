@@ -218,7 +218,7 @@ void loop() {
   //Serial.println(isRaceStarted);
 
   sensorPosition = getOsoyooSensorPosition(triggerOnWhite, printRawValues);
-  //handleMotors(sensorPosition);
+  handleMotors(sensorPosition);
 
 
   delay(TIME_SLICE);  
@@ -235,6 +235,7 @@ void handleEndRaceConditions(){
   if(dt > AUTO_TIMEOUT){
     isRaceStarted = false;
     Serial.print("Bot stopped automatically after 10 seconds");
+    stopMotors();
   }
 
 
@@ -246,6 +247,7 @@ void handleEndRaceConditions(){
       Serial.print("Bot stopped a little bit after crossing finish line ");
       Serial.print(dt);
       Serial.println(" milliseconds after crossing finish line.");
+      stopMotors();
     }
   }
 
@@ -610,16 +612,33 @@ void onConnect(){
     Serial.println("Press either right trigger to start race.");
 }
 
-// This is just a placeholder. The PID implementation will be defined in a different project
+// For drag race, we might be able to get away without using PID
 void handleMotors(int position){
-    Serial.println("handleMotors() TODO not implemented");
+  
+    Serial.println("handleMotors()");
 
     // Put in a dead zone for center
     int diff = abs(position - SENSOR_POS_CENTER);
     if(diff < 200 ){
       // close enough to center. do nothing
-      return;
+      powerMotorA = MOTOR_MAX_POWER;
+      powerMotorB = MOTOR_MAX_POWER;
+      
+    } else {
+
+      diff = position - SENSOR_POS_CENTER;
+      
+      if(diff < 0){ // We are to the left
+        powerMotorA = MOTOR_MAX_POWER;
+        powerMotorB = MOTOR_MAX_POWER * 0.8;
+      } else {      // We are to the right
+        powerMotorA = MOTOR_MAX_POWER * 0.8;
+        powerMotorB = MOTOR_MAX_POWER;
+      }
     }
+
+
+    setMotors(powerMotorA, powerMotorB);
 }
 
 
