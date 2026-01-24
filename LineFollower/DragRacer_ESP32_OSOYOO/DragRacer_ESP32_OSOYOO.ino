@@ -56,9 +56,17 @@
 #define PS3_BLACK_BLACK_3   "00:19:c1:c2:d8:03" 
 #define PS3_BLUE_BLACK_1    "00:19:c1:c2:ee:01"
 
+// PS3 Controller
 int player = 0;
 int battery = 0;
+
+
+// Race timer
+#define TIME_SLICE 250   // Quarter of a second
+#define ONE_SECOND 1000
+#define AUTO_TIMEOUT 10000
 bool isRaceStarted = false;
+long raceStartTimeMS = -1;
 
 
 // Define the control inputs
@@ -144,10 +152,21 @@ void loop() {
 
   //sensorPosition = getOsoyooSensorPosition(triggerOnWhite, printRawValues);
   //handleMotors(sensorPosition);
+  handleTimeout(TIME_SLICE);
 
 
+  delay(TIME_SLICE);  
+}
 
-  delay(500);  
+
+void handleTimeout(long timeSlice){
+
+  long dt = millis() - raceStartTimeMS;
+
+  if(dt > AUTO_TIMEOUT){
+    isRaceStarted = false;
+    Serial.print("Bot stopped automatically after 10 seconds");
+  }
 }
 
 
@@ -389,7 +408,7 @@ void notify()
         //Serial.println("Started pressing the right trigger button");
         Serial.println("Go! - Race Started");
         isRaceStarted = true;
-
+        raceStartTimeMS = millis();
     }
     if( Ps3.event.button_up.r2 ) {
         //Serial.println("Released the right trigger button");
