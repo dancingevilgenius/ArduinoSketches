@@ -1,5 +1,7 @@
-// This is the top.
-// No include files yet.
+// Author: Carlos Garcia
+// December 2026
+
+#include <Ps3Controller.h> // Needs the "Fork of PS3 Controller Host" not the "PS3 Controller Host" library
 
 
 // Sensor Array defined below
@@ -49,6 +51,22 @@
 #endif
 
 
+#define PS3_BLACK_BLACK_1   "00:19:c1:c2:d8:01"
+#define PS3_BLACK_BLACK_2   "00:19:c1:c2:d8:02" 
+#define PS3_BLACK_BLACK_3   "00:19:c1:c2:d8:03" 
+#define PS3_BLUE_BLACK_1    "00:19:c1:c2:ee:01"
+
+int player = 0;
+int battery = 0;
+
+
+// Define the control inputs
+#define MOT_A1_PIN 2   // og 10
+#define MOT_A2_PIN 4   // og 9
+#define MOT_B1_PIN 18    // og 6
+#define MOT_B2_PIN 19    // og 5
+
+#define SLP_PIN 13
 
 
 
@@ -73,6 +91,12 @@ void setup() {
 
 
   pinMode(ledPin, OUTPUT);     // set ledPin as OUTPUT
+
+
+  // For start/stop buttons
+  setupPS3Controller();
+
+
   Serial.println("Exiting setup() --------------");
 }
 
@@ -85,15 +109,36 @@ void setupOsoyooSensorArray(){
   pinMode(A4, INPUT);
 }
 
+void setupPS3Controller(){
+
+    Ps3.attach(notify);
+    Ps3.attachOnConnect(onConnect);
+
+    Ps3.begin(PS3_BLACK_BLACK_1);
+
+    Ps3.setPlayer(player);
+
+    //-------------------- Player LEDs -------------------
+    Serial.print("Setting LEDs to player "); Serial.println(player, DEC);
+
+    Serial.println("Press the 'P3' logo to bind the PS3 controller. Should see 4 LEDS flash");
+    Serial.println("Exiting setupPS3Controller()");
+
+}
+
+
 
 void loop() {
 
   bool triggerOnWhite = false;
   bool printRawValues = true;
-  sensorPosition = getOsoyooSensorPosition(triggerOnWhite, printRawValues);
+
+  //sensorPosition = getOsoyooSensorPosition(triggerOnWhite, printRawValues);
   //handleMotors(sensorPosition);
-  delay(250);
-  
+
+
+
+  delay(250);  
 }
 
 
@@ -247,7 +292,115 @@ int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[]){
 }
 
 
+void notify()
+{
+    //--- Digital cross/square/triangle/circle button events ---
+    if( Ps3.event.button_down.cross )
+        Serial.println("Started pressing the cross button");
+    if( Ps3.event.button_up.cross )
+        Serial.println("Released the cross button");
 
+    if( Ps3.event.button_down.square )
+        Serial.println("Started pressing the square button");
+    if( Ps3.event.button_up.square )
+        Serial.println("Released the square button");
+
+    if( Ps3.event.button_down.triangle )
+        Serial.println("Started pressing the triangle button");
+    if( Ps3.event.button_up.triangle )
+        Serial.println("Released the triangle button");
+
+    if( Ps3.event.button_down.circle )
+        Serial.println("Started pressing the circle button");
+    if( Ps3.event.button_up.circle )
+        Serial.println("Released the circle button");
+
+    //--------------- Digital D-pad button events --------------
+    if( Ps3.event.button_down.up )
+        Serial.println("Started pressing the up button");
+    if( Ps3.event.button_up.up )
+        Serial.println("Released the up button");
+
+    if( Ps3.event.button_down.right )
+        Serial.println("Started pressing the right button");
+    if( Ps3.event.button_up.right )
+        Serial.println("Released the right button");
+
+    if( Ps3.event.button_down.down )
+        Serial.println("Started pressing the down button");
+    if( Ps3.event.button_up.down )
+        Serial.println("Released the down button");
+
+    if( Ps3.event.button_down.left )
+        Serial.println("Started pressing the left button");
+    if( Ps3.event.button_up.left )
+        Serial.println("Released the left button");
+
+    //------------- Digital shoulder button events -------------
+    if( Ps3.event.button_down.l1 )
+        Serial.println("Started pressing the left shoulder button");
+    if( Ps3.event.button_up.l1 )
+        Serial.println("Released the left shoulder button");
+
+    if( Ps3.event.button_down.r1 )
+        Serial.println("Started pressing the right shoulder button");
+    if( Ps3.event.button_up.r1 )
+        Serial.println("Released the right shoulder button");
+
+    //-------------- Digital trigger button events -------------
+    if( Ps3.event.button_down.l2 )
+        Serial.println("Started pressing the left trigger button");
+    if( Ps3.event.button_up.l2 )
+        Serial.println("Released the left trigger button");
+
+    if( Ps3.event.button_down.r2 )
+        Serial.println("Started pressing the right trigger button");
+    if( Ps3.event.button_up.r2 )
+        Serial.println("Released the right trigger button");
+
+    //--------------- Digital stick button events --------------
+    if( Ps3.event.button_down.l3 )
+        Serial.println("Started pressing the left stick button");
+    if( Ps3.event.button_up.l3 )
+        Serial.println("Released the left stick button");
+
+    if( Ps3.event.button_down.r3 )
+        Serial.println("Started pressing the right stick button");
+    if( Ps3.event.button_up.r3 )
+        Serial.println("Released the right stick button");
+
+    //---------- Digital select/start/ps button events ---------
+    if( Ps3.event.button_down.select )
+        Serial.println("Started pressing the select button");
+    if( Ps3.event.button_up.select )
+        Serial.println("Released the select button");
+
+    if( Ps3.event.button_down.start )
+        Serial.println("Started pressing the start button");
+    if( Ps3.event.button_up.start )
+        Serial.println("Released the start button");
+
+    if( Ps3.event.button_down.ps )
+        Serial.println("Started pressing the Playstation button");
+    if( Ps3.event.button_up.ps )
+        Serial.println("Released the Playstation button");
+
+
+   //printJoystickRawValues();
+   //handleJoystickChanges();
+
+
+
+   //---------------------- Battery events ---------------------
+    //printBatteryStatus();
+
+}
+
+
+
+void onConnect(){
+    Serial.println("Connected to PS3");
+}
 
 
 
