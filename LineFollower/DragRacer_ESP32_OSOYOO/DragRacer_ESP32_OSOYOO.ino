@@ -78,9 +78,10 @@ long crossedFinishLineTimeMS = -1;
 #define MOT_A2_PIN 4   // og 9
 #define MOT_B1_PIN 18    // og 6
 #define MOT_B2_PIN 19    // og 5
-
 #define SLP_PIN 13
-
+#define MOTOR_MAX_POWER 255  // Full range is 255 (fwd) to -255 (rev)
+int powerMotorA = 0;
+int powerMotorB = 0;
 
 
 
@@ -131,8 +132,16 @@ void stopMotors(){
 /// \param pwm    PWM duty cycle ranging from -255 full reverse to 255 full forward
 /// \param IN1_PIN  pin number xIN1 for the given channel
 /// \param IN2_PIN  pin number xIN2 for the given channel
-void setMotorSpeed(int pwm, int IN1_PIN, int IN2_PIN)
+void setMotor(int pwm, int IN1_PIN, int IN2_PIN)
 {
+  // Range checking of input power.
+  if(pwm > 255){
+    pwm = MOTOR_MAX_POWER;
+  } else if(pwm < -255){
+    pwm = -MOTOR_MAX_POWER;
+  }
+
+
   if (pwm < 0) {  // reverse speeds
     analogWrite(IN1_PIN, -pwm);
     digitalWrite(IN2_PIN, LOW);
@@ -147,10 +156,10 @@ void setMotorSpeed(int pwm, int IN1_PIN, int IN2_PIN)
 ///
 /// \param pwm_A  motor A PWM, -255 to 255
 /// \param pwm_B  motor B PWM, -255 to 255
-void setMotorSpeeds(int pwm_A, int pwm_B)
-{
-  setMotorSpeed(pwm_A, MOT_A1_PIN, MOT_A2_PIN);
-  setMotorSpeed(pwm_B, MOT_B1_PIN, MOT_B2_PIN);
+void setMotors(int pwm_A, int pwm_B)
+{  
+  setMotor(pwm_A, MOT_A1_PIN, MOT_A2_PIN);
+  setMotor(pwm_B, MOT_B1_PIN, MOT_B2_PIN);
 
   // Print a status message to the console.
   Serial.print("Set motor A PWM = ");
@@ -286,7 +295,45 @@ int getOsoyooSensorPosition(boolean triggerOnWhite, bool printValues){
   return sensorPosition;    
 }
 
+int getPositionFromIndex(int index, bool printValues){
 
+  int sensorPosition = -1;
+
+    if(index == SENSOR_OUTER_LEFT){
+      sensorPosition = SENSOR_POS_16P;
+      if(printValues) {
+        Serial.print("B1 Outer left:"); Serial.println(sensorPosition, DEC);
+      }
+      
+    } else if(index == SENSOR_INNER_LEFT){
+      sensorPosition = SENSOR_POS_32P;
+      if(printValues) {
+        Serial.print("B1 Inner left:");Serial.println(sensorPosition, DEC);
+      }
+      
+    } else if(index == SENSOR_CENTER){
+      sensorPosition = SENSOR_POS_CENTER;
+      if(printValues) {
+        Serial.print("B1 Center:");Serial.println(sensorPosition, DEC);
+      }
+      
+    } else if(index == SENSOR_INNER_RIGHT){
+      sensorPosition = SENSOR_POS_66P;
+      if(printValues) {
+        Serial.print("B1 Inner right:");Serial.println(sensorPosition, DEC);
+      }
+      
+    } else if(index == SENSOR_OUTER_RIGHT){
+      sensorPosition = SENSOR_POS_83P;
+      if(printValues) {
+        Serial.print("B1 Outer right:");Serial.println(sensorPosition, DEC);        
+      }
+    }
+
+  return sensorPosition;
+}
+
+// Returns sensor position in range 0-7000
 int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[]){
 
     //Serial.print("numSensorHits:");
@@ -295,18 +342,33 @@ int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[]){
     //   return -1;
     // }
 
+
+  // Initialize to invalid
+  int sensorPosition = -1;
+
+  if(numSensorHits == 0){
+    // No sensors, real bad
+    Serial.println("Maybe in between sensors. Keep going at last known motor speeds");
+  }
+
   if(numSensorHits == 1){
 
     Serial.print("hits:");
     Serial.print(numSensorHits);
+    bool printValues = false;
 
     for(int i=0 ; i<SENSOR_COUNT ; i++){
       Serial.print("\t");
-      Serial.print(sensorValues[i]);
-        
+      Serial.print(sensorValues[i]);        
+      if(sensorValues[i]){
+        sensorPosition = getPositionFromIndex(i, false);
+      }
     }
+    Serial.print("\tpos:");
+    Serial.print(sensorPosition);
     Serial.println();
   }
+
 
   // Time since race started
   long dt = millis() - raceStartTimeMS;
@@ -324,7 +386,7 @@ int getOsoyooPositionByArrayValues(int numSensorHits, uint16_t sensorValues[]){
   }
 
 
-  return SENSOR_POS_CENTER;
+  return sensorPosition;
 
 
   //   if(numSensorHits == 0){
