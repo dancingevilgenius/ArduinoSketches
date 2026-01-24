@@ -147,19 +147,19 @@ void loop() {
     return;
   }
 
-  Serial.println("raceStarted!");
+  //Serial.println("raceStarted!");
   //Serial.println(isRaceStarted);
 
   //sensorPosition = getOsoyooSensorPosition(triggerOnWhite, printRawValues);
   //handleMotors(sensorPosition);
-  handleTimeout(TIME_SLICE);
+  handleTimeout();
 
 
   delay(TIME_SLICE);  
 }
 
 
-void handleTimeout(long timeSlice){
+void handleTimeout(){
 
   long dt = millis() - raceStartTimeMS;
 
