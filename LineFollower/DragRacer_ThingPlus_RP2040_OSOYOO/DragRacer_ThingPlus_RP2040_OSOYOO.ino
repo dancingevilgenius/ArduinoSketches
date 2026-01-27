@@ -34,11 +34,11 @@
 #ifndef A0
   // ESP32 board is missing these defines
   // Yes the pins are not sequential
-  #define A0 33 // 14
-  #define A1 25 // 27
-  #define A2 26 // 26
-  #define A3 27 // 25
-  #define A4 14 //33
+  #define A0 5 // 14
+  #define A1 6 // 27
+  #define A2 7 // 26
+  #define A3 8 // 25
+  #define A4 9 //33
 #endif
 
 #ifndef LED_BUILTIN
@@ -56,8 +56,9 @@ const int ledPin = LED_BUILTIN;
 int sensorPosition = SENSOR_POS_CENTER; // A single value used represent line relative to sensor array.
 
 // Vars for IR/Color sensor array
-#define SENSOR_COUNT 5
-int irPins[SENSOR_COUNT] = {A4, A3, A2, A1, A0};
+#define SENSOR_COUNT 1
+//int irPins[SENSOR_COUNT] = {A4, A3, A2, A1, A0};
+int irPins[SENSOR_COUNT] = {A0};
 //uint16_t sensorValues[SensorCount]; // Store sensor array boolean states in here.
 
 
@@ -69,7 +70,10 @@ void setup() {
 
 
   pinMode(ledPin, OUTPUT);     // set ledPin as OUTPUT
+
   Serial.println("Exiting setup() --------------");
+  delay(4000);
+
 }
 
 
@@ -79,16 +83,19 @@ void setupOsoyooSensorArray(){
   pinMode(A2, INPUT);
   pinMode(A3, INPUT);
   pinMode(A4, INPUT);
+  Serial.println("Exiting setupOsoyooSensorArray() ");
+  delay(2000);
 }
 
 
 void loop() {
+  Serial.println("loop 2");
 
   bool triggerOnWhite = false;
   bool printRawValues = false;
-  sensorPosition = getOsoyooSensorPosition(triggerOnWhite, printRawValues);
+  //sensorPosition = getOsoyooSensorPosition(triggerOnWhite, printRawValues);
   //handleMotors(sensorPosition);
-  delay(250);
+  delay(2000);
   
 }
 
