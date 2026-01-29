@@ -1,6 +1,8 @@
+// RC Controlled Tank Steer robot
+// Handle both DRV8833 or DRV8871
 
-
-#include <Ps3Controller.h> // Needs the "Fork of PS3 Controller Host" not the "PS3 Controller Host" library
+#include <Ps3Controller.h>      // Needs the "Fork of PS3 Controller Host" not the "PS3 Controller Host" library
+#include <FS_MX1508.h>          // For DRV8871 motor driver. DRV8833 does not need a special class.
 
 #define PS3_BLACK_BLACK_1   "00:19:c1:c2:d8:01"
 #define PS3_BLACK_BLACK_2   "00:19:c1:c2:d8:02" 
@@ -18,11 +20,23 @@ long joystickRightPctY = 0;
 
 #define MAX_PWM_VALUE 255
 
-// Define the control inputs
+// DRV8833 Motor Controller. One breakout board can controll 2 motors.
 #define MOT_A1_PIN 2   // og 10
 #define MOT_A2_PIN 4   // og 9
 #define MOT_B1_PIN 18    // og 6
 #define MOT_B2_PIN 19    // og 5
+
+// DRV8871 Motor controllers. One for each side.
+#define PIN_MOTOR_L_A 18 // Left Motor
+#define PIN_MOTOR_L_B 19 // Left Motor
+#define PIN_MOTOR_R_A 18 // Right Motor
+#define PIN_MOTOR_R_B 19 // Right Motor
+#define MAX_MOTOR_SPEED 100
+MX1508 motorL(PIN_MOTOR_L_A, PIN_MOTOR_L_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
+MX1508 motorR(PIN_MOTOR_R_A, PIN_MOTOR_R_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
+
+
+
 
 #define SLP_PIN 13
 
@@ -179,10 +193,12 @@ void handleJoystickChanges(){
         long rawX = Ps3.data.analog.stick.lx;
         long rawY = Ps3.data.analog.stick.ly;
 
+        // Want the output from -100% to + 100%.
+        // We can use this to convert to whatever value the motor controller is expecting.
         joystickLeftPctX = map(rawX, -127, 127, -100, 100);
         joystickLeftPctY = map(rawY, 127, -127, -100, 100);
 
-        Serial.print(" joystickLeftY="); Serial.print(joystickLeftPctY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
+        Serial.print(" joystickLeftPctY="); Serial.print(joystickLeftPctY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
         Serial.println();
 
     }
@@ -194,10 +210,12 @@ void handleJoystickChanges(){
         long rawX = Ps3.data.analog.stick.rx;
         long rawY = Ps3.data.analog.stick.ry;
 
+        // Want the output from -100% to + 100%.
+        // We can use this to convert to whatever value the motor controller is expecting.
         joystickRightPctX = map(rawX, -127, 127, -100, 100);
         joystickRightPctY = map(rawY, 127, -127, -100, 100);
 
-        Serial.print(" joystickRightY="); Serial.print(joystickRightPctY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
+        Serial.print(" joystickRightPctY="); Serial.print(joystickRightPctY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
         Serial.println();
 
    }
@@ -281,9 +299,17 @@ void onConnectPS3Connect(){
 void setup()
 {
     Serial.println("Setup() started");
+
     Serial.begin(115200);
 
     setupMotors();
+
+    setupPS3Controller(); 
+
+    Serial.println("Setup() ended");
+}
+
+void setupPS3Controller() {
 
     Ps3.attach(notifyPS3Controller);
     Ps3.attachOnConnect(onConnectPS3Connect);
@@ -294,8 +320,7 @@ void setup()
 
     //-------------------- Player LEDs -------------------
     Serial.print("Setting LEDs to player "); Serial.println(ps3Player, DEC);
-    
-    Serial.println("Setup() ended");
+
 }
 
 
