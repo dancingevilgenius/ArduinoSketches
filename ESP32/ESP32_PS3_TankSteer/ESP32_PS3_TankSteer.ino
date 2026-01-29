@@ -10,6 +10,14 @@
 int player = 0;
 int battery = 0;
 
+// -100% to 100%.
+// Using percent because different motor controllers have different ranges.
+long joystickLeftPctX = 0;
+long joystickLeftPctY = 0;
+long joystickRightPctX = 0;
+long joystickRightPctY = 0;
+
+#define MAX_JOYSTICK_VALUE 255
 
 // Define the control inputs
 #define MOT_A1_PIN 2   // og 10
@@ -19,21 +27,24 @@ int battery = 0;
 
 #define SLP_PIN 13
 
+#define TIME_SLICE_MS 10 // 
+
 void notify()
 {
 
     printPS3ButtonRawValues();
-   //printJoystickRawValues();
-   handleJoystickChanges();
+    //printJoystickRawValues();
+    handleJoystickChanges();
 
 
 
-   //---------------------- Battery events ---------------------
-    //printBatteryStatus();
+    //---------------------- Battery events ---------------------
+    printBatteryStatus();
 
 }
 
 void printPS3ButtonRawValues(){
+
     //--- Digital cross/square/triangle/circle button events ---
     if( Ps3.event.button_down.cross ) {
         Serial.println("Started pressing the cross button");
@@ -158,12 +169,8 @@ void printPS3ButtonRawValues(){
     }
 }
 
-#define MAX_JS_RANGE 255
 
-long joystickLeftX = 0;
-long joystickLeftY = 0;
-long joystickRightX = 0;
-long joystickRightY = 0;
+
 
 void handleJoystickChanges(){
     // Left Stick
@@ -173,10 +180,10 @@ void handleJoystickChanges(){
         long rawX = Ps3.data.analog.stick.lx;
         long rawY = Ps3.data.analog.stick.ly;
 
-        joystickLeftX = map(rawX, -127, 127, -100, 100);
-        joystickLeftY = map(rawY, 127, -127, -100, 100);
+        joystickLeftPctX = map(rawX, -127, 127, -100, 100);
+        joystickLeftPctY = map(rawY, 127, -127, -100, 100);
 
-        Serial.print(" percentY="); Serial.print(joystickLeftY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
+        Serial.print(" joystickLeftY="); Serial.print(joystickLeftPctY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
         Serial.println();
 
     }
@@ -188,15 +195,37 @@ void handleJoystickChanges(){
         long rawX = Ps3.data.analog.stick.rx;
         long rawY = Ps3.data.analog.stick.ry;
 
-        joystickRightX = map(rawX, -127, 127, -100, 100);
-        joystickRightY = map(rawY, 127, -127, -100, 100);
+        joystickRightPctX = map(rawX, -127, 127, -100, 100);
+        joystickRightPctY = map(rawY, 127, -127, -100, 100);
 
-        Serial.print(" percentY="); Serial.print(joystickRightY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
+        Serial.print(" joystickRightY="); Serial.print(joystickRightPctY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
         Serial.println();
 
    }
 }
 
+
+void printPS3ButtonCombos(){
+    //------ Digital cross/square/triangle/circle buttons ------
+    if( Ps3.data.button.cross && Ps3.data.button.down )
+        Serial.println("Pressing both the down and cross buttons");
+    if( Ps3.data.button.square && Ps3.data.button.left )
+        Serial.println("Pressing both the square and left buttons");
+    if( Ps3.data.button.triangle && Ps3.data.button.up )
+        Serial.println("Pressing both the triangle and up buttons");
+    if( Ps3.data.button.circle && Ps3.data.button.right )
+        Serial.println("Pressing both the circle and right buttons");
+
+    if( Ps3.data.button.l1 && Ps3.data.button.r1 )
+        Serial.println("Pressing both the left and right bumper buttons");
+    if( Ps3.data.button.l2 && Ps3.data.button.r2 )
+        Serial.println("Pressing both the left and right trigger buttons");
+    if( Ps3.data.button.l3 && Ps3.data.button.r3 )
+        Serial.println("Pressing both the left and right stick buttons");
+    if( Ps3.data.button.select && Ps3.data.button.start )
+        Serial.println("Pressing both the select and start buttons");
+
+}
 
 void printJoystickRawValues(){
     // Left Stick
@@ -247,7 +276,7 @@ void printBatteryStatus(){
 }
 
 void onConnect(){
-    Serial.println("Connected.");
+    Serial.println("PS3 Connected.");
 }
 
 void setup()
@@ -299,29 +328,28 @@ void loop()
     }
 
 
+    loopMotors();
 
 
 
-    //------ Digital cross/square/triangle/circle buttons ------
-    if( Ps3.data.button.cross && Ps3.data.button.down )
-        Serial.println("Pressing both the down and cross buttons");
-    if( Ps3.data.button.square && Ps3.data.button.left )
-        Serial.println("Pressing both the square and left buttons");
-    if( Ps3.data.button.triangle && Ps3.data.button.up )
-        Serial.println("Pressing both the triangle and up buttons");
-    if( Ps3.data.button.circle && Ps3.data.button.right )
-        Serial.println("Pressing both the circle and right buttons");
+    delay(TIME_SLICE_MS);
+}
 
-    if( Ps3.data.button.l1 && Ps3.data.button.r1 )
-        Serial.println("Pressing both the left and right bumper buttons");
-    if( Ps3.data.button.l2 && Ps3.data.button.r2 )
-        Serial.println("Pressing both the left and right trigger buttons");
-    if( Ps3.data.button.l3 && Ps3.data.button.r3 )
-        Serial.println("Pressing both the left and right stick buttons");
-    if( Ps3.data.button.select && Ps3.data.button.start )
-        Serial.println("Pressing both the select and start buttons");
+void loopMotors(){
 
-    delay(2000);
+    // Expecting calculated range -255 to 255
+    int pwmLeftX, pwmLeftY;
+    int pwmRightX, pwmRightY;
+
+    pwmLeftX = (joystickLeftPctX * MAX_JOYSTICK_VALUE)/100;
+    pwmLeftY = (joystickLeftPctY * MAX_JOYSTICK_VALUE)/100;
+
+    pwmRightX = (joystickRightPctX * MAX_JOYSTICK_VALUE)/100;
+    pwmRightY = (joystickRightPctY * MAX_JOYSTICK_VALUE)/100;
+
+    // For this controller system, we only care about the up/down Axis.
+    setMotorPWMs(pwmLeftY, pwmRightY);
+
 }
 
 /// Set the current on a motor channel using PWM and directional logic.
@@ -329,26 +357,32 @@ void loop()
 /// \param pwm    PWM duty cycle ranging from -255 full reverse to 255 full forward
 /// \param IN1_PIN  pin number xIN1 for the given channel
 /// \param IN2_PIN  pin number xIN2 for the given channel
-void set_motor_pwm(int pwm, int IN1_PIN, int IN2_PIN)
+void setMotorPWM(int pwm, int IN1_PIN, int IN2_PIN)
 {
-  if (pwm < 0) {  // reverse speeds
-    analogWrite(IN1_PIN, -pwm);
-    digitalWrite(IN2_PIN, LOW);
+    if(pwm < -MAX_JOYSTICK_VALUE){
+        pwm = -MAX_JOYSTICK_VALUE;
+    } else if(pwm > MAX_JOYSTICK_VALUE){
+        pwm = MAX_JOYSTICK_VALUE;
+    }
 
-  } else { // stop or forward
-    digitalWrite(IN1_PIN, LOW);
-    analogWrite(IN2_PIN, pwm);
-  }
+
+    if (pwm < 0) {  // reverse speeds
+        analogWrite(IN1_PIN, -pwm);
+        digitalWrite(IN2_PIN, LOW);
+    } else { // stop or forward
+        digitalWrite(IN1_PIN, LOW);
+        analogWrite(IN2_PIN, pwm);
+    }
 }
 
 /// Set the current on both motors.
 ///
 /// \param pwm_A  motor A PWM, -255 to 255
 /// \param pwm_B  motor B PWM, -255 to 255
-void set_motor_currents(int pwm_A, int pwm_B)
+void setMotorPWMs(int pwm_A, int pwm_B)
 {
-  set_motor_pwm(pwm_A, MOT_A1_PIN, MOT_A2_PIN);
-  set_motor_pwm(pwm_B, MOT_B1_PIN, MOT_B2_PIN);
+  setMotorPWM(pwm_A, MOT_A1_PIN, MOT_A2_PIN);
+  setMotorPWM(pwm_B, MOT_B1_PIN, MOT_B2_PIN);
 
   // Print a status message to the console.
   Serial.print("Set motor A PWM = ");
@@ -357,13 +391,3 @@ void set_motor_currents(int pwm_A, int pwm_B)
   Serial.println(pwm_B);
 }
 
-/// Simple primitive for the motion sequence to set a speed and wait for an interval.
-///
-/// \param pwm_A  motor A PWM, -255 to 255
-/// \param pwm_B  motor B PWM, -255 to 255
-/// \param duration delay in milliseconds
-void spin_and_wait(int pwm_A, int pwm_B, int duration)
-{
-  set_motor_currents(pwm_A, pwm_B);
-  delay(duration);
-}
