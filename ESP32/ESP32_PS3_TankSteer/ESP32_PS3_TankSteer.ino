@@ -24,19 +24,30 @@ long joystickRightPctY = 0;
 //#define USE_DRV8871 1
 
 // DRV8833 Motor Controller. One breakout board can control 2 motors.
-#define MOT_A1_PIN 2   // og 10
-#define MOT_A2_PIN 4   // og 9
-#define MOT_B1_PIN 18    // og 6
-#define MOT_B2_PIN 19    // og 5
+//   pins From Left to Right
+//  DRV8833 MA1 MA2 SLP MB2 MB1 FLT GND VIN
+//  ESP32   5   17  16  4   2   15  GND 3.3 
+#define MOT_A1_PIN  5    //
+#define MOT_A2_PIN  17   //
+#define SLP_PIN     16   // SLEEP PIN. Set high to enable motor controller
+#define MOT_B1_PIN  2    // 4?  Might need to swap B1 and B2
+#define MOT_B2_PIN  4    // 2? Might need to swap B1 and B2
+#define MOT_FAULT   15   // Error. We won't use this.
 #define MAX_PWM_VALUE 255
+
+
+
 
 // DRV8871 Motor controllers. One for each side.
 // Each motor needs 2 pins.
-//@TODO set 4 unique pins to control the 2 motors
-#define PIN_MOTOR_L_A 18 // Left Motor
-#define PIN_MOTOR_L_B 19 // Left Motor
-#define PIN_MOTOR_R_A 18 // Right Motor
-#define PIN_MOTOR_R_B 19 // Right Motor
+// Left  Adafruit DRV8871 IN1 IN2 VIN GND
+// ESP32                  16  4   
+// Right Adafruit DRV8871 IN1 IN2 VIN GND
+// ESP32                  2   15  GND 3.3 
+#define PIN_MOTOR_L_A 16 // Left Motor
+#define PIN_MOTOR_L_B 4 // Left Motor
+#define PIN_MOTOR_R_A 2 // Right Motor
+#define PIN_MOTOR_R_B 4 // Right Motor
 #define MAX_MOTOR_PCT 100 // Input is -100 to +100
 MX1508 motorL(PIN_MOTOR_L_A, PIN_MOTOR_L_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
 MX1508 motorR(PIN_MOTOR_R_A, PIN_MOTOR_R_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
@@ -44,7 +55,6 @@ MX1508 motorR(PIN_MOTOR_R_A, PIN_MOTOR_R_B); // default SLOW_DECAY (resolution 8
 
 
 
-#define SLP_PIN 13
 
 #define TIME_SLICE_MS 100 // A tenth of a second, cycle time.
 
@@ -138,6 +148,7 @@ void setupPS3Controller() {
 
 void setupMotors(void)
 {
+#ifdef DRV8833
   // Set all the motor control inputs to OUTPUT
   pinMode(MOT_A1_PIN, OUTPUT);
   pinMode(MOT_A2_PIN, OUTPUT);
@@ -147,12 +158,16 @@ void setupMotors(void)
   pinMode(SLP_PIN, OUTPUT);
 
   // Turn off motors - Initial state
-  digitalWrite(MOT_A1_PIN, LOW);
-  digitalWrite(MOT_A2_PIN, LOW);
-  digitalWrite(MOT_B1_PIN, LOW);
-  digitalWrite(MOT_B2_PIN, LOW);
+//   digitalWrite(MOT_A1_PIN, LOW);
+//   digitalWrite(MOT_A2_PIN, LOW);
+//   digitalWrite(MOT_B1_PIN, LOW);
+//   digitalWrite(MOT_B2_PIN, LOW);
 
   digitalWrite(SLP_PIN, HIGH);
+#endif
+
+    // Handles both DRV8833 and DRV8871
+    stopMotors();
 
 }
 
@@ -197,7 +212,23 @@ void loopMotors(){
     driveMotors(joystickLeftPctY, joystickRightPctY);
 #endif
 
+}
 
+void stopMotors(){
+
+#ifdef USE_DRV8833
+    // Expecting calculated range -255 to 255
+    setMotorPWMs(0, 0);
+    digitalWrite(MOT_A1_PIN, LOW);
+    digitalWrite(MOT_A2_PIN, LOW);
+    digitalWrite(MOT_B1_PIN, LOW);
+    digitalWrite(MOT_B2_PIN, LOW);
+#endif
+
+#ifdef USE_DRV8871
+    // Expecting calculated range -100 to +100
+    driveMotors(0, 0);
+#endif
 }
 
 // DRV8871 motor controller
