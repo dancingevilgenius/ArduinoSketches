@@ -6,9 +6,8 @@
 #define PS3_BLACK_BLACK_2   "00:19:c1:c2:d8:02" 
 #define PS3_BLACK_BLACK_3   "00:19:c1:c2:d8:03" 
 #define PS3_BLUE_BLACK_1    "00:19:c1:c2:ee:01"
-
-int player = 0;
-int battery = 0;
+int ps3Player = 0;
+int ps3Battery = 0;
 
 // -100% to 100%.
 // Using percent because different motor controllers have different ranges.
@@ -17,7 +16,7 @@ long joystickLeftPctY = 0;
 long joystickRightPctX = 0;
 long joystickRightPctY = 0;
 
-#define MAX_JOYSTICK_VALUE 255
+#define MAX_PWM_VALUE 255
 
 // Define the control inputs
 #define MOT_A1_PIN 2   // og 10
@@ -27,9 +26,9 @@ long joystickRightPctY = 0;
 
 #define SLP_PIN 13
 
-#define TIME_SLICE_MS 10 // 
+#define TIME_SLICE_MS 100 // 
 
-void notify()
+void notifyPS3Controller()
 {
 
     printPS3ButtonRawValues();
@@ -262,21 +261,21 @@ void printJoystickRawValues(){
 }
 
 void printBatteryStatus(){
-    if( battery != Ps3.data.status.battery ){
-        battery = Ps3.data.status.battery;
-        Serial.print("The controller battery is ");
-        if( battery == ps3_status_battery_charging )      Serial.println("charging");
-        else if( battery == ps3_status_battery_full )     Serial.println("FULL");
-        else if( battery == ps3_status_battery_high )     Serial.println("HIGH");
-        else if( battery == ps3_status_battery_low)       Serial.println("LOW");
-        else if( battery == ps3_status_battery_dying )    Serial.println("DYING");
-        else if( battery == ps3_status_battery_shutdown ) Serial.println("SHUTDOWN");
+    if( ps3Battery != Ps3.data.status.battery ){
+        ps3Battery = Ps3.data.status.battery;
+        Serial.print("PS3 Controller battery is ");
+        if( ps3Battery == ps3_status_battery_charging )      Serial.println("CHARGING");
+        else if( ps3Battery == ps3_status_battery_full )     Serial.println("FULL");
+        else if( ps3Battery == ps3_status_battery_high )     Serial.println("HIGH");
+        else if( ps3Battery == ps3_status_battery_low)       Serial.println("LOW");
+        else if( ps3Battery == ps3_status_battery_dying )    Serial.println("DYING");
+        else if( ps3Battery == ps3_status_battery_shutdown ) Serial.println("SHUTDOWN");
         else Serial.println("UNDEFINED");
     }
 }
 
-void onConnect(){
-    Serial.println("PS3 Connected.");
+void onConnectPS3Connect(){
+    Serial.println("PS3 Controller Connected.");
 }
 
 void setup()
@@ -286,15 +285,15 @@ void setup()
 
     setupMotors();
 
-    Ps3.attach(notify);
-    Ps3.attachOnConnect(onConnect);
+    Ps3.attach(notifyPS3Controller);
+    Ps3.attachOnConnect(onConnectPS3Connect);
 
     Ps3.begin(PS3_BLACK_BLACK_1);
 
-    Ps3.setPlayer(player);
+    Ps3.setPlayer(ps3Player);
 
     //-------------------- Player LEDs -------------------
-    Serial.print("Setting LEDs to player "); Serial.println(player, DEC);
+    Serial.print("Setting LEDs to player "); Serial.println(ps3Player, DEC);
     
     Serial.println("Setup() ended");
 }
@@ -341,11 +340,11 @@ void loopMotors(){
     int pwmLeftX, pwmLeftY;
     int pwmRightX, pwmRightY;
 
-    pwmLeftX = (joystickLeftPctX * MAX_JOYSTICK_VALUE)/100;
-    pwmLeftY = (joystickLeftPctY * MAX_JOYSTICK_VALUE)/100;
+    pwmLeftX = (joystickLeftPctX * MAX_PWM_VALUE)/100;
+    pwmLeftY = (joystickLeftPctY * MAX_PWM_VALUE)/100;
 
-    pwmRightX = (joystickRightPctX * MAX_JOYSTICK_VALUE)/100;
-    pwmRightY = (joystickRightPctY * MAX_JOYSTICK_VALUE)/100;
+    pwmRightX = (joystickRightPctX * MAX_PWM_VALUE)/100;
+    pwmRightY = (joystickRightPctY * MAX_PWM_VALUE)/100;
 
     // For this controller system, we only care about the up/down Axis.
     setMotorPWMs(pwmLeftY, pwmRightY);
@@ -359,10 +358,10 @@ void loopMotors(){
 /// \param IN2_PIN  pin number xIN2 for the given channel
 void setMotorPWM(int pwm, int IN1_PIN, int IN2_PIN)
 {
-    if(pwm < -MAX_JOYSTICK_VALUE){
-        pwm = -MAX_JOYSTICK_VALUE;
-    } else if(pwm > MAX_JOYSTICK_VALUE){
-        pwm = MAX_JOYSTICK_VALUE;
+    if(pwm < -MAX_PWM_VALUE){
+        pwm = -MAX_PWM_VALUE;
+    } else if(pwm > MAX_PWM_VALUE){
+        pwm = MAX_PWM_VALUE;
     }
 
 
