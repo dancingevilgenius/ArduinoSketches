@@ -21,6 +21,19 @@ int battery = 0;
 
 void notify()
 {
+
+    printPS3ButtonRawValues();
+   //printJoystickRawValues();
+   handleJoystickChanges();
+
+
+
+   //---------------------- Battery events ---------------------
+    //printBatteryStatus();
+
+}
+
+void printPS3ButtonRawValues(){
     //--- Digital cross/square/triangle/circle button events ---
     if( Ps3.event.button_down.cross ) {
         Serial.println("Started pressing the cross button");
@@ -143,18 +156,14 @@ void notify()
     if( Ps3.event.button_up.ps ) {
         Serial.println("Released the Playstation button");
     }
-
-   //printJoystickRawValues();
-   //handleJoystickChanges();
-
-
-
-   //---------------------- Battery events ---------------------
-    //printBatteryStatus();
-
 }
 
 #define MAX_JS_RANGE 255
+
+long joystickLeftX = 0;
+long joystickLeftY = 0;
+long joystickRightX = 0;
+long joystickRightY = 0;
 
 void handleJoystickChanges(){
     // Left Stick
@@ -164,10 +173,10 @@ void handleJoystickChanges(){
         long rawX = Ps3.data.analog.stick.lx;
         long rawY = Ps3.data.analog.stick.ly;
 
-        long jsX = map(rawX, -127, 127, -100, 100);
-        long jsY = map(rawY, 127, -127, -100, 100);
+        joystickLeftX = map(rawX, -127, 127, -100, 100);
+        joystickLeftY = map(rawY, 127, -127, -100, 100);
 
-        Serial.print(" percentY="); Serial.print(jsY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
+        Serial.print(" percentY="); Serial.print(joystickLeftY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
         Serial.println();
 
     }
@@ -179,10 +188,10 @@ void handleJoystickChanges(){
         long rawX = Ps3.data.analog.stick.rx;
         long rawY = Ps3.data.analog.stick.ry;
 
-        long jsX = map(rawX, -127, 127, -100, 100);
-        long jsY = map(rawY, 127, -127, -100, 100);
+        joystickRightX = map(rawX, -127, 127, -100, 100);
+        joystickRightY = map(rawY, 127, -127, -100, 100);
 
-        Serial.print(" percentY="); Serial.print(jsY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
+        Serial.print(" percentY="); Serial.print(joystickRightY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
         Serial.println();
 
    }
