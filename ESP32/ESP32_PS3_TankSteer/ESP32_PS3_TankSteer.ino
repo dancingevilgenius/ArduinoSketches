@@ -63,22 +63,18 @@ void notifyPS3Controller()
 
     printPS3ButtonRawValues();
     //printJoystickRawValues();
-    handleJoystickChanges();
+    bool printValues = false;
+    handleJoystickChanges(printValues);
 
-
-
-    //---------------------- Battery events ---------------------
-    printBatteryStatus();
 
 }
 
 
 
 
-void handleJoystickChanges(){
+void handleJoystickChanges(bool printValues){
     // Left Stick
    if( abs(Ps3.event.analog_changed.stick.lx) + abs(Ps3.event.analog_changed.stick.ly) > 5 ){
-       Serial.print("Left stick:");
 
         long rawX = Ps3.data.analog.stick.lx;
         long rawY = Ps3.data.analog.stick.ly;
@@ -88,14 +84,16 @@ void handleJoystickChanges(){
         joystickLeftPctX = map(rawX, -127, 127, -100, 100);
         joystickLeftPctY = map(rawY, 127, -127, -100, 100);
 
-        Serial.print(" joystickLeftPctY="); Serial.print(joystickLeftPctY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
-        Serial.println();
+        if(printValues){
+            Serial.print("Left stick:");
+            Serial.print(" joystickLeftPctY="); Serial.print(joystickLeftPctY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
+            Serial.println();
+        }
 
     }
 
     // Right Stick
    if( abs(Ps3.event.analog_changed.stick.rx) + abs(Ps3.event.analog_changed.stick.ry) > 5 ){
-        Serial.print("Right stick:");
 
         long rawX = Ps3.data.analog.stick.rx;
         long rawY = Ps3.data.analog.stick.ry;
@@ -105,8 +103,11 @@ void handleJoystickChanges(){
         joystickRightPctX = map(rawX, -127, 127, -100, 100);
         joystickRightPctY = map(rawY, 127, -127, -100, 100);
 
-        Serial.print(" joystickRightPctY="); Serial.print(joystickRightPctY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
-        Serial.println();
+        if(printValues){
+        Serial.print("Right stick:");
+            Serial.print(" joystickRightPctY="); Serial.print(joystickRightPctY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
+            Serial.println();
+        }
 
    }
 }
@@ -141,6 +142,9 @@ void setupPS3Controller() {
 
     //-------------------- Player LEDs -------------------
     Serial.print("Setting LEDs to player "); Serial.println(ps3Player, DEC);
+
+    printBatteryStatus();
+
 
 }
 
@@ -300,10 +304,12 @@ void setMotorPWMs(int pwm_A, int pwm_B)
   setMotorPWM(pwm_B, MOT_B1_PIN, MOT_B2_PIN);
 
   // Print a status message to the console.
-  Serial.print("Set motor A PWM = ");
-  Serial.print(pwm_A);
-  Serial.print(" motor B PWM = ");
-  Serial.println(pwm_B);
+  if(abs(pwm_A)>10 || abs(pwm_B)> 10){
+    Serial.print("Set motor A PWM = ");
+    Serial.print(pwm_A);
+    Serial.print(" motor B PWM = ");
+    Serial.println(pwm_B);
+  }
 }
 
 void printPS3ButtonCombos(){
