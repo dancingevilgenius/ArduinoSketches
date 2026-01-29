@@ -104,9 +104,10 @@ void handleJoystickChanges(){
 
 void setup()
 {
-    Serial.println("Setup() started");
-
     Serial.begin(115200);
+    delay(1000);
+
+    Serial.println("Setup() started");
 
     setupMotors();
 
@@ -117,9 +118,13 @@ void setup()
 
 void setupPS3Controller() {
 
+    // Initialize the callback function that will handle PS3 controller input.
     Ps3.attach(notifyPS3Controller);
+
+    // Run this when connected via bluetooth. Right now only does a print statement.
     Ps3.attachOnConnect(onConnectPS3Connect);
 
+    // Bind to a certain PS3 controller using that controller's address.
     Ps3.begin(PS3_BLACK_BLACK_1);
 
     Ps3.setPlayer(ps3Player);
@@ -151,6 +156,7 @@ void setupMotors(void)
 
 }
 
+// Note: PS3 Controller handled in notifyPS3Controller() callback.
 void loop()
 {
     if(!Ps3.isConnected()){
@@ -158,7 +164,6 @@ void loop()
     }
 
 
-    // PS3 Controller handled in notifyPS3Controller() callback.
     
 
     loopMotors();
@@ -196,20 +201,22 @@ void loopMotors(){
 }
 
 // DRV8871 motor controller
+// Input parameters range -100 to +100
 void driveMotors(int pctL, int pctR){
 
-  if(pctL > MAX_MOTOR_PCT){
-    pctL = MAX_MOTOR_PCT;
-  }
-  else if(pctL < -MAX_MOTOR_PCT){
-    pctL = -MAX_MOTOR_PCT;
-  }
-  if(pctR > MAX_MOTOR_PCT){
-    pctR = MAX_MOTOR_PCT;
-  }
-  else if(pctR < -MAX_MOTOR_PCT){
-    pctR = -MAX_MOTOR_PCT;
-  }
+    // Force input parameters to be within  valid ranges.
+    if(pctL > MAX_MOTOR_PCT){
+        pctL = MAX_MOTOR_PCT;
+    }
+    else if(pctL < -MAX_MOTOR_PCT){
+        pctL = -MAX_MOTOR_PCT;
+    }
+    if(pctR > MAX_MOTOR_PCT){
+        pctR = MAX_MOTOR_PCT;
+    }
+    else if(pctR < -MAX_MOTOR_PCT){
+        pctR = -MAX_MOTOR_PCT;
+    }
 
   motorL.motorGoP(pctL);
   motorR.motorGoP(pctR);
