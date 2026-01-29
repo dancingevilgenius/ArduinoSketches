@@ -20,18 +20,24 @@ long joystickRightPctY = 0;
 
 #define MAX_PWM_VALUE 255
 
-// DRV8833 Motor Controller. One breakout board can controll 2 motors.
+// Only use one of the next 2 lines to choose which motor controller we are using.
+#define USE_DRV8833 1
+//#define USE_DRV8871 1
+
+// DRV8833 Motor Controller. One breakout board can control 2 motors.
 #define MOT_A1_PIN 2   // og 10
 #define MOT_A2_PIN 4   // og 9
 #define MOT_B1_PIN 18    // og 6
 #define MOT_B2_PIN 19    // og 5
 
 // DRV8871 Motor controllers. One for each side.
+// Each motor needs 2 pins.
+//@TODO set 4 unique pins to control the 2 motors
 #define PIN_MOTOR_L_A 18 // Left Motor
 #define PIN_MOTOR_L_B 19 // Left Motor
 #define PIN_MOTOR_R_A 18 // Right Motor
 #define PIN_MOTOR_R_B 19 // Right Motor
-#define MAX_MOTOR_SPEED 100
+#define MAX_MOTOR_PCT 100 // Input is -100 to +100
 MX1508 motorL(PIN_MOTOR_L_A, PIN_MOTOR_L_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
 MX1508 motorR(PIN_MOTOR_R_A, PIN_MOTOR_R_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
 
@@ -40,7 +46,7 @@ MX1508 motorR(PIN_MOTOR_R_A, PIN_MOTOR_R_B); // default SLOW_DECAY (resolution 8
 
 #define SLP_PIN 13
 
-#define TIME_SLICE_MS 100 // 
+#define TIME_SLICE_MS 100 // A tenth of a second, cycle time.
 
 void notifyPS3Controller()
 {
@@ -361,6 +367,9 @@ void loop()
 
 void loopMotors(){
 
+
+    // For this controller system, we only care about the up/down Axis.
+#ifdef USE_DRV8833
     // Expecting calculated range -255 to 255
     int pwmLeftX, pwmLeftY;
     int pwmRightX, pwmRightY;
@@ -371,13 +380,41 @@ void loopMotors(){
     pwmRightX = (joystickRightPctX * MAX_PWM_VALUE)/100;
     pwmRightY = (joystickRightPctY * MAX_PWM_VALUE)/100;
 
-    // For this controller system, we only care about the up/down Axis.
     setMotorPWMs(pwmLeftY, pwmRightY);
+#endif
+
+#ifdef USE_DRV8871
+    // Can use the calculated up/down Percent Y values for each joystick.
+    driveMotors(joystickLeftPctY, joystickRightPctY);
+#endif
+
 
 }
 
+// DRV8871 motor controller
+void driveMotors(int pctL, int pctR){
+
+  if(pctL > MAX_MOTOR_PCT){
+    pctL = MAX_MOTOR_PCT;
+  }
+  else if(pctL < -MAX_MOTOR_PCT){
+    pctL = -MAX_MOTOR_PCT;
+  }
+  if(pctR > MAX_MOTOR_PCT){
+    pctR = MAX_MOTOR_PCT;
+  }
+  else if(pctR < -MAX_MOTOR_PCT){
+    pctR = -MAX_MOTOR_PCT;
+  }
+
+  motorL.motorGoP(pctL);
+  motorR.motorGoP(pctR);
+
+}
+
+
 /// Set the current on a motor channel using PWM and directional logic.
-///
+/// DRV8831 motor controller
 /// \param pwm    PWM duty cycle ranging from -255 full reverse to 255 full forward
 /// \param IN1_PIN  pin number xIN1 for the given channel
 /// \param IN2_PIN  pin number xIN2 for the given channel
@@ -400,11 +437,23 @@ void setMotorPWM(int pwm, int IN1_PIN, int IN2_PIN)
 }
 
 /// Set the current on both motors.
-///
+/// DRV8831 motor controller
 /// \param pwm_A  motor A PWM, -255 to 255
 /// \param pwm_B  motor B PWM, -255 to 255
 void setMotorPWMs(int pwm_A, int pwm_B)
 {
+    // Make sure input PWM values are within correct range.
+    if(pwm_A < -MAX_PWM_VALUE){
+        pwm_A = -MAX_PWM_VALUE;
+    } else if(pwm_A > MAX_PWM_VALUE){
+        pwm_A = MAX_PWM_VALUE;
+    }
+    if(pwm_B < -MAX_PWM_VALUE){
+        pwm_B = -MAX_PWM_VALUE;
+    } else if(pwm_B > MAX_PWM_VALUE){
+        pwm_B = MAX_PWM_VALUE;
+    }
+
   setMotorPWM(pwm_A, MOT_A1_PIN, MOT_A2_PIN);
   setMotorPWM(pwm_B, MOT_B1_PIN, MOT_B2_PIN);
 
