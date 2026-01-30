@@ -1,4 +1,6 @@
 #include <Arduino.h>
+
+// This appears to work, but the interface is a little confusing - Carlos
 #include <ESP32ServoController.h>
 
 using namespace MDO::ESP32ServoController;
@@ -17,7 +19,7 @@ void setup() {
 	PWMController oPwm;											//the actual PWM controller
 	
 	const uint32_t uiFreqHz	= 20000;
-	const uint8_t uiPinNr	= 12;
+	const uint8_t uiPinNr	= 16;
 	const double dDuty		= 0.333;							//a duty cycle of 33.3%
 	
 	if (oPwm.begin(oFactory, uiPinNr, uiFreqHz, dDuty)) {

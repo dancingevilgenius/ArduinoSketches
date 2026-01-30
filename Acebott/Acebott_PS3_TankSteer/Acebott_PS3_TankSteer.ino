@@ -28,8 +28,8 @@ long joystickRightPctY = 0;
 //  DRV8833 MA1 MA2 SLP MB2 MB1 FLT GND VIN
 //  ESP32   5   17  16  4   2   15  GND 3.3 
 #define MOT_A1_PIN  5    //
-#define MOT_A2_PIN  17   //
-#define SLP_PIN     16   // SLEEP PIN. Set high to enable motor controller
+#define MOT_A2_PIN  16   //
+#define SLP_PIN     17   // SLEEP PIN. Set high to enable motor controller
 #define MOT_B1_PIN  2    // 4?  Might need to swap B1 and B2
 #define MOT_B2_PIN  4    // 2? Might need to swap B1 and B2
 #define MOT_FAULT   15   // Error. We won't use this.
@@ -44,8 +44,8 @@ long joystickRightPctY = 0;
 // ESP32                  16  4   
 // Right Adafruit DRV8871 IN1 IN2 VIN GND
 // ESP32                  2   15  GND 3.3 
-#define PIN_MOTOR_L_A 16 // Left Motor
-#define PIN_MOTOR_L_B 4 // Left Motor
+#define PIN_MOTOR_L_A 5 // Left Motor
+#define PIN_MOTOR_L_B 16 // Left Motor
 #define PIN_MOTOR_R_A 2 // Right Motor
 #define PIN_MOTOR_R_B 4 // Right Motor
 #define MAX_MOTOR_PCT 100 // Input is -100 to +100
@@ -56,7 +56,7 @@ MX1508 motorR(PIN_MOTOR_R_A, PIN_MOTOR_R_B); // default SLOW_DECAY (resolution 8
 
 
 
-#define TIME_SLICE_MS 50 // A tenth of a second, cycle time.
+#define TIME_SLICE_MS 100 // A tenth of a second, cycle time.
 
 void notifyPS3Controller()
 {
