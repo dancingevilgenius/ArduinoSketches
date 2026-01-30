@@ -56,14 +56,14 @@ MX1508 motorR(PIN_MOTOR_R_A, PIN_MOTOR_R_B); // default SLOW_DECAY (resolution 8
 
 
 
-#define TIME_SLICE_MS 100 // A tenth of a second, cycle time.
+#define TIME_SLICE_MS 50 // A tenth of a second, cycle time.
 
 void notifyPS3Controller()
 {
 
     printPS3ButtonRawValues();
     //printJoystickRawValues();
-    bool printValues = false;
+    bool printValues = true;
     handleJoystickChanges(printValues);
 
 
@@ -74,7 +74,7 @@ void notifyPS3Controller()
 
 void handleJoystickChanges(bool printValues){
     // Left Stick
-   if( abs(Ps3.event.analog_changed.stick.lx) + abs(Ps3.event.analog_changed.stick.ly) > 5 ){
+   if( abs(Ps3.event.analog_changed.stick.ly) > 5 ){
 
         long rawX = Ps3.data.analog.stick.lx;
         long rawY = Ps3.data.analog.stick.ly;
@@ -90,10 +90,12 @@ void handleJoystickChanges(bool printValues){
             Serial.println();
         }
 
+    } else {
+        joystickLeftPctY = 0;
     }
 
     // Right Stick
-   if( abs(Ps3.event.analog_changed.stick.rx) + abs(Ps3.event.analog_changed.stick.ry) > 5 ){
+   if(abs(Ps3.event.analog_changed.stick.ry) > 5 ){
 
         long rawX = Ps3.data.analog.stick.rx;
         long rawY = Ps3.data.analog.stick.ry;
@@ -108,8 +110,9 @@ void handleJoystickChanges(bool printValues){
             Serial.print(" joystickRightPctY="); Serial.print(joystickRightPctY, DEC); Serial.print(" rawY="); Serial.print(rawY, DEC);
             Serial.println();
         }
-
-   }
+    }  else {
+        joystickRightPctY = 0;
+    }
 }
 
 
@@ -185,7 +188,7 @@ void loop()
 
     
 
-    loopMotors();
+    //loopMotors();
 
 
     // Delay between updates.  100ms means we update 10 times a second.
@@ -304,10 +307,11 @@ void setMotorPWMs(int pwm_A, int pwm_B)
   setMotorPWM(pwm_B, MOT_B1_PIN, MOT_B2_PIN);
 
   // Print a status message to the console.
-  if(abs(pwm_A)>10 || abs(pwm_B)> 10){
-    Serial.print("Set motor A PWM = ");
+  //if(abs(pwm_A)>10 || abs(pwm_B)> 10){
+  if(true){
+    Serial.print("motorA PWM = ");
     Serial.print(pwm_A);
-    Serial.print(" motor B PWM = ");
+    Serial.print(" motorB PWM = ");
     Serial.println(pwm_B);
   }
 }
