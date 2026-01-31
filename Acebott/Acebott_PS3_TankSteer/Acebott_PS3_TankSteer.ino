@@ -20,8 +20,8 @@ long joystickRightPctY = 0;
 
 
 // Only use one of the next 2 lines to choose which motor controller we are using.
-#define USE_DRV8833 1
-//#define USE_DRV8871 1
+//#define USE_DRV8833 1
+#define USE_DRV8871 1
 
 // DRV8833 Motor Controller. One breakout board can control 2 motors.
 //   pins From Left to Right
@@ -46,8 +46,8 @@ long joystickRightPctY = 0;
 // ESP32                  2   15  GND 3.3 
 #define PIN_MOTOR_L_A 5 // Left Motor
 #define PIN_MOTOR_L_B 16 // Left Motor
-#define PIN_MOTOR_R_A 2 // Right Motor
-#define PIN_MOTOR_R_B 4 // Right Motor
+#define PIN_MOTOR_R_A 17 // Right Motor
+#define PIN_MOTOR_R_B 18 // Right Motor
 #define MAX_MOTOR_PCT 100 // Input is -100 to +100
 MX1508 motorL(PIN_MOTOR_L_A, PIN_MOTOR_L_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
 MX1508 motorR(PIN_MOTOR_R_A, PIN_MOTOR_R_B); // default SLOW_DECAY (resolution 8 bits, frequency 1000Hz)
@@ -257,6 +257,11 @@ void driveMotors(int pctL, int pctR){
 
   motorL.motorGoP(pctL);
   motorR.motorGoP(pctR);
+  Serial.print("DRV8871");
+  Serial.print("\tL:");
+  Serial.print(pctL);
+  Serial.print("\tR");
+  Serial.println(pctR);
 
 }
 
