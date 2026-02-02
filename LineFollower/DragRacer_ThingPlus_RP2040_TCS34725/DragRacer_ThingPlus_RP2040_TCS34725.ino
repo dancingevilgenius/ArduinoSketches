@@ -64,7 +64,7 @@ int sensorPosition = SENSOR_POS_CENTER; // A single value used represent line re
 Adafruit_TCS34725 tcs[SENSOR_COUNT]; // Initialize in setup()
 const int tcsPins[SENSOR_COUNT] = { 4,5,6};
 volatile boolean isRGBReady[SENSOR_COUNT] = {false, false, false};
-bool sensorValues[SENSOR_COUNT]; // line/no-line black/white
+bool isLineDetected[SENSOR_COUNT]; // line/no-line black/white
 
 
 void setup() {
@@ -143,6 +143,8 @@ void loop() {
   //handleMotors(sensorPosition);
   loopRGBPrintValues();
 
+  delay(100); // Added to see if sensor can handle 1/10 second update
+
 }
 
 void loopRGBPrintValues(){
@@ -151,10 +153,14 @@ void loopRGBPrintValues(){
 
   for(int i=0 ; i<SENSOR_COUNT ; i++){
     if (isRGBReady[i]) {
+
+      // Get values from sensor
       getRawData_noDelay(i, &r, &g, &b, &c);
       colorTemp = tcs[i].calculateColorTemperature(r, g, b);
       lux = tcs[i].calculateLux(r, g, b);
-      
+
+      Serial.print(i);      
+      Serial.print(":\t");      
       Serial.print("Color Temp: "); Serial.print(colorTemp, DEC); Serial.print(" K - ");
       Serial.print("Lux: "); Serial.print(lux, DEC); Serial.print(" - ");
       Serial.print("R: "); Serial.print(r, DEC); Serial.print(" ");
@@ -165,22 +171,23 @@ void loopRGBPrintValues(){
       Serial.flush();
 
       // Calculate black line hits here
-      sensorValues[i] = isRGBLineHit(i, r, g, b);
+      isLineDetected[i] = isRGBLineDetected(i, r, g, b);
 
-      
+
       tcs[i].clearInterrupt();
       isRGBReady[i] = false;
     }
   }
+
 
 }
 
 // Determine algorithmically if we are on black or white.
 // Will need to get some test data.
 // Placeholder algorithm.
-bool isRGBLineHit(int index, uint16_t r, uint16_t g, uint16_t b){
+bool isRGBLineDetected(int index, uint16_t r, uint16_t g, uint16_t b){
 
-  if(r <100 && g<100 && b<100){
+  if(r<100 && g<100 && b<100){
     return true;
   }
 
