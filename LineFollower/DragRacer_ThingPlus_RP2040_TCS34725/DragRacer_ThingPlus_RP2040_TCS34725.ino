@@ -170,8 +170,8 @@ void loopRGBPrintValues(){
       Serial.println(" ");
       Serial.flush();
 
-      // Calculate black line hits here
-      isLineDetected[i] = isRGBLineDetected(i, r, g, b);
+      // Calculate black line hits here from raw analog values
+      isLineDetected[i] = isRGBLineDetected(r, g, b, c, lux);
 
 
       tcs[i].clearInterrupt();
@@ -185,7 +185,7 @@ void loopRGBPrintValues(){
 // Determine algorithmically if we are on black or white.
 // Will need to get some test data.
 // Placeholder algorithm.
-bool isRGBLineDetected(int index, uint16_t r, uint16_t g, uint16_t b){
+bool isRGBLineDetected(uint16_t r, uint16_t g, uint16_t b, uint16_t c, uint16_t lux){
 
   if(r<100 && g<100 && b<100){
     return true;
