@@ -3,7 +3,9 @@
 
 
 /* Initialise with specific int time and gain values */
-Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(
+                                            TCS34725_INTEGRATIONTIME_199MS, //TCS34725_INTEGRATIONTIME_614MS,
+                                            TCS34725_GAIN_1X);
 const int interruptPin = 3; // 2 for some boards. Using 3 on Inland Plus
 volatile boolean state = false;
 
@@ -59,14 +61,13 @@ void loop() {
     colorTemp = tcs.calculateColorTemperature(r, g, b);
     lux = tcs.calculateLux(r, g, b);
     
-    printRawValues(r,g,b,c, colorTemp,lux);
-    // Serial.print("Color Temp: "); Serial.print(colorTemp, DEC); Serial.print(" K - ");
-    // Serial.print("Lux: "); Serial.print(lux, DEC); Serial.print(" - ");
-    // Serial.print("R: "); Serial.print(r, DEC); Serial.print(" ");
-    // Serial.print("G: "); Serial.print(g, DEC); Serial.print(" ");
-    // Serial.print("B: "); Serial.print(b, DEC); Serial.print(" ");
-    // Serial.print("C: "); Serial.print(c, DEC); Serial.print(" ");
-    // Serial.println(" ");
+    //printRawValues(r,g,b,c, colorTemp,lux);
+    bool isLineHit = isLineDetected(r,g,b,c, colorTemp,lux);
+    if(isLineHit){
+      Serial.println("Line!");
+    } else {
+      Serial.println("-");
+    }
 
     Serial.flush();
 
@@ -76,6 +77,19 @@ void loop() {
     //Serial.println("sensor not ready.");
     //delay(1000);
   }
+}
+
+
+
+bool isLineDetected(uint16_t r, uint16_t g, uint16_t b,uint16_t c, uint16_t colorTemp, uint16_t lux){
+    // Serial.print("Color Temp: "); Serial.print(colorTemp, DEC); Serial.print(" K - ");
+    // Serial.print("Lux: "); Serial.print(lux, DEC); Serial.print(" - ");
+    // Serial.print("R: "); Serial.print(r, DEC); Serial.print(" ");
+    // Serial.print("G: "); Serial.print(g, DEC); Serial.print(" ");
+    // Serial.print("B: "); Serial.print(b, DEC); Serial.print(" ");
+    // Serial.print("C: "); Serial.print(c, DEC); Serial.print(" ");
+    // Serial.println(" ");
+    return(lux < 5000);
 }
 
 void printRawValues(uint16_t r, uint16_t g, uint16_t b,uint16_t c, uint16_t colorTemp, uint16_t lux){
