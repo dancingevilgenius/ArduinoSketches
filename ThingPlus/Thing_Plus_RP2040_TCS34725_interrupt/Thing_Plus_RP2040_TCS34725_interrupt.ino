@@ -6,7 +6,7 @@
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(
                                             TCS34725_INTEGRATIONTIME_199MS, //TCS34725_INTEGRATIONTIME_614MS,
                                             TCS34725_GAIN_1X);
-const int interruptPin = 3; // 2 for some boards. Using 3 on Inland Plus
+const int interruptPin = D22; // 2 for some boards. Using 3 on Inland Plus. Thing Plus: 22 (next to SCL)
 volatile boolean state = false;
 
 
@@ -36,6 +36,8 @@ void setup() {
   pinMode(interruptPin, INPUT_PULLUP); //TCS interrupt output is Active-LOW and Open-Drain
   attachInterrupt(digitalPinToInterrupt(interruptPin), isr, FALLING);
 
+  // Use Wire1 depending if using primary I2C
+  // Header pins: Wire1    QWIIC port: Wire
   Wire.begin();
   
   if (tcs.begin(TCS34725_ADDRESS, &Wire)) {
