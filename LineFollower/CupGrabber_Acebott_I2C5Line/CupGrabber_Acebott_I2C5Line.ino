@@ -33,11 +33,16 @@ void InfiniteLoopOnFailure(const char* function, const uint32_t line_number) {
 
 void setup() {
   Serial.begin(115200);
-  Serial.println(F("setup"));
-
+  Serial.println(F("Enter setup()"));
   Wire.begin();
 
+  setupSensorArray();
 
+
+  Serial.println(F("Exit setup()"));
+}
+
+void setupSensorArray(){
   const auto ret = g_five_line_tracker.Initialize();
 
   if (emakefun::FiveLineTracker::kOK == ret) {
@@ -57,10 +62,15 @@ void setup() {
   const uint16_t low_thresholds[emakefun::FiveLineTracker::kLineNumber] = {800, 800, 800, 800, 800};
   g_five_line_tracker.LowThresholds(low_thresholds);
 
-  Serial.println(F("setup successful"));
 }
 
 void loop() {
+
+  loopSensorArray();
+
+}
+
+void loopSensorArray(){
 
   uint16_t analog_values[emakefun::FiveLineTracker::kLineNumber] = {0};
   g_five_line_tracker.AnalogValues(analog_values);
