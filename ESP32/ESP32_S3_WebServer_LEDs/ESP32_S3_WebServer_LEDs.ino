@@ -1,5 +1,16 @@
 // Load Wi-Fi library
 #include <WiFi.h>
+#include <Adafruit_NeoPixel.h>
+
+
+// metroPixel takes in both the number of pixels (1, the built-in) and the pin)
+Adafruit_NeoPixel metroPixel = Adafruit_NeoPixel(1, PIN_NEOPIXEL);
+// note: the max. of colors in these arrays is 220 instead of 255 (super-bright!!)
+const int RED[ ] = {155, 0, 0};
+const int WHITE[ ] = {155, 155, 155};
+const int BLUE[ ] = {0, 0, 255};
+const int BLACK [ ] = {0, 0, 0};
+
 
 // Network credentials Here
 const char* ssid     = "ESP32";
@@ -41,6 +52,10 @@ void setup() {
   Serial.println("IP address: ");
   Serial.println(WiFi.softAPIP());
   server.begin();
+
+  // init. the NeoPixel library 
+  metroPixel.begin(); 
+
 }
 
 void loop() {
@@ -81,10 +96,13 @@ void loop() {
             
             if (header.indexOf("GET /17/on") >= 0) {
               statePin17 = "on";
-              digitalWrite(ledPin17, HIGH);               // turns the LED on
+              //digitalWrite(ledPin17, HIGH);     
+              pixelWrite(BLUE);
+          // turns the LED on
             } else if (header.indexOf("GET /17/off") >= 0) {
               statePin17 = "off";
-              digitalWrite(ledPin17, LOW);                //turns the LED off
+              //digitalWrite(ledPin17, LOW);                //turns the LED off
+              pixelWrite(BLACK);
             }
 
             // Display the HTML web page
@@ -131,4 +149,15 @@ void loop() {
     Serial.println("Client disconnected.");
     Serial.println("");
   }
+
+
+}
+
+
+// takes in a pre-defined color (integer array) and sets the pixel to that color
+void pixelWrite(const int* color) { 
+  metroPixel.setPixelColor(0, metroPixel.Color(color[0],color[1],color[2]));
+  // write the pixel color to the Metro's Neopixel
+  metroPixel.show(); 
+
 }
