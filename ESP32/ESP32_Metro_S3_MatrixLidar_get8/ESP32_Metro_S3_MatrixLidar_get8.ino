@@ -30,13 +30,14 @@ void setup(void){
 
 void loop(void){
   tof.getAllData(buf);
+  int val = -1;
   for(uint8_t i = 0; i < 8; i++){
     Serial.print("Y");
     Serial.print(i);
-    Serial.print(": ");
+    Serial.print(":\t");
     for(uint8_t j = 0; j < 8; j++){
-      Serial.print(buf[i * 8 + j]);
-      Serial.print(",");
+      val = buf[i * 8 + j];
+      Serial.printf("%04d\t", val);
     }
     Serial.println("");
   }
