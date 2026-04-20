@@ -15,6 +15,8 @@ DFRobot_MatrixLidar_I2C tof(0x33);
 uint16_t buf[64];
 
 #define MAX_DIST_MM 770
+#define ROW_EDGE_DETECTION 7
+#define EDGE_DETECTION_THRESHOLD_MM 80
 
 void setup(void){
   Serial.begin(115200);
@@ -38,8 +40,36 @@ void setup8x8() {
   Serial.println("setup8x8() completed.");
 }
 
+void loop8x8(){
 
-void loop(void){
+  //printRaw8x8();
+  printEdgeDetected();
+}
+
+void printEdgeDetected(){
+
+  tof.getAllData(buf);
+  int val = -1;
+  for(uint8_t i = 0; i < 8; i++){
+    if(i < ROW_EDGE_DETECTION ){
+      continue;
+    }
+    Serial.print("Bottom Row:\t");
+    for(uint8_t j = 0; j < 8; j++){
+      val = buf[i * 8 + j];
+      if(val > 120){
+        Serial.printf("%04d\t", val);
+      } else {
+        Serial.printf("    \t", val);
+      }
+    }
+    Serial.println("");
+  }
+
+}
+
+
+void printRaw8x8(){
   tof.getAllData(buf);
   int val = -1;
   for(uint8_t i = 0; i < 8; i++){
@@ -56,6 +86,14 @@ void loop(void){
     }
     Serial.println("");
   }
-  Serial.println("------------------------------");
+  Serial.println("------------------------------");  
+}
+
+
+void loop(void){
+
+  // Matrix
+  loop8x8();
+
   delay(100);
 }
