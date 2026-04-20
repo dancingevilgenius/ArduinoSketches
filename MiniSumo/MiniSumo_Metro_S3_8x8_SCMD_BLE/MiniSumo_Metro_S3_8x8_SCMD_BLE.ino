@@ -22,11 +22,14 @@
 DFRobot_MatrixLidar_I2C tof(0x33);
 uint16_t buf[64];
 
+
+// Edge Detection
 #define MAX_DIST_MM 770
 #define ROW_EDGE_DETECTION 7
 #define EDGE_DETECTION_THRESHOLD_MM 80
-
- bool edgeHit[8] = {false, false, false, false, false, false, false, false};
+#define MATRIX_COLS 8
+#define MATRIX_ROWS 8
+bool edgeHit[MATRIX_COLS] = {false, false, false, false, false, false, false, false};
 
 // For Serical Controlled Motor Driver (SCMD) also known as th Sparkfun QWIIC Motor Driver
 SCMD myMotorDriver; //This creates the main object of one motor driver and connected peripherals.
@@ -65,12 +68,13 @@ void loop8x8(){
   //printRaw8x8();
   bool displayRawScores = false;
   printEdgeDetected(displayRawScores);
+  //printRaw8x8();
 }
 
 void clearEdgeHits(){
 
-    for(uint8_t j = 0; j < 8; j++){
-      edgeHit[j] = false;
+    for(uint8_t cols = 0; cols < MATRIX_COLS; cols++){
+      edgeHit[cols] = false;
     }
 
 }
@@ -81,11 +85,11 @@ void printEdgeDetected(bool displayRawScores){
 
   tof.getAllData(buf);
   int val = -1;
-  for(uint8_t i = 0; i < 8; i++){
+  for(uint8_t i = 0; i < MATRIX_ROWS; i++){
     if(i == ROW_EDGE_DETECTION ){
       Serial.print("Edge Hit:\t");
-      for(uint8_t j = 0; j < 8; j++){
-        val = buf[i * 8 + j];
+      for(uint8_t j = 0; j < MATRIX_COLS; j++){
+        val = buf[i * MATRIX_ROWS + j];
         if(val > 120){
           if(displayRawScores){
             Serial.printf("%04d\t", val);
@@ -111,12 +115,12 @@ void printEdgeDetected(bool displayRawScores){
 void printRaw8x8(){
   tof.getAllData(buf);
   int val = -1;
-  for(uint8_t i = 0; i < 8; i++){
+  for(uint8_t i = 0; i < MATRIX_ROWS; i++){
     Serial.print("Y");
     Serial.print(i);
     Serial.print(":\t");
-    for(uint8_t j = 0; j < 8; j++){
-      val = buf[i * 8 + j];
+    for(uint8_t j = 0; j < MATRIX_COLS; j++){
+      val = buf[i * MATRIX_ROWS + j];
       if(val < MAX_DIST_MM){
         Serial.printf("%04d\t", val);
       } else {
@@ -137,7 +141,7 @@ void loop(void){
   //motorsTestForwardAndReverse();
 
 
-  delay(50);
+  delay(150);
 }
 
 
