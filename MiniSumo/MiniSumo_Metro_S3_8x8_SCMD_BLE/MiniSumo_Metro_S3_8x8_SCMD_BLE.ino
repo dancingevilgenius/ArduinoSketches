@@ -43,6 +43,7 @@ HT16K33 display;
 #define DIR_SW 'N'
 #define DIR_WW 'G'
 #define DIR_NW 'H'
+#define MAX_BRIGHTNESS 15
 
 
 
@@ -84,7 +85,8 @@ void setupAlphanumericDisplay(){
   Serial.println("Display acknowledged.");
 
 
-
+  display.setBrightness(MAX_BRIGHTNESS * 0.5);
+  /*
   // Outer segments that when all lit look like zero or letter 'O'
   display.illuminateSegment(HOR_TOP, 0);
   display.illuminateSegment(HOR_BOTTOM, 0);
@@ -111,12 +113,57 @@ void setupAlphanumericDisplay(){
   display.decimalOn();   //Turn decimals off
   display.colonOff();      //Turn colons on
   display.colonOn();     //Turn colons off
+  */
 
+  // display.illuminateSegment(DIR_WW, 0);
+  // display.illuminateSegment(DIR_EE, 0);
+  // display.illuminateSegment(DIR_WW, 1);
+  // display.illuminateSegment(DIR_EE, 1);
+  // display.illuminateSegment(DIR_WW, 2);
+  // display.illuminateSegment(DIR_EE, 2);
+  // display.illuminateSegment(DIR_WW, 3);
+  // display.illuminateSegment(DIR_EE, 3);
 
   display.updateDisplay();
 
+}
+
+void lightEdgeSegment(int sensorIndex){
+
+switch (sensorIndex) {
+  case 0:
+    display.illuminateSegment(DIR_WW, 0);
+    break;
+  case 1:
+    display.illuminateSegment(DIR_EE, 0);
+    break;
+  case 2:
+    display.illuminateSegment(DIR_WW, 1);
+    break;
+  case 3:
+    display.illuminateSegment(DIR_EE, 1);
+    break;
+  case 4:
+    display.illuminateSegment(DIR_WW, 2);
+    break;
+  case 5:
+    display.illuminateSegment(DIR_EE, 2);
+    break;
+  case 6:
+    display.illuminateSegment(DIR_WW, 3);
+    break;
+  case 7:
+    display.illuminateSegment(DIR_EE, 3);
+    break;
+
+  default:
+    // optional statements if no cases match
+    break;
+}
 
 }
+
+
 
 void setup8x8() {
   while(tof.begin() != 0){
@@ -137,6 +184,7 @@ void loop8x8(){
   //printRaw8x8();
   bool displayRawScores = false;
   printEdgeDetected(displayRawScores);
+  showEdgeDetectedSegments();
   //printRaw8x8();
 }
 
@@ -147,6 +195,34 @@ void clearEdgeHits(){
     }
 
 }
+
+
+void showEdgeDetectedSegments(){
+
+  clearEdgeHits();
+  display.clear();
+
+  tof.getAllData(buf);
+  int val = -1;
+  for(uint8_t i = 0; i < MATRIX_ROWS; i++){
+    if(i == ROW_EDGE_DETECTION ){
+      Serial.print("Edge Hit:\t");
+      for(uint8_t j = 0; j < MATRIX_COLS; j++){
+        val = buf[i * MATRIX_ROWS + j];
+        if(val > 120){
+          // Lights
+          edgeHit[j] = true;
+          lightEdgeSegment(j);
+        } else {
+          // No Lights
+        }
+      }
+      Serial.println("");
+    }
+  }
+  display.updateDisplay();
+}
+
 
 void printEdgeDetected(bool displayRawScores){
 
