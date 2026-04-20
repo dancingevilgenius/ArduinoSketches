@@ -17,10 +17,33 @@
 #include "SCMD.h"
 #include "SCMD_config.h" //Contains #defines for common SCMD register names and values
 #include "Wire.h"
+#include <SparkFun_Alphanumeric_Display.h>  //Click here to get the library: http://librarymanager/All#SparkFun_Qwiic_Alphanumeric_Display by SparkFun
+
 
 
 DFRobot_MatrixLidar_I2C tof(0x33);
 uint16_t buf[64];
+
+// Alphanumeric Display
+HT16K33 display;
+// Horizontal Side Segments
+#define HOR_TOP 'A'
+#define HOR_BOTTOM 'D'
+// Vertical Side Segments
+#define VER_BOTTOM_RIGHT 'C'
+#define VER_TOP_RIGHT 'B'
+#define VER_BOTTOM_LEFT 'E'
+#define VER_TOP_LEFT 'F'
+// Compass Direction Segments on the inside
+#define DIR_NN 'J'
+#define DIR_NE 'K'
+#define DIR_EE 'I'
+#define DIR_SE 'L'
+#define DIR_SS 'M'
+#define DIR_SW 'N'
+#define DIR_WW 'G'
+#define DIR_NW 'H'
+
 
 
 // Edge Detection
@@ -44,9 +67,55 @@ void setup(void){
 
   setup8x8();
   setupQwiicMotorDriver();
+  setupAlphanumericDisplay();
 
 
   Serial.println("init success");
+}
+
+
+void setupAlphanumericDisplay(){
+  //check if display will acknowledge
+  if (display.begin() == false)
+  {
+    Serial.println("Device did not acknowledge! Freezing.");
+    while(1);
+  }
+  Serial.println("Display acknowledged.");
+
+
+
+  // Outer segments that when all lit look like zero or letter 'O'
+  display.illuminateSegment(HOR_TOP, 0);
+  display.illuminateSegment(HOR_BOTTOM, 0);
+  display.illuminateSegment(VER_TOP_RIGHT, 0);
+  display.illuminateSegment(VER_BOTTOM_RIGHT, 0);
+  display.illuminateSegment(VER_TOP_LEFT, 0);
+  display.illuminateSegment(VER_BOTTOM_LEFT, 0);
+
+  // Inner horizontal and vertical segments that when lit look like plus sign
+  display.illuminateSegment(DIR_NN, 1);
+  display.illuminateSegment(DIR_EE, 1);
+  display.illuminateSegment(DIR_SS, 1);
+  display.illuminateSegment(DIR_WW, 1);
+
+  // Inner diagonal segments that when lit look like letter 'X'
+  display.illuminateSegment(DIR_NE, 2);
+  display.illuminateSegment(DIR_SE, 2);
+  display.illuminateSegment(DIR_SW, 2);
+  display.illuminateSegment(DIR_NW, 2);
+
+
+
+  display.decimalOff();  //Turn decimals on
+  display.decimalOn();   //Turn decimals off
+  display.colonOff();      //Turn colons on
+  display.colonOn();     //Turn colons off
+
+
+  display.updateDisplay();
+
+
 }
 
 void setup8x8() {
