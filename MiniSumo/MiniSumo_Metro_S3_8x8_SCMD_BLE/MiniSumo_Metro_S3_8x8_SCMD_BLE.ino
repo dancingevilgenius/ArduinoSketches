@@ -18,6 +18,8 @@ uint16_t buf[64];
 #define ROW_EDGE_DETECTION 7
 #define EDGE_DETECTION_THRESHOLD_MM 80
 
+ bool edgeHit[5] = {false, false, false, false, false};
+
 void setup(void){
   Serial.begin(115200);
 
@@ -43,27 +45,46 @@ void setup8x8() {
 void loop8x8(){
 
   //printRaw8x8();
-  printEdgeDetected();
+  bool displayRawScores = false;
+  printEdgeDetected(displayRawScores);
 }
 
-void printEdgeDetected(){
+void clearEdgeHits(){
+
+    for(uint8_t j = 0; j < 8; j++){
+      edgeHit[j] = false;
+    }
+
+}
+
+void printEdgeDetected(bool displayRawScores){
+
+  clearEdgeHits();
 
   tof.getAllData(buf);
   int val = -1;
   for(uint8_t i = 0; i < 8; i++){
-    if(i < ROW_EDGE_DETECTION ){
-      continue;
-    }
-    Serial.print("Bottom Row:\t");
-    for(uint8_t j = 0; j < 8; j++){
-      val = buf[i * 8 + j];
-      if(val > 120){
-        Serial.printf("%04d\t", val);
-      } else {
-        Serial.printf("    \t", val);
+    if(i == ROW_EDGE_DETECTION ){
+      Serial.print("Edge Hit:\t");
+      for(uint8_t j = 0; j < 8; j++){
+        val = buf[i * 8 + j];
+        if(val > 120){
+          if(displayRawScores){
+            Serial.printf("%04d\t", val);
+          } else {
+            Serial.printf("X\t");
+          }
+          edgeHit[j] = true;
+        } else {
+          if(displayRawScores){
+            Serial.printf(" \t");
+          } else {
+            Serial.printf(" \t");
+          }
+        }
       }
+      Serial.println("");
     }
-    Serial.println("");
   }
 
 }
@@ -95,5 +116,5 @@ void loop(void){
   // Matrix
   loop8x8();
 
-  delay(100);
+  delay(50);
 }
