@@ -103,7 +103,8 @@ uint8_t SCMD::begin( void )
 		// start the SPI library:
 		SPI.begin();
 		// Maximum SPI frequency is 1MHz use SPI_CLK_DIV16
-		SPI.setClockDivider(SPI_CLOCK_DIV32);
+		//SPI.setClockDivider(SPI_CLOCK_DIV32);
+		SPI.beginTransaction(SPISettings(500000, MSBFIRST, SPI_MODE0));
 		// Data is read and written MSb first.
 		SPI.setBitOrder(MSBFIRST);
 		// Data is captured on rising edge of clock (CPHA = 0)
