@@ -84,9 +84,14 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   // Custom code setup here
+  setupCustomCode();
+
+
+}
+
+void setupCustomCode(){
+  // Change this to whatever your program needs.
   setupNeopixel();
-
-
 }
 
 
