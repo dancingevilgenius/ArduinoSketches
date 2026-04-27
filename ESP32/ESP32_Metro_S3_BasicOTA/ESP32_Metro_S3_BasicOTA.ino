@@ -2,6 +2,11 @@
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include <Adafruit_NeoPixel.h>
+
+// How many internal neopixels do we have? some boards have more than one!
+#define NUMPIXELS        1
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
 #ifndef STASSID
 #define STASSID "STDL8167"
@@ -83,6 +88,24 @@ void setup() {
 void setupCustomCode(){
   // Test code
   pinMode(ESP32_OTA_LED_PIN, OUTPUT);
+
+  setupNeopixel();  
+}
+
+
+void setupNeopixel(){
+#if defined(NEOPIXEL_POWER)
+  // If this board has a power control pin, we must set it to output and high
+  // in order to enable the NeoPixels. We put this in an #if defined so it can
+  // be reused for other boards without compilation errors
+  pinMode(NEOPIXEL_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_POWER, HIGH);
+#endif
+
+  pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
+  pixels.setBrightness(10); // not so bright
+
+  Serial.println("Finished setupNeopixel()");
 }
 
 
@@ -110,4 +133,21 @@ void loop() {
 
   // Put custom application specific code here
   loopBlink();
+  loopNeopixel();
+}
+
+void loopNeopixel(){
+  int blink_delay = 250;
+   // set color (Red, Green, Blue)
+  //pixels.fill(0xFF0000);
+  //pixels.fill(0x00FF00);
+  pixels.fill(0x0000FF);
+  pixels.show(); 
+  delay(blink_delay); // wait half a second
+
+  // turn off
+  pixels.fill(0x000000);
+  pixels.show();
+  delay(blink_delay); // wait half a second
+ 
 }
