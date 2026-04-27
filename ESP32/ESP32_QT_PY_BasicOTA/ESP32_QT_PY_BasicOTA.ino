@@ -98,7 +98,7 @@ void setupNeopixel(){
 #endif
 
   pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
-  pixels.setBrightness(20); // not so bright
+  pixels.setBrightness(10); // not so bright
 
   Serial.println("Finished setupNeopixel()");
 }
@@ -108,31 +108,8 @@ void setupNeopixel(){
 void loop() {
   ArduinoOTA.handle();
 
-  // Test code
-  // pinMode(ESP32_OLED_LED_PIN, OUTPUT);
-
-  // Serial.println("start blinking");
-  // digitalWrite(ESP32_OLED_LED_PIN, HIGH);
-  // delay(250);
-  // digitalWrite(ESP32_OLED_LED_PIN, LOW);
-  // delay(250);
-  // digitalWrite(ESP32_OLED_LED_PIN, HIGH);
-  // delay(250);
-  // digitalWrite(ESP32_OLED_LED_PIN, LOW);
-  // delay(250);
-  // digitalWrite(ESP32_OLED_LED_PIN, HIGH);
-  // delay(250);
-  // digitalWrite(ESP32_OLED_LED_PIN, LOW);
-  // delay(250);
-  // digitalWrite(ESP32_OLED_LED_PIN, HIGH);
-  // delay(250);
-  // digitalWrite(ESP32_OLED_LED_PIN, LOW);
-  // delay(250);
-
-  // delay(3000);
-
-  // set color to red
-  pixels.fill(0xFF0000);
+  // set color to blue
+  pixels.fill(0x00FF00);
   pixels.show(); 
   delay(500); // wait half a second
 
