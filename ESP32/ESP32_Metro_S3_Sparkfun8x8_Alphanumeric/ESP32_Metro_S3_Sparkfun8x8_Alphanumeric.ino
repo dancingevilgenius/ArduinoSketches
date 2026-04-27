@@ -35,6 +35,25 @@ void setup()
 
   Wire.begin(); //This resets to 100kHz I2C
   setup8x8();
+
+  setupAlphanumeric();
+}
+
+void setupAlphanumeric(){
+  bool displaySuccess = display.begin(
+          DEFAULT_ADDRESS,
+          DEFAULT_NOTHING_ATTACHED,
+          DEFAULT_NOTHING_ATTACHED,
+          DEFAULT_NOTHING_ATTACHED,
+          Wire); 
+  if (!displaySuccess)
+  {
+    Serial.println("Device did not acknowledge! Freezing.");
+    while (1);
+  }
+  Serial.println("Display acknowledged.");
+
+  display.print("REDY");
 }
 
 void setup8x8(){
@@ -57,8 +76,15 @@ void setup8x8(){
 
 }
 
+
 void loop()
 {
+  loop8x8();
+  delay(100); //Small delay between polling
+}
+
+
+void loop8x8(){
   //Poll sensor for new data
   if (myImager.isDataReady() == true)
   {
@@ -86,5 +112,4 @@ void loop()
     }
   }
 
-  delay(100); //Small delay between polling
 }
