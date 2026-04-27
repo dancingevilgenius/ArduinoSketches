@@ -70,32 +70,46 @@ void setup() {
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+
+  // Put your application specific setup in here
+  setupCustomCode();
 }
 
 #define ESP32_OLED_LED_PIN 8
+void setupCustomCode(){
+  // Set up the BUILT-IN LED
+  pinMode(ESP32_OLED_LED_PIN, OUTPUT);
+}
+
 
 void loop() {
   ArduinoOTA.handle();
 
-  // Test code
-  pinMode(ESP32_OLED_LED_PIN, OUTPUT);
+  // Custom Application Loop here
+  loopBlink();
+}
+
+void loopBlink(){
+
+  int blink_delay=500;
+
 
   digitalWrite(ESP32_OLED_LED_PIN, HIGH);
-  delay(250);
+  delay(blink_delay);
   digitalWrite(ESP32_OLED_LED_PIN, LOW);
-  delay(250);
+  delay(blink_delay);
   digitalWrite(ESP32_OLED_LED_PIN, HIGH);
-  delay(250);
+  delay(blink_delay);
   digitalWrite(ESP32_OLED_LED_PIN, LOW);
-  delay(250);
+  delay(blink_delay);
   digitalWrite(ESP32_OLED_LED_PIN, HIGH);
-  delay(250);
+  delay(blink_delay);
   digitalWrite(ESP32_OLED_LED_PIN, LOW);
-  delay(250);
+  delay(blink_delay);
   digitalWrite(ESP32_OLED_LED_PIN, HIGH);
-  delay(250);
+  delay(blink_delay);
   digitalWrite(ESP32_OLED_LED_PIN, LOW);
-  delay(250);
+  delay(blink_delay);
 
 
   delay(3000);
