@@ -14,8 +14,12 @@
 */
 
 #include <Wire.h>
-
 #include <SparkFun_VL53L5CX_Library.h> //http://librarymanager/All#SparkFun_VL53L5CX
+#include <SparkFun_Alphanumeric_Display.h> //Click here to get the library: http://librarymanager/All#SparkFun_Qwiic_Alphanumeric_Display by SparkFun
+
+
+// Alphanumeric Segmented display
+HT16K33 display;
 
 SparkFun_VL53L5CX myImager;
 VL53L5CX_ResultsData measurementData; // Result data class structure, 1356 byes of RAM
@@ -30,10 +34,13 @@ void setup()
   Serial.println("SparkFun VL53L5CX Imager Example");
 
   Wire.begin(); //This resets to 100kHz I2C
+  setup8x8();
+}
+
+void setup8x8(){
+  Serial.println("Initializing Sparkfun 8x8 board. This can take up to 10s. Please wait.");
+  
   Wire.setClock(400000); //Sensor has max I2C freq of 400kHz 
-  
-  Serial.println("Initializing sensor board. This can take up to 10s. Please wait.");
-  
 
   if (myImager.begin() == false)
   {
@@ -47,6 +54,7 @@ void setup()
   imageWidth = sqrt(imageResolution); //Calculate printing width
 
   myImager.startRanging();
+
 }
 
 void loop()
