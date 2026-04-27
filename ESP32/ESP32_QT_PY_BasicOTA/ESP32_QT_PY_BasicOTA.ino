@@ -53,7 +53,6 @@ void setup() {
     // NOTE: if updating FS this would be the place to unmount FS using FS.end()
     Serial.println("Start updating " + type);
 
-    setupNeopixel();
   
   });
 
@@ -84,6 +83,9 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
+  // Custom code setup here
+  setupNeopixel();
+
 
 }
 
@@ -98,7 +100,7 @@ void setupNeopixel(){
 #endif
 
   pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
-  pixels.setBrightness(10); // not so bright
+  pixels.setBrightness(1); // not so bright
 
   Serial.println("Finished setupNeopixel()");
 }
@@ -108,8 +110,10 @@ void setupNeopixel(){
 void loop() {
   ArduinoOTA.handle();
 
-  // set color to blue
+  // set color (Red, Green, Blue)
+  pixels.fill(0xFF0000);
   pixels.fill(0x00FF00);
+  pixels.fill(0x0000FF);
   pixels.show(); 
   delay(500); // wait half a second
 
