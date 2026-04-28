@@ -124,7 +124,7 @@ void loop()
 
   loopAlphanumeric();
 
-  delay(500); //Small delay between polling
+  delay(100); //Small delay between polling
 }
 
 void loopAlphanumeric(){
@@ -145,7 +145,7 @@ void loop8x8(){
   {
     if (myImager.getRangingData(&measurementData)) //Read distance data into array
     {
-      int d;
+      int raw_d, filtered_d;
       int row, col;
       //The ST library returns the data transposed from zone mapping shown in datasheet
       //Pretty-print data with increasing y, decreasing x to reflect reality
@@ -161,15 +161,19 @@ void loop8x8(){
         for (int x = imageWidth - 1 ; x >= 0 ; x--)
         {
           if(true){
-            d = measurementData.distance_mm[x + y];
-            Serial.print("\t");
-            Serial.print(d);
+            raw_d = measurementData.distance_mm[x + y];
 
             //Serial.print("y:"); Serial.print(row);
             //Serial.print(" x:"); Serial.print(x);
             // Save for later
             col = x;
-            dist8x8[row][col] = d;
+            filter[row][col].AddValue(raw_d);
+
+            filtered_d = filter[row][col].GetFiltered();
+            Serial.print("\t");
+            Serial.print(filtered_d);
+
+            dist8x8[row][col] = filtered_d;
           }
         }
         if(true){
