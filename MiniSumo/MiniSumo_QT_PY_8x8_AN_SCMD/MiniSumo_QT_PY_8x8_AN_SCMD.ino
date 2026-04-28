@@ -16,7 +16,7 @@
 #include <Wire.h>
 #include <SparkFun_VL53L5CX_Library.h> //http://librarymanager/All#SparkFun_VL53L5CX
 #include <SparkFun_Alphanumeric_Display.h> //Click here to get the library: http://librarymanager/All#SparkFun_Qwiic_Alphanumeric_Display by SparkFun
-
+#include "MedianFilterLib2.h"
 
 // Alphanumeric Segmented display
 HT16K33 display;
@@ -37,6 +37,27 @@ int dist8x8[NUM_ROWS][NUM_COLS] = {
                                   -1,-1,-1,-1,-1,-1,-1,-1,
                                   -1,-1,-1,-1,-1,-1,-1,-1
                                   };
+
+// Median Filter - to remove abnormal data readings.
+// Define number of sensors and filter window size
+//const int NUM_SENSORS = 3; //
+const int WINDOW_SIZE = 5;
+
+// Array of MedianFilter objects
+MedianFilter2<int> filter[NUM_ROWS][NUM_COLS] =
+
+{
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)}
+};
+
+
 
 void setup()
 {
