@@ -27,7 +27,16 @@ int imageResolution = 0; //Used to pretty print output
 int imageWidth = 0; //Used to pretty print output
 #define NUM_ROWS 8
 #define NUM_COLS 8
-int dist8x8[NUM_ROWS][NUM_COLS];
+int dist8x8[NUM_ROWS][NUM_COLS] = {
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1
+                                  };
 
 void setup()
 {
@@ -39,7 +48,7 @@ void setup()
 
   setupAlphanumeric();
 
-  //setup8x8();
+  setup8x8();
 
 }
 
@@ -52,17 +61,18 @@ void setupAlphanumeric(){
           Wire1); 
   if (!displaySuccess)
   {
-    Serial.println("Alphanumeric device did not acknowledge! Freezing.");
+    Serial.println("Alphanumeric display did not acknowledge! Freezing.");
     while (1);
   }
   Serial.println("Alphanumeric display initialized.");
 
-  display.print("REDY");
+  display.print("ALPH");
+  delay(2000);
 }
 
 void setup8x8(){
   Serial.println("Initializing Sparkfun 8x8 board. This can take up to 10s. Please wait.");
-  
+  //Wire1.begin();
   Wire1.setClock(400000); //Sensor has max I2C freq of 400kHz 
 
   if (myImager.begin((DEFAULT_I2C_ADDR >> 1), Wire1) == false)
@@ -78,13 +88,18 @@ void setup8x8(){
 
   myImager.startRanging();
 
-  Serial.println(F("Sparkfun TOF 8x8 Sensor initialized")); 
+  Serial.print(F("Sparkfun TOF 8x8 Sensor initialized  with imageWidth:"));
+  Serial.println(imageWidth);
+
+  // Put this on display.
+  display.print("8x8");
+  delay(2000);
 }
 
 
 void loop()
 {
-  //loop8x8();
+  loop8x8();
 
   //loopAlphanumeric();
 
@@ -122,7 +137,7 @@ void loop8x8(){
             Serial.print("\t");
             Serial.print(d);
             // Save for later
-            dist8x8[y][x] = d;
+            //dist8x8[y][x] = d;
           }
         }
         if(true){
