@@ -23,9 +23,11 @@ HT16K33 display;
 
 SparkFun_VL53L5CX myImager;
 VL53L5CX_ResultsData measurementData; // Result data class structure, 1356 byes of RAM
-
 int imageResolution = 0; //Used to pretty print output
 int imageWidth = 0; //Used to pretty print output
+#define NUM_ROWS 8
+#define NUM_COLS 8
+int dist8x8[NUM_ROWS][NUM_COLS];
 
 void setup()
 {
@@ -80,9 +82,23 @@ void setup8x8(){
 void loop()
 {
   loop8x8();
-  delay(100); //Small delay between polling
+
+  loopAlphanumeric();
+
+  delay(500); //Small delay between polling
 }
 
+void loopAlphanumeric(){
+  // display value of last/bottom row, one of the middle columns
+  int d = dist8x8[7][4];
+
+
+  char buffer[5];
+  sprintf(buffer, "%d", d);
+  String distStr = buffer;
+
+  display.print(distStr.c_str());
+}
 
 void loop8x8(){
   //Poll sensor for new data
@@ -102,6 +118,8 @@ void loop8x8(){
             d = measurementData.distance_mm[x + y];
             Serial.print("\t");
             Serial.print(d);
+            // Save for later
+            dist8x8[y][x] = d;
           }
         }
         if(true){
