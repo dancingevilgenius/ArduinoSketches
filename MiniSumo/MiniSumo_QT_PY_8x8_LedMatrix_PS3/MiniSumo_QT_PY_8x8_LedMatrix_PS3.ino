@@ -205,7 +205,7 @@ void loop8x8(){
           }else {
             row = y;
           }
-          //Serial.print("row:"); Serial.print(row);
+          Serial.print("row:"); Serial.print(row);
         
         for (int x = imageWidth - 1 ; x >= 0 ; x--)
         {
@@ -222,40 +222,26 @@ void loop8x8(){
               filter[row][col].AddValue(raw_d);
               dist8x8[row][col] = filtered_d;
             } else {
-              Serial.print("Anomoly!");
-              Serial.print("raw_d:");
-              Serial.println(raw_d);
+              //Serial.print("Anomoly!");
+              //Serial.print("raw_d:");
+              //Serial.println(raw_d);
             }
-            //Serial.print("\t");
-            //Serial.print(filtered_d);
+            Serial.print("\t");
+            Serial.print(filtered_d);
 
           }
         }
         if(true){
-          //Serial.println();
+          Serial.println();
         }
       }
-      //Serial.println();
+      Serial.println();
     }
   }
 
 }
-void loopMenu(){
 
-  String str = "FOO";
-  String strArray[] = {"E1", "E2", "OP"};
-  uint16_t color565;
-  color565 = ledmatrix.color565(160, 32, 240); // purple
-  ledmatrix.setTextColor(color565); // No background color needed
-
-
-  
-    int delay_time = 1500;
-    ledMatrixKeyValue(strArray[0], "1", delay_time);
-    ledMatrixKeyValue(strArray[1], "4", delay_time);
-    ledMatrixKeyValue(strArray[2], "9", delay_time);
-}
- void loopMenuColored(){
+void loopMenuColored(){
 
   String strArray[] = {"E1", "E2", "OP"};
 
@@ -368,6 +354,22 @@ void loopReadFromMatrix(){
     }
   }
   delay(2000);
+}
+
+void loopMenu(){
+
+  String str = "FOO";
+  String strArray[] = {"E1", "E2", "OP"};
+  uint16_t color565;
+  color565 = ledmatrix.color565(160, 32, 240); // purple
+  ledmatrix.setTextColor(color565); // No background color needed
+
+
+  
+    int delay_time = 1500;
+    ledMatrixKeyValue(strArray[0], "1", delay_time);
+    ledMatrixKeyValue(strArray[1], "4", delay_time);
+    ledMatrixKeyValue(strArray[2], "9", delay_time);
 }
 
 
