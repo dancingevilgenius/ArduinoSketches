@@ -15,6 +15,18 @@ Adafruit_IS31FL3741_QT ledmatrix;
 #define TOF_8x8_NUM_ROWS 8
 #define TOF_8x8_NUM_COLS 8
 
+uint8_t matrix[TOF_8x8_NUM_ROWS][TOF_8x8_NUM_COLS] = {
+  {0,0, 10, 20, 30, 0, 0 , 0}, // Row 0
+  {0,0, 10, 20, 30, 0, 0 , 0},
+  {0,0, 10, 20, 30, 0, 0 , 0},
+  {0,0, 10, 20, 50, 100, 150, 200},
+  {0,0, 10, 20, 30, 0, 0 , 0},
+  {0,0, 10, 20, 30, 0, 0 , 0},
+  {0,0, 10, 20, 30, 0, 0 , 0},
+  {10,10, 10, 10, 10, 10, 10,10}
+  
+};
+
 // Some boards have just one I2C interface, but some have more...
 TwoWire *i2c = &Wire; // e.g. change this to &Wire1 for QT Py RP2040
 
@@ -34,8 +46,8 @@ void setup() {
   i2c->setClock(800000);
 
   // Set brightness to max and bring controller out of shutdown state
-  ledmatrix.setLEDscaling(0x44); //0xFF
-  ledmatrix.setGlobalCurrent(0xAA); //0xFF
+  ledmatrix.setLEDscaling(0xAA); //0xFF
+  ledmatrix.setGlobalCurrent(0xCC); //0xFF
   Serial.print("Global current set to: ");
   Serial.println(ledmatrix.getGlobalCurrent());
   ledmatrix.enable(true); // bring out of shutdown
@@ -51,8 +63,32 @@ void loop() {
   //loopSameColor();
   //loopShowLastRow();
   //loopShow8x8LastRow();
-  loopShow8x8Gradients();
+  //loopShow8x8Gradients();
+  loopReadFromMatrix();
 }
+
+void loopReadFromMatrix(){
+  uint8_t scale_factor = 18;
+  uint16_t color565;
+  for (int y=0; y<TOF_8x8_NUM_ROWS ; y++) {
+    for (int x=0; x<TOF_8x8_NUM_COLS; x++) {
+      if(y<TOF_8x8_NUM_ROWS -2 ){
+        if(matrix[y][x] >=20){
+          color565 = ledmatrix.color565(0, matrix[y][x],0);
+        } else {
+          color565 = ledmatrix.color565(0, 0, 0);
+        }
+        ledmatrix.drawPixel(x, y, color565);
+      } else {
+        //color565 = ledmatrix.color565( matrix[y][x],0,0);
+        color565 = ledmatrix.color565( 10,50,50);
+        ledmatrix.drawPixel(x, y, color565);
+      }
+    }
+  }
+  delay(2000);
+}
+
 
 void loopShow8x8Gradients(){
   uint8_t scale_factor = 18;
