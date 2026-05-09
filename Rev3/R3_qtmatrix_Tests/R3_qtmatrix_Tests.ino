@@ -16,14 +16,14 @@ Adafruit_IS31FL3741_QT ledmatrix;
 #define TOF_8x8_NUM_COLS 8
 
 uint8_t matrix[TOF_8x8_NUM_ROWS][TOF_8x8_NUM_COLS] = {
-  {0,0, 10, 20, 30, 0, 0 , 0}, // Row 0
-  {0,0, 10, 20, 30, 0, 0 , 0},
-  {0,0, 10, 20, 30, 0, 0 , 0},
-  {0,0, 10, 20, 50, 100, 150, 200},
-  {0,0, 10, 20, 30, 0, 0 , 0},
-  {0,0, 10, 20, 30, 0, 0 , 0},
-  {0,0, 10, 20, 30, 0, 0 , 0},
-  {10,10, 10, 10, 10, 10, 10,10}
+  {0,0, 0, 0, 0, 0, 0 , 0},
+  {0,0, 0, 0, 0, 0, 0 , 0},
+  {0,0, 0, 0, 0, 0, 0 , 0},
+  {0,0, 0, 20, 20, 0, 0 , 0},
+  {0,0, 0, 0, 0, 0, 0 , 0},
+  {0,0, 0, 0, 0, 0, 0 , 0},
+  {10,10, 10, 10, 10, 10, 10 , 10},
+  {10,10, 10, 8, 10, 10, 10,10}
   
 };
 
@@ -64,7 +64,37 @@ void loop() {
   //loopShowLastRow();
   //loopShow8x8LastRow();
   //loopShow8x8Gradients();
-  loopReadFromMatrix();
+  //loopReadFromMatrix();
+  loopSimulateMiniSumo();
+}
+
+void loopSimulateMiniSumo(){
+  uint16_t color565;
+  int d;
+  for (int y=0; y<TOF_8x8_NUM_ROWS ; y++) {
+    for (int x=0; x<TOF_8x8_NUM_COLS; x++) {
+      d = matrix[y][x];
+      if(y<TOF_8x8_NUM_ROWS -2 ){
+        
+        if(d > 0 && d < 30){
+          color565 = ledmatrix.color565(0, 150,0);
+        } else {
+          color565 = ledmatrix.color565(0, 0, 0);
+        }
+        ledmatrix.drawPixel(x, y, color565);
+      } else {
+        //color565 = ledmatrix.color565( matrix[y][x],0,0);
+        if(d < 10){
+          color565 = ledmatrix.color565( 100,0, 0);
+        } else {
+          color565 = ledmatrix.color565( 10,50,50);
+        }
+        ledmatrix.drawPixel(x, y, color565);
+      }
+    }
+  }
+  delay(2000);
+
 }
 
 void loopReadFromMatrix(){
