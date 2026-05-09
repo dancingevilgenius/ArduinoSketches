@@ -106,43 +106,45 @@ void loopMenu(){
   //   delay(1500);
   // }
 
+    // ledmatrix.setCursor(text_x, text_y);
+    // ledmatrix.fill(0); // Fill screen to erase old text
+    // ledmatrix.print(strArray[0]); // write the string;
+    // ledmatrix.show(); // Buffered matrix MUST use show() to update!
+    // delay(1500);
+
+    // ledmatrix.setCursor(text_x, text_y);
+    // ledmatrix.fill(0); // Fill screen to erase old text
+    // ledmatrix.print("1"); // write the string
+    // ledmatrix.show(); // Buffered matrix MUST use show() to update!
+    // delay(1500);
+
+
+    // ledmatrix.setCursor(text_x, text_y);
+    // ledmatrix.fill(0); // Fill screen to erase old text
+    // ledmatrix.print(strArray[1]); // write the string
+    // ledmatrix.show(); // Buffered matrix MUST use show() to update!
+    // delay(1500);
+
+    // ledmatrix.setCursor(text_x, text_y);
+    // ledmatrix.fill(0); // Fill screen to erase old text
+    // ledmatrix.print("3"); // write the string
+    // ledmatrix.show(); // Buffered matrix MUST use show() to update!
+    // delay(1500);
+
+    ledMatrixString(strArray[0], 1500);
+    ledMatrixString("1", 1500);
+    ledMatrixString(strArray[1], 1500);
+    ledMatrixString("3", 1500);
+    ledMatrixString(strArray[2], 1500);
+    ledMatrixString("5", 1500);
+}
+
+void ledMatrixString(String s, int delay_time){
     ledmatrix.setCursor(text_x, text_y);
     ledmatrix.fill(0); // Fill screen to erase old text
-    ledmatrix.print(strArray[0]); // write the string;
+    ledmatrix.print(s); // write the string
     ledmatrix.show(); // Buffered matrix MUST use show() to update!
-    delay(1500);
-
-    ledmatrix.setCursor(text_x, text_y);
-    ledmatrix.fill(0); // Fill screen to erase old text
-    ledmatrix.print("1"); // write the string
-    ledmatrix.show(); // Buffered matrix MUST use show() to update!
-    delay(1500);
-
-
-    ledmatrix.setCursor(text_x, text_y);
-    ledmatrix.fill(0); // Fill screen to erase old text
-    ledmatrix.print(strArray[1]); // write the string
-    ledmatrix.show(); // Buffered matrix MUST use show() to update!
-    delay(1500);
-
-    ledmatrix.setCursor(text_x, text_y);
-    ledmatrix.fill(0); // Fill screen to erase old text
-    ledmatrix.print("3"); // write the string
-    ledmatrix.show(); // Buffered matrix MUST use show() to update!
-    delay(1500);
-
-    ledmatrix.setCursor(text_x, text_y);
-    ledmatrix.fill(0); // Fill screen to erase old text
-    ledmatrix.print(strArray[2]); // write the string
-    ledmatrix.show(); // Buffered matrix MUST use show() to update!
-    delay(1500);
-
-    ledmatrix.setCursor(text_x, text_y);
-    ledmatrix.fill(0); // Fill screen to erase old text
-    ledmatrix.print("5"); // write the string
-    ledmatrix.show(); // Buffered matrix MUST use show() to update!
-    delay(1500);
-
+    delay(delay_time);
 }
 
 void loopSimulateMiniSumo(){
