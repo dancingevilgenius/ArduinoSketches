@@ -35,7 +35,7 @@ void setup() {
 
   // Set brightness to max and bring controller out of shutdown state
   ledmatrix.setLEDscaling(0x44); //0xFF
-  ledmatrix.setGlobalCurrent(0xFF); //0xFF
+  ledmatrix.setGlobalCurrent(0xAA); //0xFF
   Serial.print("Global current set to: ");
   Serial.println(ledmatrix.getGlobalCurrent());
   ledmatrix.enable(true); // bring out of shutdown
@@ -50,7 +50,24 @@ void loop() {
 
   //loopSameColor();
   //loopShowLastRow();
-  loopShow8x8LastRow();
+  //loopShow8x8LastRow();
+  loopShow8x8Gradients();
+}
+
+void loopShow8x8Gradients(){
+  uint8_t scale_factor = 18;
+  for (int y=0; y<TOF_8x8_NUM_ROWS ; y++) {
+    for (int x=0; x<TOF_8x8_NUM_COLS; x++) {
+      uint16_t color565 = ledmatrix.color565(0, x*scale_factor,0);
+      if(y<TOF_8x8_NUM_ROWS -1 ){
+        ledmatrix.drawPixel(x, y, color565);
+      } else {
+        color565 = ledmatrix.color565( x*scale_factor,0,0);
+        ledmatrix.drawPixel(x, y, color565);
+      }
+    }
+  }
+  delay(2000);
 }
 
 void loopShow8x8LastRow(){
