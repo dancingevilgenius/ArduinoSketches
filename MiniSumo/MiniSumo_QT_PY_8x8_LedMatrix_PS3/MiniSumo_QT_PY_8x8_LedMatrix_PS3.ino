@@ -184,11 +184,11 @@ void loop() {
   //loopMenu();
   //loopMenuColored();
 
-  loop8x8();
+  loop8x8Raw();
 }
 
 
-void loop8x8(){
+void loop8x8Raw(){
   //Poll sensor for new data
   if (myImager.isDataReady() == true)
   {
