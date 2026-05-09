@@ -182,9 +182,64 @@ void loop() {
   //loopReadFromMatrix();
   //loopSimulateMiniSumo();
   //loopMenu();
-  loopMenuColored();
+  //loopMenuColored();
+
+  loop8x8();
 }
 
+
+void loop8x8(){
+  //Poll sensor for new data
+  if (myImager.isDataReady() == true)
+  {
+    if (myImager.getRangingData(&measurementData)) //Read distance data into array
+    {
+      int raw_d, filtered_d;
+      int row, col;
+      //The ST library returns the data transposed from zone mapping shown in datasheet
+      //Pretty-print data with increasing y, decreasing x to reflect reality
+      for (int y = 0 ; y <= imageWidth * (imageWidth - 1) ; y += imageWidth)
+      {
+          if(y > 0){
+            row = y/8;
+          }else {
+            row = y;
+          }
+          //Serial.print("row:"); Serial.print(row);
+        
+        for (int x = imageWidth - 1 ; x >= 0 ; x--)
+        {
+          if(true){
+            raw_d = measurementData.distance_mm[x + y];
+
+            //Serial.print("y:"); Serial.print(row);
+            //Serial.print(" x:"); Serial.print(x);
+            // Save for later
+            col = x;
+            filtered_d = filter[row][col].GetFiltered();
+
+            if(abs(raw_d - filtered_d) < 100){
+              filter[row][col].AddValue(raw_d);
+              dist8x8[row][col] = filtered_d;
+            } else {
+              Serial.print("Anomoly!");
+              Serial.print("raw_d:");
+              Serial.println(raw_d);
+            }
+            //Serial.print("\t");
+            //Serial.print(filtered_d);
+
+          }
+        }
+        if(true){
+          //Serial.println();
+        }
+      }
+      //Serial.println();
+    }
+  }
+
+}
 void loopMenu(){
 
   String str = "FOO";
