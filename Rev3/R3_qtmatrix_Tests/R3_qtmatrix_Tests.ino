@@ -45,6 +45,13 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Adafruit QT RGB Matrix Simple RGB Swirl Test");
 
+  setupLedMatrix();
+
+}
+
+
+void setupLedMatrix(){
+  
   if (! ledmatrix.begin(IS3741_ADDR_DEFAULT, i2c)) {
     Serial.println("IS41 not found");
     while (1);
@@ -74,6 +81,9 @@ void setup() {
 
   // Set all pixels to black 0x000
   clearLEDMatrix();
+  ledMatrixKeyValue("MA", "OK", 1500);
+  clearLEDMatrix();
+
 }
 
 uint16_t hue_offset = 0;
@@ -215,13 +225,14 @@ void loopShow8x8LastRow(){
 
 void clearLEDMatrix(){
 
+  ledmatrix.fill(0);
 
-  for (int y=0; y<ledmatrix.height(); y++) {
-    for (int x=0; x<ledmatrix.width(); x++) {
-      uint16_t color565 = ledmatrix.color565(0x000000);
-      ledmatrix.drawPixel(x, y, color565);
-    }
-  }
+  // for (int y=0; y<ledmatrix.height(); y++) {
+  //   for (int x=0; x<ledmatrix.width(); x++) {
+  //     uint16_t color565 = ledmatrix.color565(0x000000);
+  //     ledmatrix.drawPixel(x, y, color565);
+  //   }
+  // }
 }
 
 void loopShowLastRow(){
