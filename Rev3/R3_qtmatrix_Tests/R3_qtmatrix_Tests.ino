@@ -51,7 +51,7 @@ void setup() {
 
 
 void setupLedMatrix(){
-  
+
   if (! ledmatrix.begin(IS3741_ADDR_DEFAULT, i2c)) {
     Serial.println("IS41 not found");
     while (1);
@@ -96,7 +96,8 @@ void loop() {
   //loopShow8x8Gradients();
   //loopReadFromMatrix();
   //loopSimulateMiniSumo();
-  loopMenu();
+  //loopMenu();
+  loopMenuColored();
 }
 
 void loopMenu(){
@@ -114,11 +115,53 @@ void loopMenu(){
     ledMatrixKeyValue(strArray[1], "4", delay_time);
     ledMatrixKeyValue(strArray[2], "9", delay_time);
 }
+ void loopMenuColored(){
+
+  String strArray[] = {"E1", "E2", "OP"};
+
+  uint16_t key_color, value_color;
+
+  key_color = ledmatrix.color565(160, 32, 240); // purple
+  value_color = ledmatrix.color565(0, 150, 0);    // green
+
+
+  int delay_time = 1500;
+  ledMatrixKeyValueColor(strArray[0], "1", key_color, value_color, delay_time);
+  ledMatrixKeyValueColor(strArray[1], "4", key_color, value_color, delay_time);
+  ledMatrixKeyValueColor(strArray[2], "7", key_color, value_color, delay_time);
+
+ }
+
+void ledMatrixKeyValueColor(String key, String value, uint16_t key_color, uint16_t value_color, int delay_time){
+
+  ledMatrixStringColor(key,   key_color, delay_time);
+  ledMatrixStringColor(value, value_color, delay_time);
+}
+
 
 void ledMatrixKeyValue(String key, String value, int delay_time){
-  ledMatrixString(key, delay_time);
-  ledMatrixString(value, delay_time);
+
+  uint16_t color565;
+  color565 = ledmatrix.color565(160, 32, 240); // purple
+  ledmatrix.setTextColor(color565); // No background color needed
+
+  ledMatrixStringColor(key,   color565, delay_time);
+  ledMatrixStringColor(value, color565, delay_time);
 }
+
+
+void ledMatrixStringColor(String s, uint16_t color565, int delay_time){
+
+    ledmatrix.setTextColor(color565); // No background color needed
+
+    ledmatrix.setCursor(text_x, text_y);
+    ledmatrix.fill(0); // Fill screen to erase old text
+    ledmatrix.print(s); // write the string
+    ledmatrix.show(); // Buffered matrix MUST use show() to update!
+    delay(delay_time);
+}
+
+
 
 
 void ledMatrixString(String s, int delay_time){
