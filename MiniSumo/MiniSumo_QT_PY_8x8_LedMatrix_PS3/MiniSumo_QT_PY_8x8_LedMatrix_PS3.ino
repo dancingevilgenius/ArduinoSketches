@@ -7,6 +7,8 @@
 // OLED screens.
 
 #include <Adafruit_IS31FL3741.h>
+#include <SparkFun_VL53L5CX_Library.h>  //http://librarymanager/All#SparkFun_VL53L5CX
+#include "MedianFilterLib2.h"           // For getting an average value.
 
 Adafruit_IS31FL3741_QT ledmatrix;
 // If colors appear wrong on matrix, try invoking constructor like so:
@@ -38,6 +40,48 @@ int text_y = 1;
 int text_min;                // Pos. where text resets (calc'd later)
 
 
+
+SparkFun_VL53L5CX myImager;
+VL53L5CX_ResultsData measurementData; // Result data class structure, 1356 byes of RAM
+int imageResolution = 0; //Used to pretty print output
+int imageWidth = 0; //Used to pretty print output
+#define NUM_ROWS 8
+#define NUM_COLS 8
+int dist8x8[NUM_ROWS][NUM_COLS] = {
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1,
+                                  -1,-1,-1,-1,-1,-1,-1,-1
+                                  };
+
+// Median Filter - to remove abnormal data readings.
+// Define number of sensors and filter window size
+//const int NUM_SENSORS = 3; //
+const int WINDOW_SIZE = 5;
+
+// Array of MedianFilter objects
+MedianFilter2<int> filter[NUM_ROWS][NUM_COLS] =
+
+{
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)},
+  {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)}
+};
+
+
+
+
+
+
 // Some boards have just one I2C interface, but some have more...
 TwoWire *i2c = &Wire1; // e.g. change this to &Wire1 for QT Py RP2040
 
@@ -46,7 +90,43 @@ void setup() {
   Serial.println("Adafruit QT RGB Matrix Simple RGB Swirl Test");
 
   setupLedMatrix();
+  setup8x8();
 
+}
+
+
+void setup8x8(){
+  Serial.println("Initializing Sparkfun 8x8 board. This can take up to 10s. Please wait.");
+  //Wire1.begin();
+  Wire1.setClock(400000); //Sensor has max I2C freq of 400kHz 
+
+  if (myImager.begin((DEFAULT_I2C_ADDR >> 1), Wire1) == false)
+  {
+    Serial.println(F("Sparkfun TOF 8x8 Sensor not found - check your wiring. Freezing"));
+    while (1) ;
+  }
+
+  myImager.setResolution(NUM_ROWS*NUM_COLS); //Enable all 64 pads
+  
+  imageResolution = myImager.getResolution(); //Query sensor for current resolution - either 4x4 or 8x8
+  imageWidth = sqrt(imageResolution); //Calculate printing width
+
+  myImager.startRanging();
+
+  Serial.print(F("Sparkfun TOF 8x8 Sensor initialized  with imageWidth:"));
+  Serial.println(imageWidth);
+
+  // Put this on display.
+  //display.print("8x8");
+  clearLEDMatrix();
+  uint16_t  key_color = ledmatrix.color565(160, 32, 240); // purple
+  uint16_t value_color = ledmatrix.color565(0, 150, 0);    // green
+  int delay_time = 1500;
+
+  ledMatrixKeyValueColor("8x", "OK", key_color, value_color, delay_time);
+
+
+  delay(2000);
 }
 
 
@@ -81,7 +161,12 @@ void setupLedMatrix(){
 
   // Set all pixels to black 0x000
   clearLEDMatrix();
-  ledMatrixKeyValue("MA", "OK", 1500);
+  uint16_t  key_color = ledmatrix.color565(160, 32, 240); // purple
+  uint16_t value_color = ledmatrix.color565(0, 150, 0);    // green
+  int delay_time = 1500;
+
+  ledMatrixKeyValueColor("LM", "OK", key_color, value_color, delay_time);
+
   clearLEDMatrix();
 
 }
