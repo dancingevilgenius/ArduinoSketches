@@ -218,7 +218,7 @@ void loop8x8(){
             col = x;
             filtered_d = filter[row][col].GetFiltered();
 
-            if(abs(raw_d - filtered_d) < 100){
+            if(abs(raw_d - filtered_d) < 300){
               filter[row][col].AddValue(raw_d);
               dist8x8[row][col] = filtered_d;
             } else {
