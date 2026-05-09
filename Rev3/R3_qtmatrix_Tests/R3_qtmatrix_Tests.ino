@@ -98,46 +98,18 @@ void loopMenu(){
   ledmatrix.setTextColor(color565); // No background color needed
 
 
-  //ledmatrix.print(text[0]); // write the letter
-  // for(int i=0 ; i<3 ; i++){
-  //   clearLEDMatrix();
-  //   ledmatrix.print(strArray[2]); // write the string
-  //   ledmatrix.show(); // Buffered matrix MUST use show() to update!
-  //   delay(1500);
-  // }
-
-    // ledmatrix.setCursor(text_x, text_y);
-    // ledmatrix.fill(0); // Fill screen to erase old text
-    // ledmatrix.print(strArray[0]); // write the string;
-    // ledmatrix.show(); // Buffered matrix MUST use show() to update!
-    // delay(1500);
-
-    // ledmatrix.setCursor(text_x, text_y);
-    // ledmatrix.fill(0); // Fill screen to erase old text
-    // ledmatrix.print("1"); // write the string
-    // ledmatrix.show(); // Buffered matrix MUST use show() to update!
-    // delay(1500);
-
-
-    // ledmatrix.setCursor(text_x, text_y);
-    // ledmatrix.fill(0); // Fill screen to erase old text
-    // ledmatrix.print(strArray[1]); // write the string
-    // ledmatrix.show(); // Buffered matrix MUST use show() to update!
-    // delay(1500);
-
-    // ledmatrix.setCursor(text_x, text_y);
-    // ledmatrix.fill(0); // Fill screen to erase old text
-    // ledmatrix.print("3"); // write the string
-    // ledmatrix.show(); // Buffered matrix MUST use show() to update!
-    // delay(1500);
-
-    ledMatrixString(strArray[0], 1500);
-    ledMatrixString("1", 1500);
-    ledMatrixString(strArray[1], 1500);
-    ledMatrixString("3", 1500);
-    ledMatrixString(strArray[2], 1500);
-    ledMatrixString("5", 1500);
+  
+    int delay_time = 1500;
+    ledMatrixKeyValue(strArray[0], "1", delay_time);
+    ledMatrixKeyValue(strArray[1], "4", delay_time);
+    ledMatrixKeyValue(strArray[2], "9", delay_time);
 }
+
+void ledMatrixKeyValue(String key, String value, int delay_time){
+  ledMatrixString(key, delay_time);
+  ledMatrixString(value, delay_time);
+}
+
 
 void ledMatrixString(String s, int delay_time){
     ledmatrix.setCursor(text_x, text_y);
