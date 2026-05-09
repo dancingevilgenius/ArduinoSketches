@@ -14,6 +14,11 @@ Adafruit_IS31FL3741_QT ledmatrix;
 
 #define TOF_8x8_NUM_ROWS 8
 #define TOF_8x8_NUM_COLS 8
+#define X_OFFSET 2        // Screen is 13 rows wide, 8x8 is only 8 wide.
+#define D_OPP_MIN 1
+#define D_OPP_MAX 30
+#define D_EDGE6_MAX 12
+#define D_EDGE7_MAX 8
 
 uint8_t matrix[TOF_8x8_NUM_ROWS][TOF_8x8_NUM_COLS] = {
   {0,0, 0, 0, 0, 0, 0 , 0},
@@ -76,20 +81,27 @@ void loopSimulateMiniSumo(){
       d = matrix[y][x];
       if(y<TOF_8x8_NUM_ROWS -2 ){
         
-        if(d > 0 && d < 30){
+        if(d > D_OPP_MIN && d < D_OPP_MAX){
           color565 = ledmatrix.color565(0, 150,0);
         } else {
           color565 = ledmatrix.color565(0, 0, 0);
         }
-        ledmatrix.drawPixel(x, y, color565);
+        ledmatrix.drawPixel(x+X_OFFSET, y, color565);
       } else {
-        //color565 = ledmatrix.color565( matrix[y][x],0,0);
-        if(d < 10){
-          color565 = ledmatrix.color565( 100,0, 0);
-        } else {
-          color565 = ledmatrix.color565( 10,50,50);
+        if(y == 6){
+          if(d > D_EDGE6_MAX){
+            color565 = ledmatrix.color565( 100,0, 0);
+          } else {
+            color565 = ledmatrix.color565( 10,50,50);
+          }
+        } else if(y==7){
+          if(d > D_EDGE7_MAX){
+            color565 = ledmatrix.color565( 100,0, 0);
+          } else {
+            color565 = ledmatrix.color565( 10,50,50);
+          }
         }
-        ledmatrix.drawPixel(x, y, color565);
+        ledmatrix.drawPixel(x+X_OFFSET, y, color565);
       }
     }
   }
