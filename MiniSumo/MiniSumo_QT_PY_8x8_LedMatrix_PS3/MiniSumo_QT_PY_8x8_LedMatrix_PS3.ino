@@ -77,6 +77,8 @@ MedianFilter2<int> filter[NUM_ROWS][NUM_COLS] =
   {MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE),MedianFilter2<int>(WINDOW_SIZE)}
 };
 
+long countdownMedianValues = 10 * 1000;
+boolean medianValuesComplete = false;
 
 
 
@@ -184,7 +186,112 @@ void loop() {
   //loopMenu();
   //loopMenuColored();
 
-  loop8x8Raw();
+  loop8x8Baseline(); // Take readings and average them out.
+}
+
+
+void loop8x8Baseline(){
+  long time_slice = 100;
+
+
+  if((abs(countdownMedianValues) < 80) && (medianValuesComplete == false)){
+    medianValuesComplete = true;
+    Serial.println("loop8x8Baseline() finished");
+    int d;
+
+    int sum, avg_r6, avg_r7;
+    sum = 0;
+    Serial.print("row7\t");
+    for(int col=0 ; col<NUM_COLS ; col++){
+      d = filter[6][col].GetFiltered();
+      sum += d;
+      Serial.print(d);
+      Serial.print("\t");
+    }
+    Serial.println("");
+    avg_r6 = sum/8;
+
+    sum = 0;
+    Serial.print("row8\t");
+    for(int col=0 ; col<NUM_COLS ; col++){
+      d = filter[7][col].GetFiltered();
+      sum += d;
+      Serial.print(d);
+      Serial.print("\t");
+    }
+    Serial.println("");
+    avg_r7 = sum/8;
+
+
+  uint16_t key_color, value_color;
+
+  key_color = ledmatrix.color565(160, 32, 240); // purple
+  value_color = ledmatrix.color565(0, 150, 0);    // green
+
+    String value;
+
+    value = String(avg_r6);
+    ledMatrixKeyValueColor("E6", value, key_color, value_color, 1000);
+    value = String(avg_r7);
+    ledMatrixKeyValueColor("E7", value, key_color, value_color, 1000);
+    return;
+  }
+
+  if(medianValuesComplete){
+    return;
+  }
+  
+  //Poll sensor for new data
+  if (myImager.isDataReady() == true)
+  {
+    if (myImager.getRangingData(&measurementData)) //Read distance data into array
+    {
+      int raw_d, filtered_d;
+      int row, col;
+      //The ST library returns the data transposed from zone mapping shown in datasheet
+      //Pretty-print data with increasing y, decreasing x to reflect reality
+      for (int y = 0 ; y <= imageWidth * (imageWidth - 1) ; y += imageWidth)
+      {
+          if(y > 0){
+            row = y/8;
+          }else {
+            row = y;
+          }
+          Serial.print("countdown:"); Serial.print(countdownMedianValues);
+          Serial.print("\trow:"); Serial.print(row);
+        
+        for (int x = imageWidth - 1 ; x >= 0 ; x--)
+        {
+          if(true){
+            raw_d = measurementData.distance_mm[x + y];
+
+            // Save for later
+            col = x;
+            filtered_d = filter[row][col].GetFiltered();
+
+            if(abs(raw_d - filtered_d) < 300){
+              filter[row][col].AddValue(raw_d);
+              dist8x8[row][col] = filtered_d;
+            } else {
+              //Serial.print("Anomoly!");
+              //Serial.print("raw_d:");
+              //Serial.println(raw_d);
+            }
+            Serial.print("\t");
+            Serial.print(filtered_d);
+
+          }
+        }
+        if(true){
+          Serial.println();
+        }
+      }
+      Serial.println();
+    }
+  }
+
+  countdownMedianValues -= time_slice;
+  delay(time_slice);
 }
 
 
@@ -212,8 +319,6 @@ void loop8x8Raw(){
           if(true){
             raw_d = measurementData.distance_mm[x + y];
 
-            //Serial.print("y:"); Serial.print(row);
-            //Serial.print(" x:"); Serial.print(x);
             // Save for later
             col = x;
             filtered_d = filter[row][col].GetFiltered();
