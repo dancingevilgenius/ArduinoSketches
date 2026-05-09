@@ -29,8 +29,14 @@ uint8_t matrix[TOF_8x8_NUM_ROWS][TOF_8x8_NUM_COLS] = {
   {0,0, 0, 0, 0, 0, 0 , 0},
   {10,10, 10, 10, 10, 10, 10 , 10},
   {10,10, 10, 8, 10, 10, 10,10}
-  
 };
+
+// 8x8 Text
+char text[] = "ADAFRUIT!";   // A message to scroll
+int text_x = 1; //ledmatrix.width(); // Initial text position = off right edge
+int text_y = 1;
+int text_min;                // Pos. where text resets (calc'd later)
+
 
 // Some boards have just one I2C interface, but some have more...
 TwoWire *i2c = &Wire1; // e.g. change this to &Wire1 for QT Py RP2040
@@ -57,8 +63,17 @@ void setup() {
   Serial.println(ledmatrix.getGlobalCurrent());
   ledmatrix.enable(true); // bring out of shutdown
 
+  // Text Init
+  ledmatrix.setRotation(0);
+  ledmatrix.setTextWrap(false);
+  uint16_t w, h;
+  int16_t ignore;
+  ledmatrix.getTextBounds(text, 0, 0, &ignore, &ignore, &w, &h);
+  text_min = -w; // Off left edge this many pixels
+
+
   // Set all pixels to black 0x000
-  clearMatrix();
+  clearLEDMatrix();
 }
 
 uint16_t hue_offset = 0;
@@ -70,7 +85,38 @@ void loop() {
   //loopShow8x8LastRow();
   //loopShow8x8Gradients();
   //loopReadFromMatrix();
-  loopSimulateMiniSumo();
+  //loopSimulateMiniSumo();
+  loopMenu();
+}
+
+void loopMenu(){
+
+  String str = "FOO";
+  String strArray[] = {"E1", "E2", "OP"};
+  uint16_t color565;
+  color565 = ledmatrix.color565(160, 32, 240); // purple
+  ledmatrix.setTextColor(color565); // No background color needed
+
+
+  
+    int delay_time = 1500;
+    ledMatrixKeyValue(strArray[0], "1", delay_time);
+    ledMatrixKeyValue(strArray[1], "4", delay_time);
+    ledMatrixKeyValue(strArray[2], "9", delay_time);
+}
+
+void ledMatrixKeyValue(String key, String value, int delay_time){
+  ledMatrixString(key, delay_time);
+  ledMatrixString(value, delay_time);
+}
+
+
+void ledMatrixString(String s, int delay_time){
+    ledmatrix.setCursor(text_x, text_y);
+    ledmatrix.fill(0); // Fill screen to erase old text
+    ledmatrix.print(s); // write the string
+    ledmatrix.show(); // Buffered matrix MUST use show() to update!
+    delay(delay_time);
 }
 
 void loopSimulateMiniSumo(){
@@ -167,7 +213,7 @@ void loopShow8x8LastRow(){
 
 
 
-void clearMatrix(){
+void clearLEDMatrix(){
 
 
   for (int y=0; y<ledmatrix.height(); y++) {
