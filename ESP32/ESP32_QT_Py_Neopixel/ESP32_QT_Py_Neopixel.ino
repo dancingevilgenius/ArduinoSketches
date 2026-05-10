@@ -24,7 +24,7 @@ void setup() {
 // the loop routine runs over and over again forever:
 void loop() {
   // say hi
-  Serial.println("Hello!");
+  Serial.println("Red Pixel");
   
   // set color to red
   pixels.fill(0xFF0000);
@@ -35,4 +35,18 @@ void loop() {
   pixels.fill(0x000000);
   pixels.show();
   delay(500); // wait half a second
+
+  Serial.println("Blue Pixel");
+  
+  // set color to blue
+  pixels.fill(0x0000FF);
+  pixels.show();
+  delay(500); // wait half a second
+
+  // turn off
+  pixels.fill(0x000000);
+  pixels.show();
+  delay(500); // wait half a second
+  
+
 }
