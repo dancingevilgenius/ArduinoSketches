@@ -5,8 +5,8 @@
 
 
 // Network credentials Here
-const char* ssid     = "ESP32";
-const char* password = "asdf1234";
+const char* ssid     = "STDL5301";
+const char* password = "library30";
 
 // Set web server port number to 80
 WiFiServer server(80);
