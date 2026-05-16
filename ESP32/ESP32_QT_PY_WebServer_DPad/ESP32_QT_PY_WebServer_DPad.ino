@@ -42,19 +42,24 @@ void setup() {
   setupNeopixel();
 }
 
+bool verbose = false;
 
 void loop() {
   NetworkClient client = server.accept();   // Listen for incoming clients
 
   if (client) {                             // If a new client connects,
-    Serial.println("New Client.");          // print a message out in the serial port
+    //Serial.println("New Client.");          // print a message out in the serial port
     String currentLine = "";                // make a String to hold incoming data from the client
 
+
+  
     while (client.connected()) {
       // loop while the client's connected
       if (client.available()) {             // if there's bytes to read from the client,
         char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out the serial monitor
+        if(verbose){
+          Serial.write(c);                    // print it out the serial monitor
+        }
         header += c;
         if (c == '\n') {                    // if the byte is a newline character
           // if the current line is blank, you got two newline characters in a row.
@@ -91,8 +96,8 @@ void loop() {
     header = "";
     // Close the connection
     client.stop();
-    Serial.println("Client disconnected.");
-    Serial.println("");
+    //Serial.println("Client disconnected.");
+    //Serial.println("");
   }
 }
 
@@ -199,7 +204,7 @@ void handleClientRequest(String request) {
         //Serial.println("right");
     }
     else if (direction == "center") {
-        Serial.println("center");
+        //Serial.println("center");
     }
   }
 
