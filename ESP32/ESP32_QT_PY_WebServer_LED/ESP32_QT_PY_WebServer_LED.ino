@@ -44,8 +44,9 @@ void setup() {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 
-  setupNeopixel();
+  server.begin();
 
+  setupNeopixel();
 }
 
 
@@ -73,54 +74,58 @@ void loop() {
             client.println();
 
             // turns the GPIOs on and off
-            if (header.indexOf("GET /16/on") >= 0) {
+            if (currentLine.endsWith("GET /16/on")) {
               statePin16 = "on";
               pixels.fill(0x0000FF);
               pixels.show();
 
-            } else if (header.indexOf("GET /16/off") >= 0) {
+            } else if (currentLine.endsWith("GET /16/off")) {
               statePin16 = "off";
               pixels.fill(0x000000);
               pixels.show();
             }
             
-            if (header.indexOf("GET /17/on") >= 0) {
+            if (currentLine.endsWith("GET /17/on")) {
               statePin17 = "on";
               pixels.fill(0xFF0000);
               pixels.show();
-            } else if (header.indexOf("GET /17/off") >= 0) {
+            } else if (currentLine.endsWith("GET /17/off")) {
               statePin17 = "off";
               pixels.fill(0x000000);
               pixels.show();
             }
-
-            // Display the HTML web page
-            client.println("<!DOCTYPE html><html>");
-            client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-            client.println("<link rel=\"icon\" href=\"data:,\">");
-            // CSS to style the on/off buttons
-            client.println("<style>html { font-family: monospace; display: inline-block; margin: 0px auto; text-align: center;}");
-            client.println(".button { background-color: yellowgreen; border: none; color: white; padding: 16px 40px;");
-            client.println("text-decoration: none; font-size: 32px; margin: 2px; cursor: pointer;}");
-            client.println(".button2 {background-color: gray;}</style></head>");
-
-            client.println("<body><h1>ESP32 Web Server</h1>");
-            client.println("<p>Control LED State</p>");
-
-            if (statePin16 == "off") {
-              client.println("<p><a href=\"/16/on\"><button class=\"button\">ON</button></a></p>");
-            } else {
-              client.println("<p><a href=\"/16/off\"><button class=\"button button2\">OFF</button></a></p>");
-            }
-            if (statePin17 == "off") {
-              client.println("<p><a href=\"/17/on\"><button class=\"button\">ON</button></a></p>");
-            } else {
-              client.println("<p><a href=\"/17/off\"><button class=\"button button2\">OFF</button></a></p>");
-            }
-            client.println("</body></html>");
-
-            // The HTTP response ends with another blank line
             client.println();
+            client.print("<h1>Click <a href=\"/H\">here</a> to turn the Neopixel on\t(blue).</h1><br>");
+            client.print("<h1>Click <a href=\"/L\">here</a> to turn the Neopixel off\t(black).</h1><br>");
+            client.println();
+            // // Display the HTML web page
+            // client.println("<!DOCTYPE html><html>");
+            // client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+            // client.println("<link rel=\"icon\" href=\"data:,\">");
+            // // CSS to style the on/off buttons
+            // client.println("<style>html { font-family: monospace; display: inline-block; margin: 0px auto; text-align: center;}");
+            // client.println(".button { background-color: yellowgreen; border: none; color: white; padding: 16px 40px;");
+            // client.println("text-decoration: none; font-size: 32px; margin: 2px; cursor: pointer;}");
+            // client.println(".button2 {background-color: gray;}</style></head>");
+
+            // client.println("<body><h1>ESP32 Web Server</h1>");
+            // client.println("<p>Control LED State</p>");
+
+            // if (statePin16 == "off") {
+            //   client.println("<p><a href=\"/16/on\"><button class=\"button\">ON</button></a></p>");
+            // } else {
+            //   client.println("<p><a href=\"/16/off\"><button class=\"button button2\">OFF</button></a></p>");
+            // }
+            // if (statePin17 == "off") {
+            //   client.println("<p><a href=\"/17/on\"><button class=\"button\">ON</button></a></p>");
+            // } else {
+            //   client.println("<p><a href=\"/17/off\"><button class=\"button button2\">OFF</button></a></p>");
+            // }
+            // client.println("</body></html>");
+
+            // // The HTTP response ends with another blank line
+            // client.println();
+
             // Break out of the while loop
             break;
           } else { // if you got a newline, then clear currentLine
