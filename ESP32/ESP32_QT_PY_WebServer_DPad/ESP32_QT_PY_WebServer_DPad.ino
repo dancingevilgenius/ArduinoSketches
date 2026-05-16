@@ -15,9 +15,6 @@ const char* password = "library30";
 // Set web server port number to 80
 NetworkServer server(80);
 
-// Variable to store the HTTP request
-String header;
-
 
 void setup() {
   Serial.begin(115200);
@@ -45,60 +42,49 @@ void setup() {
 bool verbose = false;
 
 void loop() {
-  NetworkClient client = server.accept();   // Listen for incoming clients
-
-  if (client) {                             // If a new client connects,
-    //Serial.println("New Client.");          // print a message out in the serial port
-    String currentLine = "";                // make a String to hold incoming data from the client
-
-
+  NetworkClient client = server.available(); // Wait for an incoming client
   
+  if (client) {
+    String request = "";
+    
     while (client.connected()) {
-      // loop while the client's connected
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-        if(verbose){
-          Serial.write(c);                    // print it out the serial monitor
-        }
-        header += c;
-        if (c == '\n') {                    // if the byte is a newline character
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
-          if (currentLine.length() == 0) {
-            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-            // and a content-type so the client knows what's coming, then a blank line:
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-type:text/html");
-            client.println();
-
-            // Display the HTML web page
-            //clientLEDControls(client);
-            clientDPad(client);
-            // Break out of the while loop
-            break;
-          } else { // if you got a newline, then clear currentLine
-            currentLine = "";
+      if (client.available()) {
+        char c = client.read();
+        request += c;
+        
+        // End of client HTTP request header
+        if (c == '\n' && request.endsWith("\r\n\r\n")) {
+          
+          // 1. Parse for the "direction" attribute (e.g., /?direction=left)
+          String direction = "";
+          int index = request.indexOf("?direction=");
+          if (index != -1) {
+            int start = index + 11; // Length of "?direction="
+            int end = request.indexOf(' ', start);
+            if (end != -1) {
+              direction = request.substring(start, end);
+              Serial.print("direction:");
+              Serial.println(direction);
+            }
           }
-        } else if (c != '\r') {  // if you got anything else but a carriage return character,
-          currentLine += c;      // add it to the end of the currentLine
+
+          // 2. Send HTTP Response Header
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-type:text/html");
+          client.println("Connection: close");
+          client.println();
+          
+          // 3. Serve the Web Page
+          clientDPad(client);
+          break; // Break out of the while loop
         }
-
-
       }
-
-      // Parse client requests/commands here
-      handleClientRequest(currentLine);
-
     }
-
-
-    // Clear the header variable
-    header = "";
+    
     // Close the connection
     client.stop();
-    //Serial.println("Client disconnected.");
-    //Serial.println("");
   }
+  
 }
 
 void clientDPad(NetworkClient client){
