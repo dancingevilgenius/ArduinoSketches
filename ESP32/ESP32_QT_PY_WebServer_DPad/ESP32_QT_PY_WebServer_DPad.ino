@@ -78,16 +78,15 @@ void loop() {
           currentLine += c;      // add it to the end of the currentLine
         }
 
-          // Parse HTML Commands here
-          // if (currentLine.endsWith("GET /16/on")) {
-          //   statePin16 = "on";
-          //   pixels.fill(0x0000FF);
-          //   pixels.show();
-
-          // }
 
       }
+
+      // Parse client requests/commands here
+      handleClientRequest(currentLine);
+
     }
+
+
     // Clear the header variable
     header = "";
     // Close the connection
@@ -156,6 +155,55 @@ void clientDPad(NetworkClient client){
   client.println("");
 }
 
+String getParam(String request, String key) {
+    int keyIndex = request.indexOf(key + "=");
+    if (keyIndex == -1) return "";
+
+    int start = keyIndex + key.length() + 1;
+    int end = request.indexOf('&', start);
+    if (end == -1) end = request.indexOf(' ', start);
+
+    return request.substring(start, end);
+}
+
+void handleClientRequest(String request) {
+  String direction = getParam(request, "direction");
+
+  String dirSet[] = {"up", "down", "left", "right", "center"};
+
+  int setSize = 5;
+  bool found = false;
+
+  for (int i = 0 ; i < setSize ; i++) {
+    if (direction == dirSet[i]) {
+      found = true;
+      break; // Exit loop early once match is found
+    }
+  }
+
+  //if (direction.length() > 0) {
+  if(found){
+    Serial.print("Direction pressed: ");
+    Serial.println(direction);
+
+    if (direction == "up") {
+        //Serial.println("up");
+    }
+    else if (direction == "down") {
+        //Serial.println("down");
+    }
+    else if (direction == "left") {
+        //Serial.println("left");
+    }
+    else if (direction == "right") {
+        //Serial.println("right");
+    }
+    else if (direction == "center") {
+        Serial.println("center");
+    }
+  }
+
+}
 
 void setupNeopixel(){
 #if defined(NEOPIXEL_POWER)
