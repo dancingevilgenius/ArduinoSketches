@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+	  <title>DPad</title>
+	  <meta name="viewport" content="width=device-width, initial-scale=1">
+	  <style>
+	  body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #eee; }
+	  .dpad-container { display: inline-block; margin-top: 40px; }
+	  .row { display: flex; justify-content: center; }
+	  .btn {
+		width: 70px;
+		height: 70px;
+		margin: 5px;
+		border-radius: 10px;
+		border: none;
+		background: #333;
+		color: #fff;
+		font-size: 24px;
+		cursor: pointer;
+	  }
+	  .btn:active { background: #555; }
+	  </style>
+  </head>
+  <body>
+  <h2>Web D-Pad</h2>
+  <div class="dpad-container">
+
+    <div class="row">
+      <form action="up" method="GET">
+        <button class="btn" type="submit" name="direction" value="up">&#9650;</button>
+      </form>
+    </div>
+
+    <div class="row">
+      <form action="left" method="GET">
+        <button class="btn" type="submit" name="direction" value="left">&#9664;</button>
+      </form>
+      <form action="center" method="GET">
+        <button class="btn" type="submit" name="direction" value="center">OK</button>
+      </form>
+      <form action="right" method="GET">
+        <button class="btn" type="submit" name="direction" value="right">&#9654;</button>
+      </form>
+    </div>
+
+    <div class="row">
+      <form action="down" method="GET">
+        <button class="btn" type="submit" name="direction" value="down">&#9660;</button>
+      </form>
+    </div>
+
+  </div>
+  </body>
+ </html>
+  
