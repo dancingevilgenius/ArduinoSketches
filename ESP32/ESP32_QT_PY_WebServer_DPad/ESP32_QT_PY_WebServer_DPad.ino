@@ -56,17 +56,18 @@ void loop() {
         if (c == '\n' && request.endsWith("\r\n\r\n")) {
           
           // 1. Parse for the "direction" attribute (e.g., /?direction=left)
-          String direction = "";
-          int index = request.indexOf("?direction=");
-          if (index != -1) {
-            int start = index + 11; // Length of "?direction="
-            int end = request.indexOf(' ', start);
-            if (end != -1) {
-              direction = request.substring(start, end);
-              Serial.print("direction:");
-              Serial.println(direction);
-            }
-          }
+          handleClientRequest(request);
+          // String direction = "";
+          // int index = request.indexOf("?direction=");
+          // if (index != -1) {
+          //   int start = index + 11; // Length of "?direction="
+          //   int end = request.indexOf(' ', start);
+          //   if (end != -1) {
+          //     direction = request.substring(start, end);
+          //     Serial.print("direction:");
+          //     Serial.println(direction);
+          //   }
+          // }
 
           // 2. Send HTTP Response Header
           client.println("HTTP/1.1 200 OK");
@@ -158,6 +159,11 @@ String getParam(String request, String key) {
 }
 
 void handleClientRequest(String request) {
+
+  handleRequestParamDirection(request); // DPad sends form data as 'direction' param.
+}
+
+void handleRequestParamDirection(String request){
   String direction = getParam(request, "direction");
 
   String dirSet[] = {"up", "down", "left", "right", "center"};
