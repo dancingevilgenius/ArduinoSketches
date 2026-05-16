@@ -1,5 +1,11 @@
+#include <Arduino.h>
 #include <LittleFS.h>
 #include <WiFi.h> 
+#include <Adafruit_NeoPixel.h>
+
+// How many internal neopixels do we have? some boards have more than one!
+#define NUMPIXELS        1
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
 
 // Network credentials Here
@@ -24,6 +30,8 @@ void setup() {
 
 
   setupWifiConnection();
+
+  setupNeopixel();
 
 }
 
@@ -76,7 +84,7 @@ void loop() {
           if (file) {
             // 3. Send HTTP Headers
             sendResponseHeader(client);
-            
+
             // 4. Stream the file content
             while (file.available()) {
               client.write(file.read());
@@ -92,6 +100,24 @@ void loop() {
     client.stop();
   }
 }
+
+void setupNeopixel(){
+#if defined(NEOPIXEL_POWER)
+  // If this board has a power control pin, we must set it to output and high
+  // in order to enable the NeoPixels. We put this in an #if defined so it can
+  // be reused for other boards without compilation errors
+  pinMode(NEOPIXEL_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_POWER, HIGH);
+#endif
+
+  pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
+  pixels.setBrightness(20); // not so bright
+
+  // Show Green to start
+  pixels.fill(0x00FF00);
+  pixels.show();
+}
+
 
 void sendResponseHeader(NetworkClient client) {
     
