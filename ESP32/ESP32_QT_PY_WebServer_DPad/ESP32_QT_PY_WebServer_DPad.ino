@@ -71,33 +71,8 @@ void loop() {
             client.println();
 
             // Display the HTML web page
-            client.println("<!DOCTYPE html><html>");
-            client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-            client.println("<link rel=\"icon\" href=\"data:,\">");
-            // CSS to style the on/off buttons
-            client.println("<style>html { font-family: monospace; display: inline-block; margin: 0px auto; text-align: center;}");
-            client.println(".button { background-color: yellowgreen; border: none; color: white; padding: 16px 40px;");
-            client.println("text-decoration: none; font-size: 32px; margin: 2px; cursor: pointer;}");
-            client.println(".button2 {background-color: gray;}</style></head>");
-
-            client.println("<body><h1>ESP32 QT PY Web Server</h1>");
-            client.println("<p>Control Built-in Neopixel</p>");
-
-            if (statePin16 == "off") {
-              client.println("<p><a href=\"/16/on\"><button class=\"button\">BLUE ON</button></a></p>");
-            } else {
-              client.println("<p><a href=\"/16/off\"><button class=\"button button2\">BLUE OFF</button></a></p>");
-            }
-            if (statePin17 == "off") {
-              client.println("<p><a href=\"/17/on\"><button class=\"button\">RED ON</button></a></p>");
-            } else {
-              client.println("<p><a href=\"/17/off\"><button class=\"button button2\">RED OFF</button></a></p>");
-            }
-            client.println("</body></html>");
-
-            // The HTTP response ends with another blank line
-            client.println();
-
+            //clientLEDControls(client);
+            clientDPad(client);
             // Break out of the while loop
             break;
           } else { // if you got a newline, then clear currentLine
@@ -141,6 +116,90 @@ void loop() {
     Serial.println("Client disconnected.");
     Serial.println("");
   }
+}
+
+void clientDPad(NetworkClient client){
+
+  // Inside your request handler, after client.println("HTTP/1.1 200 OK"); etc.
+  client.println("<!DOCTYPE html>");
+  client.println("<html>");
+  client.println("<head>");
+  client.println("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+  client.println("<style>");
+  client.println("body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #eee; }");
+  client.println(".dpad-container { display: inline-block; margin-top: 40px; }");
+  client.println(".row { display: flex; justify-content: center; }");
+  client.println(".btn {");
+  client.println("  width: 70px;");
+  client.println("  height: 70px;");
+  client.println("  margin: 5px;");
+  client.println("  border-radius: 10px;");
+  client.println("  border: none;");
+  client.println("  background: #333;");
+  client.println("  color: #fff;");
+  client.println("  font-size: 24px;");
+  client.println("  cursor: pointer;");
+  client.println("}");
+  client.println(".btn:active { background: #555; }");
+  client.println("</style>");
+  client.println("</head>");
+  client.println("<body>");
+  client.println("<h2>Web D-Pad</h2>");
+  client.println("<div class=\"dpad-container\">");
+  client.println("  <div class=\"row\">");
+  client.println("    <form action=\"/up\" method=\"GET\">");
+  client.println("      <button class=\"btn\" type=\"submit\">&#9650;</button>");
+  client.println("    </form>");
+  client.println("  </div>");
+  client.println("  <div class=\"row\">");
+  client.println("    <form action=\"/left\" method=\"GET\">");
+  client.println("      <button class=\"btn\" type=\"submit\">&#9664;</button>");
+  client.println("    </form>");
+  client.println("    <form action=\"/center\" method=\"GET\">");
+  client.println("      <button class=\"btn\" type=\"submit\">OK</button>");
+  client.println("    </form>");
+  client.println("    <form action=\"/right\" method=\"GET\">");
+  client.println("      <button class=\"btn\" type=\"submit\">&#9654;</button>");
+  client.println("    </form>");
+  client.println("  </div>");
+  client.println("  <div class=\"row\">");
+  client.println("    <form action=\"/down\" method=\"GET\">");
+  client.println("      <button class=\"btn\" type=\"submit\">&#9660;</button>");
+  client.println("    </form>");
+  client.println("  </div>");
+  client.println("</div>");
+  client.println("</body>");
+  client.println("</html>");
+  
+}
+
+void clientLEDControls(NetworkClient client){
+  client.println("<!DOCTYPE html><html>");
+  client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+  client.println("<link rel=\"icon\" href=\"data:,\">");
+  // CSS to style the on/off buttons
+  client.println("<style>html { font-family: monospace; display: inline-block; margin: 0px auto; text-align: center;}");
+  client.println(".button { background-color: yellowgreen; border: none; color: white; padding: 16px 40px;");
+  client.println("text-decoration: none; font-size: 32px; margin: 2px; cursor: pointer;}");
+  client.println(".button2 {background-color: gray;}</style></head>");
+
+  client.println("<body><h1>ESP32 QT PY Web Server</h1>");
+  client.println("<p>Control Built-in Neopixel</p>");
+
+  if (statePin16 == "off") {
+    client.println("<p><a href=\"/16/on\"><button class=\"button\">BLUE ON</button></a></p>");
+  } else {
+    client.println("<p><a href=\"/16/off\"><button class=\"button button2\">BLUE OFF</button></a></p>");
+  }
+  if (statePin17 == "off") {
+    client.println("<p><a href=\"/17/on\"><button class=\"button\">RED ON</button></a></p>");
+  } else {
+    client.println("<p><a href=\"/17/off\"><button class=\"button button2\">RED OFF</button></a></p>");
+  }
+  client.println("</body></html>");
+
+  // The HTTP response ends with another blank line
+  client.println();
 }
 
 void setupNeopixel(){
