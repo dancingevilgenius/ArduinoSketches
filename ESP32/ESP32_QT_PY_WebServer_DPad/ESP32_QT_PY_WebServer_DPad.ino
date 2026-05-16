@@ -184,20 +184,22 @@ void handleRequestParamDirection(String request){
     Serial.println(direction);
 
     if (direction == "up") {
-        //Serial.println("up");
+      pixels.fill(0xFF00FF);
     }
     else if (direction == "down") {
-        //Serial.println("down");
+      pixels.fill(0xFF0000);
     }
     else if (direction == "left") {
-        //Serial.println("left");
+      pixels.fill(0x0000FF);
     }
     else if (direction == "right") {
-        //Serial.println("right");
+      pixels.fill(0x00FF00);
     }
     else if (direction == "center") {
-        //Serial.println("center");
+      pixels.fill(0x000);
     }
+    pixels.show();
+
   }
 
 }
