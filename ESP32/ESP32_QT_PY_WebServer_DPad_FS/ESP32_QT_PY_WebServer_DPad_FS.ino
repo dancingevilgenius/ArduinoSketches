@@ -74,22 +74,24 @@ void loop() {
   if (client) {
     while (client.connected()) {
       if (client.available()) {
-        String req = client.readStringUntil('\r');
+        String request = client.readStringUntil('\r');
         client.flush();
 
         // 2. Simple route for "/" or "/index.html"
-        if (req.indexOf("GET /") != -1) {
+        if (request.indexOf("GET /") != -1) {
         //if(req.startsWith("\n") && req.endsWith("\r\n\r\n")) {
-          File file = LittleFS.open("/index.html", "r");
-          if (file) {
-            // 3. Send HTTP Headers
+          File htmlFile = LittleFS.open("/index.html", "r");
+          if (htmlFile) {
+
+            // 1. Check for params in URL
+            handleClientRequest(request);
+
+            // 2. Send HTTP Headers
             sendResponseHeader(client);
 
-            // 4. Stream the file content
-            while (file.available()) {
-              client.write(file.read());
-            }
-            file.close();
+            // 3. Stream the file content
+            sendWebpage(client, htmlFile);
+
           } else {
             client.println("HTTP/1.1 404 Not Found");
           }
@@ -100,6 +102,72 @@ void loop() {
     client.stop();
   }
 }
+
+void sendWebpage(NetworkClient client,  File htnlFile){
+    while (htnlFile.available()) {
+      client.write(htnlFile.read());
+    }
+    htnlFile.close();
+}
+
+String getParam(String request, String key) {
+    int keyIndex = request.indexOf(key + "=");
+    if (keyIndex == -1) return "";
+
+    int start = keyIndex + key.length() + 1;
+    int end = request.indexOf('&', start);
+    if (end == -1) end = request.indexOf(' ', start);
+
+    return request.substring(start, end);
+}
+
+void handleClientRequest(String request) {
+
+  handleRequestParamDirection(request); // DPad sends form data as 'direction' param.
+}
+
+void handleRequestParamDirection(String request){
+  String direction = getParam(request, "direction");
+
+  String dirSet[] = {"up", "down", "left", "right", "center"};
+
+  int setSize = 5;
+  bool found = false;
+
+  for (int i = 0 ; i < setSize ; i++) {
+    if (direction == dirSet[i]) {
+      found = true;
+      break; // Exit loop early once match is found
+    }
+  }
+
+  //if (direction.length() > 0) {
+  if(found){
+    Serial.print("Direction pressed: ");
+    Serial.println(direction);
+
+    if (direction == "up") {
+      pixels.fill(0xFF00FF);
+    }
+    else if (direction == "down") {
+      pixels.fill(0xFF0000);
+    }
+    else if (direction == "left") {
+      pixels.fill(0x0000FF);
+    }
+    else if (direction == "right") {
+      pixels.fill(0x00FF00);
+    }
+    else if (direction == "center") {
+      pixels.fill(0x000);
+    }
+    pixels.show();
+
+  }
+
+}
+
+
 
 void setupNeopixel(){
 #if defined(NEOPIXEL_POWER)
