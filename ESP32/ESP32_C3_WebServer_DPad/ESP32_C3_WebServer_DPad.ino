@@ -72,18 +72,19 @@ void navigateMenu(const String& direction) {
     verticalIndex = 0;
   }
 
-  else if (direction == "up") {
-    verticalIndex--;
-    if (verticalIndex < 0)
-      verticalIndex = verticalCounts[horizontalIndex] - 1;
-  }
+else if (direction == "up") {
+  // move forward in list
+  verticalIndex++;
+  if (verticalIndex >= verticalCounts[horizontalIndex])
+    verticalIndex = 0;  // wrap to first
+}
 
-  else if (direction == "down") {
-    verticalIndex++;
-    if (verticalIndex >= verticalCounts[horizontalIndex])
-      verticalIndex = 0;
-  }
-
+else if (direction == "down") {
+  // move backward in list
+  verticalIndex--;
+  if (verticalIndex < 0)
+    verticalIndex = verticalCounts[horizontalIndex] - 1; // wrap to last
+}
   else if (direction == "center") {
     Serial.println("Center pressed — select/confirm");
   }
@@ -351,9 +352,9 @@ client.println("<body>");
 
 client.println("<div class='center-column'>");
 client.println("    <select id='dropdown'>");
-client.println("        <option value='item1' selected>Menu Item 1</option>");
-client.println("        <option value='item2'>Menu Item 2</option>");
-client.println("        <option value='item3'>Menu Item 3</option>");
+client.println("        <option value='robotA' selected>Robot A</option>");
+client.println("        <option value='robotB'>Robot B</option>");
+client.println("        <option value='robotC'>Robot C</option>");
 client.println("    </select>");
 
 client.println("    <div class='status-row'>");
@@ -361,6 +362,7 @@ client.println("        <div id='hStatus' class='status-box'></div>");
 client.println("        <div id='vStatus' class='status-box'></div>");
 client.println("    </div>");
 client.println("</div>");
+
 
 client.println("<div class='dpad-container'>");
 client.println("    <div class='row'>");
