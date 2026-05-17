@@ -94,15 +94,8 @@ void setup() {
 
   delay(2000);
 
-  boolean success=false;
 
-
-
-  success = setupLittleFS();
-  if(!success){
-    return;
-  }
-
+  setupLittleFS();
 
   setupWifiConnection();
 
@@ -111,11 +104,16 @@ void setup() {
 }
 
 void setupWifiConnection(){
+  
  WiFi.begin(ssid,password);
   int count=0;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.println("Attempting to connect. count:" + count++);
+    if(count > 15){
+      Serial.println("Too many wifi connection failed attempts. Exiting program");
+      exit(3);
+    }
   }
 
   Serial.println("");
@@ -123,28 +121,25 @@ void setupWifiConnection(){
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 
+
   server.begin();
 
 }
 
 boolean setupLittleFS(){
 
-  bool success = false;
   // 1. Start LittleFS
   if(!LittleFS.begin()) {
-    Serial.println("LittleFS Mount Failed");
-    success = false;
-    return success;
-  } else {
-    success = true;
+    Serial.println("LittleFS Mount Failed. exiting program");
+    exit(1);
   }
 
   htmlFile = LittleFS.open("/index.html", "r");
   if(!htmlFile){
-    success = false;
+    Serial.println("Failed to open index.html  exiting program.");
+    exit(2);
   }  
 
-  return success;
 }
 
 
