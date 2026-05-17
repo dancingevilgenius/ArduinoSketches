@@ -2,6 +2,7 @@
 #include <LittleFS.h>
 #include <WiFi.h> 
 #include <Adafruit_NeoPixel.h>
+#include <ArduinoJson.h>
 
 // How many internal neopixels do we have? some boards have more than one!
 #define NUMPIXELS        1
@@ -141,33 +142,31 @@ void loop() {
       Serial.println("=== JSON BODY RECEIVED ===");
       Serial.println(body);
 
-      // Parse JSON manually: {"direction":"up"}
-      String direction = "";
-      int keyIndex = body.indexOf("direction");
-      Serial.print("dirIndex:");
-      Serial.println(keyIndex);
-      if (keyIndex != -1) {
-          int colon = body.indexOf("=", keyIndex);
-          Serial.print("colon index:");
-          Serial.println(colon);
-          int quote1 = body.indexOf("\"", colon + 1);
-          int quote2 = body.indexOf("\"", quote1 + 1);
-          direction = body.substring(quote1 + 2 + strlen("direction"), quote2);
-      }
+    // Parse JSON using ArduinoJson
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, body);
 
-      Serial.print("Parsed direction: ");
-      Serial.println(direction);
-      handleDirectionParam(direction);
+    if (error) {
+        Serial.print("JSON parse failed: ");
+        Serial.println(error.c_str());
+    } else {
+        const char* direction = doc["direction"];
+        Serial.print("Parsed direction: ");
+        Serial.println(direction);
+        handleDirectionParam(direction);
+        //Serial.print("codename:");
+        //Serial.println(doc["codename"]);
+    }
 
-      // Respond
-      client.println("HTTP/1.1 200 OK");
-      client.println("Content-Type: text/plain");
-      client.println("Connection: close");
-      client.println();
-      client.println("OK");
+    // Respond
+    client.println("HTTP/1.1 200 OK");
+    client.println("Content-Type: text/plain");
+    client.println("Connection: close");
+    client.println();
+    client.println("OK");
 
-      client.stop();
-      return;
+    client.stop();
+    return;
   }
 
   // Unknown request

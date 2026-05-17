@@ -41,7 +41,7 @@ function sendDirection(dir) {
     fetch("/controller", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ direction: dir })
+        body: JSON.stringify({ direction: dir, foo: 'bar', codename: 'Wonder Woman'})
     });
     return false;
 }
