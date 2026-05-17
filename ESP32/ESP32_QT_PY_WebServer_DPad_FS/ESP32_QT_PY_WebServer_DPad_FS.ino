@@ -14,6 +14,8 @@ const char* password = "library30";	// Change this for your project
 
 NetworkServer server(80);
 
+File htmlFile;
+
 void setup() {
   Serial.begin(115200);
 
@@ -59,55 +61,148 @@ boolean setupLittleFS(){
   if(!LittleFS.begin()) {
     Serial.println("LittleFS Mount Failed");
     success = false;
+    return success;
   } else {
     success = true;
   }
 
+  htmlFile = LittleFS.open("/index.html", "r");
+  if(!htmlFile){
+    success = false;
+  }  
+
   return success;
+}
+
+
+
+void serveFile(WiFiClient &client, const char* path) {
+  File file = LittleFS.open(path, "r");
+  if (!file) {
+    client.println("HTTP/1.1 404 Not Found");
+    client.println("Content-Type: text/plain");
+    client.println("Connection: close");
+    client.println();
+    client.println("File not found");
+    return;
+  }
+
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: text/html");
+  client.println("Connection: close");
+  client.println();
+
+  while (file.available()) {
+    client.write(file.read());
+  }
+  file.close();
 }
 
 void loop() {
   NetworkClient client = server.available();
+  if (!client) return;
 
-  
+  String request = "";
+  unsigned long timeout = millis();
 
-  if (client) {
-    while (client.connected()) {
-      if (client.available()) {
-        String request = client.readStringUntil('\r');
-        client.flush();
-
-        // 2. Simple route for "/" or "/index.html"
-        if (request.indexOf("GET /") != -1) {
-        //if(req.startsWith("\n") && req.endsWith("\r\n\r\n")) {
-          File htmlFile = LittleFS.open("/index.html", "r");
-          if (htmlFile) {
-
-            // 1. Check for params in URL
-            handleClientRequest(request);
-
-            // 2. Send HTTP Headers
-            sendResponseHeader(client);
-
-            // 3. Stream the file content
-            sendWebpage(client, htmlFile);
-
-          } else {
-            client.println("HTTP/1.1 404 Not Found");
-          }
-        }
-        break;
-      }
+  // Read headers
+  while (client.connected() && millis() - timeout < 2000) {
+    if (client.available()) {
+      char c = client.read();
+      request += c;
+      if (request.endsWith("\r\n\r\n")) break;
     }
-    client.stop();
   }
+
+  // Serve index.html
+  if (request.startsWith("GET / ") || request.startsWith("GET /index.html")) {
+    serveFile(client, "/index.html");
+    client.stop();
+    return;
+  }
+
+  // Handle POST /controller
+  if (request.startsWith("POST /controller")) {
+
+      // Extract Content-Length
+      int clIndex = request.indexOf("Content-Length:");
+      int contentLength = 0;
+      if (clIndex != -1) {
+        int start = clIndex + 15;
+        int end = request.indexOf("\r\n", start);
+        contentLength = request.substring(start, end).toInt();
+      }
+
+      // Read POST body
+      String body = "";
+      while (client.available() < contentLength) delay(1);
+      while (client.available()) body += (char)client.read();
+
+      Serial.println("=== JSON BODY RECEIVED ===");
+      Serial.println(body);
+
+      // Parse JSON manually: {"direction":"up"}
+      String direction = "";
+      int keyIndex = body.indexOf("direction");
+      Serial.print("dirIndex:");
+      Serial.println(keyIndex);
+      if (keyIndex != -1) {
+          int colon = body.indexOf("=", keyIndex);
+          Serial.print("colon index:");
+          Serial.println(colon);
+          int quote1 = body.indexOf("\"", colon + 1);
+          int quote2 = body.indexOf("\"", quote1 + 1);
+          direction = body.substring(quote1 + 2 + strlen("direction"), quote2);
+      }
+
+      Serial.print("Parsed direction: ");
+      Serial.println(direction);
+      handleDirectionParam(direction);
+
+      // Respond
+      client.println("HTTP/1.1 200 OK");
+      client.println("Content-Type: text/plain");
+      client.println("Connection: close");
+      client.println();
+      client.println("OK");
+
+      client.stop();
+      return;
+  }
+
+  // Unknown request
+  client.println("HTTP/1.1 400 Bad Request");
+  client.println("Connection: close");
+  client.println();
+  client.stop();
 }
 
-void sendWebpage(NetworkClient client,  File htnlFile){
-    while (htnlFile.available()) {
-      client.write(htnlFile.read());
+void handleDirectionParam(String direction){
+    if (direction == "up") {
+      pixels.fill(0xFF00FF);
     }
-    htnlFile.close();
+    else if (direction == "down") {
+      pixels.fill(0xFF0000);
+    }
+    else if (direction == "left") {
+      pixels.fill(0x0000FF);
+    }
+    else if (direction == "right") {
+      pixels.fill(0x00FF00);
+    }
+    else if (direction == "center") {
+      pixels.fill(0x000);
+    } else {
+      pixels.fill(0x000);
+    }
+    pixels.show();
+}
+
+void sendWebpage(NetworkClient client,  File htmlFile){
+    while (htmlFile.available()) {
+      client.write(htmlFile.read());
+    }
+    htmlFile.close();
 }
 
 String getParam(String request, String key) {
