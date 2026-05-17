@@ -1,4 +1,9 @@
-// Load Wi-Fi library
+// Webserver game controller DPad web page code uploaded to Adafruit Forums by:
+// Carlos Garcia (dancingevilgenius) on May 16, 2026
+// Original board tested: Adafruit QT PY Pico
+// Original Espressif library version:  3.3.8
+// Original Adafruit Neopixel version: 1.15.5
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <Adafruit_NeoPixel.h>
@@ -9,21 +14,22 @@
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
 // Network credentials Here
-const char* ssid     = "STDL5301";
-const char* password = "library30";
+const char* ssid     = "STDL5301";	// Change this for your project
+const char* password = "library30";	// Change this for your project
 
 // Set web server port number to 80
 NetworkServer server(80);
+
+bool verbose = false; // Used to hide some of the less important web server connection properties.
 
 
 void setup() {
   Serial.begin(115200);
 
-
   delay(2000); // Fixes problem that displays ONLY firmware debugging info.
 
   WiFi.begin(ssid,password);
- int count=0;
+  int count=0;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.println("Attempting to connect. count:" + count++);
@@ -39,7 +45,6 @@ void setup() {
   setupNeopixel();
 }
 
-bool verbose = false;
 
 void loop() {
   NetworkClient client = server.available(); // Wait for an incoming client
@@ -55,28 +60,15 @@ void loop() {
         // End of client HTTP request header
         if (c == '\n' && request.endsWith("\r\n\r\n")) {
           
-          // 1. Parse for the "direction" attribute (e.g., /?direction=left)
+          // 1. Parse URL parameters  (e.g., /?direction=left)
           handleClientRequest(request);
-          // String direction = "";
-          // int index = request.indexOf("?direction=");
-          // if (index != -1) {
-          //   int start = index + 11; // Length of "?direction="
-          //   int end = request.indexOf(' ', start);
-          //   if (end != -1) {
-          //     direction = request.substring(start, end);
-          //     Serial.print("direction:");
-          //     Serial.println(direction);
-          //   }
-          // }
 
           // 2. Send HTTP Response Header
-          client.println("HTTP/1.1 200 OK");
-          client.println("Content-type:text/html");
-          client.println("Connection: close");
-          client.println();
+          sendResponseHeader(client);
           
           // 3. Serve the Web Page
-          clientDPad(client);
+          sendWebPage(client);
+
           break; // Break out of the while loop
         }
       }
@@ -84,8 +76,28 @@ void loop() {
     
     // Close the connection
     client.stop();
+
+    // Small delay so that the loop isn't working every millisecond.
+    delay(100);
   }
   
+}
+
+void sendResponseHeader(NetworkClient client) {
+    
+    // Should not normally edit/remove these 4 lines
+    client.println("HTTP/1.1 200 OK");
+    client.println("Content-type:text/html");
+    client.println("Connection: close");
+    client.println();
+
+}
+
+void sendWebPage(NetworkClient client){
+
+  // Send your web page here.
+  // In this case it is a simulated game controller DPad.
+  clientDPad(client);
 }
 
 void clientDPad(NetworkClient client){
@@ -94,6 +106,7 @@ void clientDPad(NetworkClient client){
   client.println("<!DOCTYPE html>");
   client.println("<html>");
   client.println("<head>");
+  client.println("<title>DPad</title>");
   client.println("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
   client.println("<style>");
   client.println("body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #eee; }");
@@ -118,7 +131,7 @@ void clientDPad(NetworkClient client){
   client.println("<div class=\"dpad-container\">");
 
   client.println("  <div class=\"row\">");
-  client.println("    <form action=\"/up\" method=\"GET\">");
+  client.println("    <form action=\"/up \" method=\"GET\">");
   client.println("      <button class=\"btn\" type=\"submit\" name=\"direction\" value=\"up\">&#9650;</button>");
   client.println("    </form>");
   client.println("  </div>");
