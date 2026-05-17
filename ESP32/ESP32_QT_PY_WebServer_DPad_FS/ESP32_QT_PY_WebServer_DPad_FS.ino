@@ -17,6 +17,78 @@ NetworkServer server(80);
 
 File htmlFile;
 
+
+// Horizontal menu (fixed 4 items)
+const char* horizontalMenu[] = { "M1", "M2", "M3", "M4" };
+int horizontalIndex = 0;
+const int horizontalCount = 4;
+
+// Vertical lists for each horizontal menu
+const char* verticalMenu_M1[] = { "A1", "A2", "A3" };
+const char* verticalMenu_M2[] = { "B1", "B2", "B3", "B4" };
+const char* verticalMenu_M3[] = { "C1", "C2" };
+const char* verticalMenu_M4[] = { "D1", "D2", "D3", "D4", "D5" };
+
+// Pointer array to vertical menus
+const char** verticalMenus[] = {
+  verticalMenu_M1,
+  verticalMenu_M2,
+  verticalMenu_M3,
+  verticalMenu_M4
+};
+
+// Length of each vertical list
+int verticalCounts[] = {
+  sizeof(verticalMenu_M1) / sizeof(verticalMenu_M1[0]),
+  sizeof(verticalMenu_M2) / sizeof(verticalMenu_M2[0]),
+  sizeof(verticalMenu_M3) / sizeof(verticalMenu_M3[0]),
+  sizeof(verticalMenu_M4) / sizeof(verticalMenu_M4[0])
+};
+
+int verticalIndex = 0;
+
+// ----------------------------
+// NAVIGATION FUNCTION
+// ----------------------------
+void navigateMenu(const String& direction) {
+
+  if (direction == "left") {
+    horizontalIndex--;
+    if (horizontalIndex < 0)
+      horizontalIndex = horizontalCount - 1;  // wrap
+    verticalIndex = 0; // reset vertical position
+  }
+
+  else if (direction == "right") {
+    horizontalIndex++;
+    if (horizontalIndex >= horizontalCount)
+      horizontalIndex = 0;  // wrap
+    verticalIndex = 0; // reset vertical position
+  }
+
+  else if (direction == "up") {
+    verticalIndex--;
+    if (verticalIndex < 0)
+      verticalIndex = verticalCounts[horizontalIndex] - 1; // wrap
+  }
+
+  else if (direction == "down") {
+    verticalIndex++;
+    if (verticalIndex >= verticalCounts[horizontalIndex])
+      verticalIndex = 0; // wrap
+  }
+
+  else if (direction == "center") {
+    Serial.println("Center pressed — select/confirm");
+  }
+
+  // Debug output
+  Serial.print("Menu: ");
+  Serial.print(horizontalMenu[horizontalIndex]);
+  Serial.print(" | Item: ");
+  Serial.println(verticalMenus[horizontalIndex][verticalIndex]);
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -154,6 +226,7 @@ void loop() {
         Serial.print("Parsed direction: ");
         Serial.println(direction);
         handleDirectionParam(direction);
+        navigateMenu(direction);
         //Serial.print("codename:");
         //Serial.println(doc["codename"]);
     }
