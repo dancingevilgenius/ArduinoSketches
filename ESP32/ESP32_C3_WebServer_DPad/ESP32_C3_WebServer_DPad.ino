@@ -25,15 +25,15 @@ bool verbose = false; // Used to hide some of the less important web server conn
 // ----------------------------
 
 // Horizontal menu (fixed 4 items)
-const char* horizontalMenu[] = { "M1", "M2", "M3", "M4" };
+const char* horizontalMenu[] = { "SPEED", "TURNING", "PROPORTIONAL", "INTEGRAL" };
 int horizontalIndex = 0;
 const int horizontalCount = 4;
 
 // Vertical lists for each horizontal menu
-const char* verticalMenu_M1[] = { "A1", "A2", "A3" };
-const char* verticalMenu_M2[] = { "B1", "B2", "B3", "B4" };
-const char* verticalMenu_M3[] = { "C1", "C2" };
-const char* verticalMenu_M4[] = { "D1", "D2", "D3", "D4", "D5" };
+const char* verticalMenu_M1[] = { "50", "60", "70", "80", "90", "100" };
+const char* verticalMenu_M2[] = { "50", "60", "70", "80", "90", "100" };
+const char* verticalMenu_M3[] = { "50", "60", "70", "80", "90" };
+const char* verticalMenu_M4[] = { "0.1", "0.2", "0.3", "0.4", "0.5" };
 
 // Pointer array to vertical menus
 const char** verticalMenus[] = {
@@ -202,12 +202,19 @@ void loop() {
       }
     }
 
+    // Build JSON response
+    StaticJsonDocument<200> response;
+    response["horiz"] = horizontalMenu[horizontalIndex];
+    response["vert"]  = verticalMenus[horizontalIndex][verticalIndex];
+
+    String out;
+    serializeJson(response, out);
+
     client.println("HTTP/1.1 200 OK");
-    client.println("Content-Type: text/plain");
+    client.println("Content-Type: application/json");
     client.println("Connection: close");
     client.println();
-    client.println("OK");
-
+    client.println(out);
     client.stop();
     return;
   }
@@ -244,79 +251,77 @@ client.println("<meta name=\"viewport\" content=\"width=device-width, initial-sc
 client.println("<title>Web D-Pad</title>");
 
 client.println("<style>");
-client.println("    body {");
-client.println("        font-family: Arial, sans-serif;");
-client.println("        background: #111;");
-client.println("        color: #eee;");
-client.println("        margin: 0;");
-client.println("        padding: 0;");
-client.println("        height: 100vh;");
-client.println("        display: flex;");
-client.println("        flex-direction: column;");
-client.println("        align-items: center;");
-client.println("    }");
-
-client.println("    .center-column {");
-client.println("        display: flex;");
-client.println("        flex-direction: column;");
-client.println("        align-items: center;");
-client.println("        margin-top: 20px;");
-client.println("    }");
-
-client.println("    select {");
-client.println("        font-size: 20px;");
-client.println("        padding: 8px;");
-client.println("        border-radius: 8px;");
-client.println("        margin-bottom: 20px;");
-client.println("    }");
-
-client.println("    .dpad-container {");
-client.println("        display: flex;");
-client.println("        flex-direction: column;");
-client.println("        align-items: center;");
-client.println("        margin-top: 10px;");
-client.println("    }");
-
-client.println("    .row {");
-client.println("        display: flex;");
-client.println("        justify-content: center;");
-client.println("    }");
-
-client.println("    .btn {");
-client.println("        width: 80px;");
-client.println("        height: 80px;");
-client.println("        margin: 6px;");
-client.println("        border-radius: 12px;");
-client.println("        border: none;");
-client.println("        background: #333;");
-client.println("        color: #fff;");
-client.println("        font-size: 28px;");
-client.println("        cursor: pointer;");
-client.println("        transition: background 0.2s;");
-client.println("    }");
-
-client.println("    .btn:active { background: #555; }");
-
-client.println("    .bottom-buttons {");
-client.println("        margin-top: auto;");   // <-- pushes to bottom
-client.println("        margin-bottom: 20px;");
-client.println("        display: flex;");
-client.println("        justify-content: center;");
-client.println("        gap: 20px;");
-client.println("    }");
-
-client.println("    .action-btn {");
-client.println("        width: 140px;");
-client.println("        height: 60px;");
-client.println("        border-radius: 10px;");
-client.println("        border: none;");
-client.println("        background: #444;");
-client.println("        color: #fff;");
-client.println("        font-size: 24px;");
-client.println("        cursor: pointer;");
-client.println("    }");
-
-client.println("    .action-btn:active { background: #666; }");
+client.println("body {");
+client.println("    font-family: Arial, sans-serif;");
+client.println("    background: #111;");
+client.println("    color: #eee;");
+client.println("    margin: 0;");
+client.println("    padding: 0;");
+client.println("    text-align: center;");
+client.println("}");
+client.println(".center-column {");
+client.println("    margin-top: 20px;");
+client.println("}");
+client.println("select {");
+client.println("    font-size: 20px;");
+client.println("    padding: 8px;");
+client.println("    border-radius: 8px;");
+client.println("    margin-bottom: 10px;");
+client.println("}");
+client.println(".status-row {");
+client.println("    display: flex;");
+client.println("    justify-content: center;");
+client.println("    gap: 20px;");
+client.println("    margin-bottom: 20px;");
+client.println("}");
+client.println(".status-box {");
+client.println("    width: 140px;");
+client.println("    height: 40px;");
+client.println("    background: #222;");
+client.println("    border: 1px solid #555;");
+client.println("    border-radius: 6px;");
+client.println("    color: #fff;");
+client.println("    font-size: 18px;");
+client.println("    text-align: center;");
+client.println("    line-height: 40px;");
+client.println("}");
+client.println(".dpad-container {");
+client.println("    margin-top: 10px;");
+client.println("}");
+client.println(".row {");
+client.println("    display: flex;");
+client.println("    justify-content: center;");
+client.println("}");
+client.println(".btn {");
+client.println("    width: 80px;");
+client.println("    height: 80px;");
+client.println("    margin: 6px;");
+client.println("    border-radius: 12px;");
+client.println("    border: none;");
+client.println("    background: #333;");
+client.println("    color: #fff;");
+client.println("    font-size: 28px;");
+client.println("    cursor: pointer;");
+client.println("}");
+client.println(".btn:active { background: #555; }");
+client.println(".bottom-buttons {");
+client.println("    margin-top: 40px;");
+client.println("    margin-bottom: 20px;");
+client.println("    display: flex;");
+client.println("    justify-content: center;");
+client.println("    gap: 20px;");
+client.println("}");
+client.println(".action-btn {");
+client.println("    width: 140px;");
+client.println("    height: 60px;");
+client.println("    border-radius: 10px;");
+client.println("    border: none;");
+client.println("    background: #444;");
+client.println("    color: #fff;");
+client.println("    font-size: 24px;");
+client.println("    cursor: pointer;");
+client.println("}");
+client.println(".action-btn:active { background: #666; }");
 client.println("</style>");
 
 client.println("<script>");
@@ -325,6 +330,11 @@ client.println("    fetch('/controller', {");
 client.println("        method: 'POST',");
 client.println("        headers: { 'Content-Type': 'application/json' },");
 client.println("        body: JSON.stringify({ direction: dir })");
+client.println("    })");
+client.println("    .then(r => r.json())");
+client.println("    .then(data => {");
+client.println("        document.getElementById('hStatus').innerText = data.horiz;");
+client.println("        document.getElementById('vStatus').innerText = data.vert;");
 client.println("    });");
 client.println("}");
 client.println("function sendAction(action) {");
@@ -345,6 +355,11 @@ client.println("        <option value='item1' selected>Menu Item 1</option>");
 client.println("        <option value='item2'>Menu Item 2</option>");
 client.println("        <option value='item3'>Menu Item 3</option>");
 client.println("    </select>");
+
+client.println("    <div class='status-row'>");
+client.println("        <div id='hStatus' class='status-box'></div>");
+client.println("        <div id='vStatus' class='status-box'></div>");
+client.println("    </div>");
 client.println("</div>");
 
 client.println("<div class='dpad-container'>");
@@ -370,7 +385,6 @@ client.println("</div>");
 
 client.println("</body>");
 client.println("</html>");
-
 
 }
 
