@@ -9,6 +9,9 @@
 #include <Adafruit_NeoPixel.h>
 #include <ArduinoJson.h>          // For passing information to/from web server
 #include "DFRobot_MatrixLidar.h"  // 8x8 Laser TOF Sensor Array
+#include "SCMD.h"                 // QWIIC Motor Driver - Serial Controlled Motor Driver
+#include "SCMD_config.h"          // Contains #defines for common SCMD register names and values
+
 
 
 // Wifi Setup Start ---------------------------------------------
@@ -89,6 +92,15 @@ DFRobot_MatrixLidar_I2C tof(0x33);
 uint16_t buf[64];
 // End for DFRobot MatrixLidar --------------------------------
 
+// Start QWIIC Motor Driver (SCMD) -----------------------------------------------------
+SCMD myMotorDriver; 
+#define DIR_FW  0
+#define DIR_RV  1
+#define LEFT_MOTOR 0
+#define RIGHT_MOTOR 1
+// End QWIIC Motor Driver (SCMD) -----------------------------------------------------
+
+
 
 // ----------------------------
 // NAVIGATION FUNCTION
@@ -144,8 +156,59 @@ void setup() {
 
   setupWebServer();
 
-  setupMatrixLidar();  
+  setupMatrixLidar();
+
+  setupQwiicMotorDriver();
+
 }
+
+void setupQwiicMotorDriver(){
+  //***** Configure the Motor Driver's Settings *****//
+  //  .commInter face is I2C_MODE 
+  myMotorDriver.settings.commInterface = I2C_MODE;
+
+  //  set address if I2C configuration selected with the config jumpers
+  myMotorDriver.settings.I2CAddress = 0x5D; //config pattern is "1000" (default) on board for address 0x5D
+
+  //  set chip select if SPI selected with the config jumpers
+  myMotorDriver.settings.chipSelectPin = 10;
+
+  //*****initialize the driver get wait for idle*****//
+  while ( myMotorDriver.begin() != 0xA9 ) //Wait until a valid ID word is returned
+  {
+    Serial.print("begin() return word ");
+    Serial.print(myMotorDriver.begin(), HEX);
+    Serial.print(" : ");
+    Serial.println( "ID mismatch, trying again" );    
+    delay(500);
+  }
+  Serial.println( "ID matches 0xA9" );
+
+  //  Check to make sure the driver is done looking for peripherals before beginning
+  Serial.print("Waiting for enumeration...");
+  while ( myMotorDriver.ready() == false );
+  Serial.println("Done.");
+  Serial.println();
+
+  //*****Set application settings and enable driver*****//
+
+  //Uncomment code for motor 0 inversion
+  //while( myMotorDriver.busy() );
+  //myMotorDriver.inversionMode(0, 1); //invert motor 0
+
+  //Uncomment code for motor 1 inversion
+  while ( myMotorDriver.busy() ); //Waits until the SCMD is available.
+  myMotorDriver.inversionMode(1, 1); //invert motor 1
+
+  while ( myMotorDriver.busy() )
+    ; // Do nothing until driver is available
+
+  myMotorDriver.enable(); //Enables the output driver hardware
+
+  Serial.println("setupQwiicMotorDriver() completed");
+  delay(3000);
+}
+
 
 void setupMatrixLidar(){
   while(tof.begin() != 0){
