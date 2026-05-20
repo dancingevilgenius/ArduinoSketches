@@ -188,16 +188,35 @@ void setupWifi(){
   Serial.println("setupWifi() completed");
 }
 
+#define INTERVAL_MS 250     // 250 is 1/4 second
+unsigned long previousMillis = 0;   // Stores the last time the block ran
+unsigned long currentMillis = millis();
 
 void loop() {
 
-  long time_slice = 250;
-  loopWebServer(time_slice);
+  currentMillis = millis(); // Get the current time
+
+  // Check if certain time in milliseoncs have passed
+  if (currentMillis - previousMillis < INTERVAL_MS) {
+
+    return;    
+  }
+
+  // Save the last time the block was executed
+  previousMillis = currentMillis;
+
+
+  loopWebServer(INTERVAL_MS);
+
 }
 
-void loopWebServer(long time_slice){
+void loopWebServer(int time_slice){
+
   NetworkClient client = server.available();
-  if (!client) return;
+  if (!client){
+    // @TODO Error handling here
+    return;
+  }
 
   String request = "";
   unsigned long timeout = millis();
