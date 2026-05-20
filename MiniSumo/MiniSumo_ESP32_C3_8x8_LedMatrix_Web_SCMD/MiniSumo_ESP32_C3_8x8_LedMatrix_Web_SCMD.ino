@@ -190,6 +190,12 @@ void setupWifi(){
 
 
 void loop() {
+
+  long time_slice = 250;
+  loopWebServer(time_slice);
+}
+
+void loopWebServer(long time_slice){
   NetworkClient client = server.available();
   if (!client) return;
 
@@ -294,6 +300,7 @@ void loop() {
   client.println("Connection: close");
   client.println();
   client.stop();  
+
 }
 
 void sendResponseHeader(NetworkClient client) {
