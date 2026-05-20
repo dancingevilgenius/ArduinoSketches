@@ -11,24 +11,33 @@
 
 #include "DFRobot_MatrixLidar.h"
 
+// Start for DFRobot MatrixLidar ----------------
 DFRobot_MatrixLidar_I2C tof(0x33);
 uint16_t buf[64];
+// End for DFRobot MatrixLidar ----------------
 
 void setup(void){
   Serial.begin(115200);
 
-  delay(2000);
+  delay(1000); // Delay to Serial initialize before printing stuff.
+
+  setupMatrixLidar();
+
+  Serial.println("setupComplete()");
+}
+
+void setupMatrixLidar(){
   while(tof.begin() != 0){
-    Serial.println("DFR 8x8 not found");
+    Serial.println("DFR MatrixLidar not found");
     delay(500);
   }
-  Serial.println("DFR 8x8 no found! Starting readings in 3 seconds");
   //config matrix mode
   while(tof.setRangingMode(eMatrix_8X8) != 0){
     Serial.println("init error !!!!!");
     delay(1000);
   }
-  Serial.println("init success");
+
+  Serial.println("DFR MatrixLidar found! Starting readings in 3 seconds");
 }
 
 void loop(void){
