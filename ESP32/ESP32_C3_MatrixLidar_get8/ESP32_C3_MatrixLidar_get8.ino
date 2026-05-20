@@ -41,6 +41,11 @@ void setupMatrixLidar(){
 }
 
 void loop(void){
+  loopMatrixLidar();
+  delay(100);
+}
+
+void loopMatrixLidar(){
   tof.getAllData(buf);
   int val = -1;
   for(uint8_t i = 0; i < 8; i++){
@@ -54,5 +59,4 @@ void loop(void){
     Serial.println("");
   }
   Serial.println("------------------------------");
-  delay(100);
 }
