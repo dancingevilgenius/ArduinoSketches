@@ -7,7 +7,9 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <Adafruit_NeoPixel.h>
-#include <ArduinoJson.h>
+#include <ArduinoJson.h>          // For passing information to/from web server
+#include "DFRobot_MatrixLidar.h"  // 8x8 Laser TOF Sensor Array
+
 
 // Wifi Setup Start ---------------------------------------------
 // Network credentials Here
@@ -82,6 +84,10 @@ Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 #define VIOLET 0xEE82EE
 // Neopix End  ---------------------------------------------------------
 
+// Start for DFRobot MatrixLidar ------------------------------
+DFRobot_MatrixLidar_I2C tof(0x33);
+uint16_t buf[64];
+// End for DFRobot MatrixLidar --------------------------------
 
 
 // ----------------------------
@@ -137,7 +143,26 @@ void setup() {
   setupWifi();
 
   setupWebServer();
+
+  setupMatrixLidar();  
 }
+
+void setupMatrixLidar(){
+  while(tof.begin() != 0){
+    Serial.println("DFR MatrixLidar not found");
+    delay(500);
+  }
+  //config matrix mode
+  while(tof.setRangingMode(eMatrix_8X8) != 0){
+    Serial.println("init error !!!!!");
+    delay(1000);
+  }
+
+  Serial.println("DFR MatrixLidar found! Starting readings in 3 seconds");
+  Serial.println("Pausing for 3 seconds. Before the readings overwhelm the Serial Monitor");
+  delay(3000);  
+}
+
 
 void setupWebServer(){
 
