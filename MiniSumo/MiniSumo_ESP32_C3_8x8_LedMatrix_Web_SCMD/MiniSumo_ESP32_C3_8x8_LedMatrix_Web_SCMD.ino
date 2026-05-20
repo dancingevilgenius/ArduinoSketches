@@ -9,14 +9,21 @@
 #include <Adafruit_NeoPixel.h>
 #include <ArduinoJson.h>
 
+// Wifi Setup Start ---------------------------------------------
 // Network credentials Here
 const char* ssid     = "TheMandaloriKen";	// Change this for your project
 const char* password = "asdf12346302201111";	// Change this for your project
 //const char* ssid     = "VERIZON-SM-G950U-DEA4";	// Change this for your project
 //const char* password = "6302201111";	// Change this for your project
+// Wifi Setup End ---------------------------------------------
 
+
+// Web Server Start --------------------------------------------------
 // Set web server port number to 80
 NetworkServer server(80);
+// Web Server Start --------------------------------------------------
+
+
 
 bool verbose = false; // Used to hide some of the less important web server connection properties.
 
@@ -24,6 +31,7 @@ bool verbose = false; // Used to hide some of the less important web server conn
 // MENU SYSTEM (Hierarchical)
 // ----------------------------
 
+// Software Menu System Start --------------------------------------------------
 // Horizontal menu (fixed 4 items)
 const char* horizontalMenu[] = { "SPEED", "TURNING", "PROPORTIONAL", "INTEGRAL" };
 int horizontalIndex = 0;
@@ -52,6 +60,29 @@ int verticalCounts[] = {
 };
 
 int verticalIndex = 0;
+// Software Menu System End ------------------------------------------------
+
+
+// Neopix Start  ---------------------------------------------------------
+// How many internal neopixels do we have? some boards have more than one!
+#define NUMPIXELS        1
+
+#ifndef PIN_NEOPIXEL
+#define  PIN_NEOPIXEL 2
+#endif
+
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
+
+// Some colors for the Neopixel
+#define RED    0xFF0000
+#define ORANGE 0xFFA500
+#define YELLOW 0xFFFF00
+#define GREEN  0x008000
+#define BLUE   0x0000FF
+#define VIOLET 0xEE82EE
+// Neopix End  ---------------------------------------------------------
+
+
 
 // ----------------------------
 // NAVIGATION FUNCTION
@@ -100,6 +131,8 @@ void setup() {
   Serial.begin(115200);
 
   delay(2000); // Fixes problem that displays ONLY firmware debugging info.
+
+  setupNeopixel();
 
   setupWifi();
 
@@ -418,6 +451,30 @@ void handleClientRequest(String request) {
   handleRequestParamDirection(request); // DPad sends form data as 'direction' param.
 }
 
+
+
+
+void setupNeopixel(){
+#if defined(NEOPIXEL_POWER)
+  // If this board has a power control pin, we must set it to output and high
+  // in order to enable the NeoPixels. We put this in an #if defined so it can
+  // be reused for other boards without compilation errors
+  pinMode(NEOPIXEL_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_POWER, HIGH);
+#endif
+
+  pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
+  pixels.setBrightness(20); // not so bright
+
+  // Show Green to start
+  pixels.fill(0xFF00FF);
+  pixels.show();
+
+  Serial.println("setupNeopixel() complete");
+}
+
+
+
 void handleRequestParamDirection(String request){
   String direction = getParam(request, "direction");
 
@@ -458,4 +515,6 @@ void handleRequestParamDirection(String request){
   }
 
 }
+
+
 
