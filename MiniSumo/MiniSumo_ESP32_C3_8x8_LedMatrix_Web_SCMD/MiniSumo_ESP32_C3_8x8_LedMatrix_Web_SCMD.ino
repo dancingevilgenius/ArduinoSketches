@@ -188,7 +188,7 @@ void setupWifi(){
   Serial.println("setupWifi() completed");
 }
 
-#define INTERVAL_MS 250     // 250 is 1/4 second
+#define INTERVAL_MS 1000     // 250 is 1/4 second
 unsigned long previousMillis = 0;   // Stores the last time the block ran
 unsigned long currentMillis = millis();
 
@@ -208,7 +208,26 @@ void loop() {
 
   loopWebServer(INTERVAL_MS);
 
+  loopMatrixLidar(INTERVAL_MS);
 }
+
+
+void loopMatrixLidar(long time_slice){
+  tof.getAllData(buf);
+  int val = -1;
+  for(uint8_t i = 0; i < 8; i++){
+    Serial.print("Y");
+    Serial.print(i);
+    Serial.print(":\t");
+    for(uint8_t j = 0; j < 8; j++){
+      val = buf[i * 8 + j];
+      Serial.printf("%04d\t", val);
+    }
+    Serial.println("");
+  }
+  Serial.println("------------------------------");
+}
+
 
 void loopWebServer(int time_slice){
 
@@ -566,6 +585,7 @@ void handleRequestParamDirection(String request){
   }
 
 }
+
 
 
 
