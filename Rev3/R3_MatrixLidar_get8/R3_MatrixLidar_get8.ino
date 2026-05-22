@@ -58,7 +58,7 @@ void loopMiniSumoEdge(){
   int val = -1;
   bool edge_hit = false;
   for(uint8_t i = 0; i < 8; i++){
-    if(i == 7){
+    if(i == 7 || i==7){
 
       edge_hit = false;
       for(uint8_t j = 0; j < 8; j++){
@@ -66,8 +66,14 @@ void loopMiniSumoEdge(){
         if(val == INVALID_VAL || val > MAX_DIST){
           // Do nothing
         } else {
-          if(val > 150){
-            edge_hit = true;
+          if(i==7){
+            if(val > 150){
+              edge_hit = true;
+            }
+          } else if(i==6){
+            if(val > 300){
+              edge_hit = true;
+            }
           }
         }
       }
@@ -82,11 +88,20 @@ void loopMiniSumoEdge(){
           if(val == INVALID_VAL || val > MAX_DIST){
             Serial.print("    ");
           } else {
-            if(val > 150){
-              Serial.print("EDG0");
-            } else {
-              Serial.print("    ");
-            }            
+            if(i==6){
+              if(val > 300){
+                Serial.print("Edg1");
+              } else {
+                Serial.print("-   ");
+              }
+            } else if(i==7){
+              if(val > 150){
+                Serial.print("Edg0");
+              } else {
+                Serial.print("-   ");
+              }
+            }
+                        
           }
         }
         Serial.println("");
