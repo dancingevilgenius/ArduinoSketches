@@ -47,9 +47,74 @@ void setupMatrixLidar(){
 void loop(void){
   //loopMatrixLidar();
   //loopMatrixMiniSumoRaw();
-  loopMiniSumoEdge();
+  loopMiniSumoOpponent();
   delay(70);
 }
+
+
+
+
+// 1. Ignore value 4000  (indeterminate)
+// 1. Ignore value > 770  (size of sumo ring)
+void loopMiniSumoOpponent(){
+  tof.getAllData(buf);
+  int d_mm = -1;
+  bool opponent_detected = false;
+  for(uint8_t i = 0; i < 8; i++){
+    if(i == 5){
+
+      opponent_detected = false;
+      for(uint8_t j = 0; j < 8; j++){
+        d_mm = buf[i * 8 + j];
+        if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
+          // Do nothing
+        } else {
+          if(i==5){
+            if(d_mm < 250){
+              opponent_detected = true;
+            }
+          }
+          // else if(i==6){
+          //   if(val < 400){
+          //     oppoenent_detected = true;
+          //   }
+          // }
+        }
+      }
+
+      if(opponent_detected){
+        Serial.print("Y");
+        Serial.print(i);    
+        Serial.print(":\t");
+        for(uint8_t j = 0; j < 8; j++){
+          d_mm = buf[i * 8 + j];
+          Serial.print("\t");
+          if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
+            Serial.print("    ");
+          } else {
+            if(i==5){
+              if(d_mm < 250){
+                Serial.print("Opp1");
+              } else {
+                Serial.print("-   ");
+              }
+            }
+                        
+          }
+        }
+        Serial.println("");
+        Serial.println("------------------------------");
+
+      }
+
+
+    }
+  }
+}
+
+
+
+
 
 // 1. Ignore value 4000  (indeterminate)
 // 1. Ignore value > 770  (size of sumo ring)
