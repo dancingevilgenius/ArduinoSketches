@@ -14,6 +14,10 @@
 // Start for DFRobot MatrixLidar ----------------
 DFRobot_MatrixLidar_I2C tof(0x33);
 uint16_t buf[64];
+#define INVALID_VAL 4000
+#define RING_SIZE_MM 770
+#define ROBOT_SIZE_MM 100
+#define MAX_DIST 570    // 770 - 100 - 100
 // End for DFRobot MatrixLidar ----------------
 
 void setup(void){
@@ -59,7 +63,7 @@ void loopMiniSumoEdge(){
       edge_hit = false;
       for(uint8_t j = 0; j < 8; j++){
         val = buf[i * 8 + j];
-        if(val == 4000 || val > (770 - 200)){
+        if(val == INVALID_VAL || val > MAX_DIST){
           // Do nothing
         } else {
           if(val > 150){
@@ -75,7 +79,7 @@ void loopMiniSumoEdge(){
         for(uint8_t j = 0; j < 8; j++){
           val = buf[i * 8 + j];
           Serial.print("\t");
-          if(val == 4000 || val > (770 - 200)){
+          if(val == INVALID_VAL || val > MAX_DIST){
             Serial.print("    ");
           } else {
             if(val > 150){
