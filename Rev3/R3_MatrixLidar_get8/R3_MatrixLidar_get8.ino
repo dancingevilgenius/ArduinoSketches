@@ -44,7 +44,7 @@ void loop(void){
   //loopMatrixLidar();
   //loopMatrixMiniSumoRaw();
   loopMiniSumoEdge();
-  delay(100);
+  delay(70);
 }
 
 // 1. Ignore value 4000  (indeterminate)
@@ -52,30 +52,47 @@ void loop(void){
 void loopMiniSumoEdge(){
   tof.getAllData(buf);
   int val = -1;
+  bool edge_hit = false;
   for(uint8_t i = 0; i < 8; i++){
     if(i == 7){
-      Serial.print("Y");
-      Serial.print(i);    
-      Serial.print(":\t");
+
+      edge_hit = false;
       for(uint8_t j = 0; j < 8; j++){
         val = buf[i * 8 + j];
-        Serial.print("\t");
         if(val == 4000 || val > (770 - 200)){
-          Serial.print("    ");
+          // Do nothing
         } else {
           if(val > 150){
-            Serial.print("EDGE");
-          } else {
-            Serial.print("    ");
+            edge_hit = true;
           }
-          
         }
+      }
+
+      if(edge_hit){
+        Serial.print("Y");
+        Serial.print(i);    
+        Serial.print(":\t");
+        for(uint8_t j = 0; j < 8; j++){
+          val = buf[i * 8 + j];
+          Serial.print("\t");
+          if(val == 4000 || val > (770 - 200)){
+            Serial.print("    ");
+          } else {
+            if(val > 150){
+              Serial.print("EDG0");
+            } else {
+              Serial.print("    ");
+            }            
+          }
+        }
+        Serial.println("");
+        Serial.println("------------------------------");
 
       }
-      Serial.println("");
+
+
     }
   }
-  Serial.println("------------------------------");
 }
 
 
