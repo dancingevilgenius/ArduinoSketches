@@ -1,0 +1,86 @@
+#if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
+
+#define BASE_FREQ 5000
+#define LEDC_TIMER_8_BIT    8
+struct motor_t {
+  int pin1;
+  int pin2;
+};
+
+motor_t motor[4] = {{27, 13}, {4, 2}, {17, 12}, {14, 15}};
+void Motor_Speed(motor_t motorID, int speed) {  // set motor speed
+                                                // ID=0~3,speed=-255~255
+  if (speed == 0) {
+    ledcWrite(motorID.pin1, 0);
+    ledcWrite(motorID.pin2, 0);
+  } else if (speed > 0) {
+    ledcWrite(motorID.pin1, speed);
+    ledcWrite(motorID.pin2, 0);
+  } else {
+    ledcWrite(motorID.pin1, 0);
+    ledcWrite(motorID.pin2, -speed);
+  }
+}
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+
+  for (int i = 0; i < 4; i++) {
+    ledcAttach(motor[i].pin1, BASE_FREQ, LEDC_TIMER_8_BIT);
+    ledcAttach(motor[i].pin2, BASE_FREQ, LEDC_TIMER_8_BIT);
+  }
+  Serial.println("setup() complete");
+}
+
+void loop() {
+  for (int i = 0; i < 4; i++) {
+    Motor_Speed(motor[i], 255);  // set motor group speed
+    delay(1000);
+    Motor_Speed(motor[i], (-255));  // set motor group speed  
+    delay(1000);
+  }
+  Serial.println("loop() cycle");
+}
+
+#else
+void Motor_Setup(int motorID, int pin1,
+                 int pin2) {  //   init motor ID = 0-3 
+  ledcSetup(motorID * 2 - 2, 5000, 8);
+  ledcAttachPin(pin1, motorID * 2 - 2);
+  ledcSetup(motorID * 2 - 1, 5000, 8);
+  ledcAttachPin(pin2, motorID * 2 - 1);
+}
+void Motor_Speed(int motorID, int speed) {  // set motor  speed
+                                            // ID=1~4,speed=-255~255
+  if (speed == 0) {
+    ledcWrite(motorID * 2 - 2, 0);
+    ledcWrite(motorID * 2 - 1, 0);
+  } else if (speed > 0) {
+    ledcWrite(motorID * 2 - 2, speed);
+    ledcWrite(motorID * 2 - 1, 0);
+  } else {
+    ledcWrite(motorID * 2 - 2, 0);
+    ledcWrite(motorID * 2 - 1, -speed);
+  }
+}
+
+void setup() {
+  Motor_Setup(1, 27, 13);  //  set motor group map io
+  Motor_Setup(2, 4, 2);
+  Motor_Setup(3, 17, 12);
+  Motor_Setup(4, 14, 15);
+}
+
+void loop() {
+  Motor_Speed(1, 255);  // set motor group speed
+  Motor_Speed(2, 255);
+  Motor_Speed(3, 255);
+  Motor_Speed(4, 255);
+  delay(1000);
+  Motor_Speed(1, (-255));
+  Motor_Speed(2, (-255));
+  Motor_Speed(3, (-255));
+  Motor_Speed(4, (-255));
+  delay(1000);
+}
+#endif
