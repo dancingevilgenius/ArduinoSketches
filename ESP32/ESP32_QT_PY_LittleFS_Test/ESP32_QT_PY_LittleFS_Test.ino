@@ -3,14 +3,18 @@
 
 
 // Network credentials Here
-const char* ssid     = "STDL5301";	// Change this for your project
-const char* password = "library30";	// Change this for your project
+//const char* ssid     = "STDL5301";	// Change this for your project
+//const char* password = "library30";	// Change this for your project
+const char* ssid     = "TheMandalorian";	// Change this for your project
+const char* password = "6302201111";	// Change this for your project
 
 NetworkServer server(80);
 
 void setup() {
   Serial.begin(115200);
-  
+  delay(1000);
+
+  Serial.println("LittleFS Test start.");
   // 1. Start LittleFS
   if(!LittleFS.begin()) {
     Serial.println("LittleFS Mount Failed");
@@ -28,6 +32,9 @@ void setup() {
 
   // Connect to network...
   server.begin();
+
+  Serial.println("LittleFS Test start.");
+
 }
 
 void loop() {
