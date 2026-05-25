@@ -10,10 +10,10 @@
 #include <ArduinoJson.h>
 
 // Network credentials Here
-//const char* ssid     = "STDL5301";	// Change this for your project
-//const char* password = "library30";	// Change this for your project
-const char* ssid     = "TheMandalorian";	// Change this for your project
-const char* password = "6302201111";	// Change this for your project
+const char* ssid     = "STDL5301";	// Change this for your project
+const char* password = "library30";	// Change this for your project
+//const char* ssid     = "TheMandalorian";	// Change this for your project
+//const char* password = "6302201111";	// Change this for your project
 
 // Set web server port number to 80
 NetworkServer server(80);
@@ -258,141 +258,120 @@ client.println("<meta name=\"viewport\" content=\"width=device-width, initial-sc
 client.println("<title>Web D-Pad</title>");
 
 client.println("<style>");
-client.println("body {");
-client.println("    font-family: Arial, sans-serif;");
-client.println("    background: #111;");
-client.println("    color: #eee;");
-client.println("    margin: 0;");
-client.println("    padding: 0;");
-client.println("    text-align: center;");
-client.println("}");
-client.println(".center-column {");
-client.println("    margin-top: 20px;");
-client.println("}");
-client.println("select {");
-client.println("    font-size: 20px;");
-client.println("    padding: 8px;");
-client.println("    border-radius: 8px;");
-client.println("    margin-bottom: 10px;");
-client.println("}");
-client.println(".status-row {");
-client.println("    display: flex;");
-client.println("    justify-content: center;");
-client.println("    gap: 20px;");
-client.println("    margin-bottom: 20px;");
-client.println("}");
-client.println(".status-box {");
-client.println("    width: 140px;");
-client.println("    height: 40px;");
-client.println("    background: #222;");
-client.println("    border: 1px solid #555;");
-client.println("    border-radius: 6px;");
-client.println("    color: #fff;");
-client.println("    font-size: 18px;");
-client.println("    text-align: center;");
-client.println("    line-height: 40px;");
-client.println("}");
-client.println(".dpad-container {");
-client.println("    margin-top: 10px;");
-client.println("}");
-client.println(".row {");
-client.println("    display: flex;");
-client.println("    justify-content: center;");
-client.println("}");
-client.println(".btn {");
-client.println("    width: 80px;");
-client.println("    height: 80px;");
-client.println("    margin: 6px;");
-client.println("    border-radius: 12px;");
-client.println("    border: none;");
-client.println("    background: #333;");
-client.println("    color: #fff;");
-client.println("    font-size: 28px;");
-client.println("    cursor: pointer;");
-client.println("}");
+client.println("body { font-family: Arial, sans-serif; background: #111; color: #eee; margin: 0; padding: 0; text-align: center; }");
+client.println(".center-column { margin-top: 20px; }");
+client.println("select { font-size: 20px; padding: 8px; border-radius: 8px; margin-bottom: 10px; }");
+client.println(".status-row { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; }");
+client.println(".status-box { width: 140px; height: 40px; background: #222; border: 1px solid #555; border-radius: 6px; color: #fff; font-size: 18px; text-align: center; line-height: 40px; }");
+
+client.println(".dpad-container { margin-top: 10px; }");
+client.println(".row { display: flex; justify-content: center; }");
+client.println(".btn { width: 80px; height: 80px; margin: 6px; border-radius: 12px; border: none; background: #333; color: #fff; font-size: 28px; cursor: pointer; }");
 client.println(".btn:active { background: #555; }");
-client.println(".bottom-buttons {");
-client.println("    margin-top: 40px;");
-client.println("    margin-bottom: 20px;");
-client.println("    display: flex;");
-client.println("    justify-content: center;");
-client.println("    gap: 20px;");
-client.println("}");
-client.println(".action-btn {");
-client.println("    width: 140px;");
-client.println("    height: 60px;");
-client.println("    border-radius: 10px;");
-client.println("    border: none;");
-client.println("    background: #444;");
-client.println("    color: #fff;");
-client.println("    font-size: 24px;");
-client.println("    cursor: pointer;");
-client.println("}");
+
+client.println(".bottom-buttons { margin-top: 40px; margin-bottom: 20px; display: flex; justify-content: center; gap: 20px; }");
+client.println(".action-btn { width: 140px; height: 60px; border-radius: 10px; border: none; background: #444; color: #fff; font-size: 24px; cursor: pointer; }");
 client.println(".action-btn:active { background: #666; }");
+
+client.println(".grid-container { margin-top: 20px; }");
+client.println(".grid { display: grid; grid-template-columns: repeat(8, 40px); grid-template-rows: repeat(8, 40px); gap: 4px; }");
+client.println(".grid-cell { width: 40px; height: 40px; border-radius: 4px; }");
 client.println("</style>");
 
 client.println("<script>");
 client.println("function sendDirection(dir) {");
-client.println("    fetch('/controller', {");
-client.println("        method: 'POST',");
-client.println("        headers: { 'Content-Type': 'application/json' },");
-client.println("        body: JSON.stringify({ direction: dir })");
-client.println("    })");
-client.println("    .then(r => r.json())");
-client.println("    .then(data => {");
-client.println("        document.getElementById('hStatus').innerText = data.horiz;");
-client.println("        document.getElementById('vStatus').innerText = data.vert;");
-client.println("    });");
+client.println("  fetch('/controller', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ direction: dir }) })");
+client.println("  .then(r => r.json())");
+client.println("  .then(data => { document.getElementById('hStatus').innerText = data.horiz; document.getElementById('vStatus').innerText = data.vert; });");
 client.println("}");
+
 client.println("function sendAction(action) {");
-client.println("    fetch('/controller', {");
-client.println("        method: 'POST',");
-client.println("        headers: { 'Content-Type': 'application/json' },");
-client.println("        body: JSON.stringify({ action: action })");
-client.println("    });");
+client.println("  fetch('/controller', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: action }) });");
 client.println("}");
+
+client.println("document.addEventListener('DOMContentLoaded', () => {");
+client.println("  const dropdown = document.getElementById('dropdown');");
+client.println("  const dpad = document.querySelector('.dpad-container');");
+client.println("  const grid = document.getElementById('grid8x8');");
+
+client.println("  dropdown.addEventListener('change', function() {");
+client.println("    if (this.value === '8x8') { dpad.style.display = 'none'; grid.style.display = 'block'; }");
+client.println("    else { dpad.style.display = 'block'; grid.style.display = 'none'; }");
+client.println("  });");
+client.println("});");
 client.println("</script>");
 
 client.println("</head>");
 client.println("<body>");
 
 client.println("<div class='center-column'>");
-client.println("    <select id='dropdown'>");
-client.println("        <option value='robotA' selected>Robot A</option>");
-client.println("        <option value='robotB'>Robot B</option>");
-client.println("        <option value='robotC'>Robot C</option>");
-client.println("    </select>");
+client.println("  <select id='dropdown'>");
+client.println("    <option value='dpad' selected>DPad</option>");
+client.println("    <option value='8x8'>8x8</option>");
+client.println("    <option value='tba'>TBA</option>");
+client.println("  </select>");
 
-client.println("    <div class='status-row'>");
-client.println("        <div id='hStatus' class='status-box'></div>");
-client.println("        <div id='vStatus' class='status-box'></div>");
-client.println("    </div>");
+client.println("  <div class='status-row'>");
+client.println("    <div id='hStatus' class='status-box'></div>");
+client.println("    <div id='vStatus' class='status-box'></div>");
+client.println("  </div>");
 client.println("</div>");
 
-
 client.println("<div class='dpad-container'>");
-client.println("    <div class='row'>");
-client.println("        <button class='btn' onclick=\"sendDirection('up')\">&#9650;</button>");
-client.println("    </div>");
+client.println("  <div class='row'><button class='btn' onclick=\"sendDirection('up')\">&#9650;</button></div>");
+client.println("  <div class='row'>");
+client.println("    <button class='btn' onclick=\"sendDirection('left')\">&#9664;</button>");
+client.println("    <button class='btn' onclick=\"sendDirection('center')\">OK</button>");
+client.println("    <button class='btn' onclick=\"sendDirection('right')\">&#9654;</button>");
+client.println("  </div>");
+client.println("  <div class='row'><button class='btn' onclick=\"sendDirection('down')\">&#9660;</button></div>");
+client.println("</div>");
 
-client.println("    <div class='row'>");
-client.println("        <button class='btn' onclick=\"sendDirection('left')\">&#9664;</button>");
-client.println("        <button class='btn' onclick=\"sendDirection('center')\">OK</button>");
-client.println("        <button class='btn' onclick=\"sendDirection('right')\">&#9654;</button>");
-client.println("    </div>");
+client.println("<div id='grid8x8' class='grid-container' style='display:none;'>");
+client.println("  <div class='row'>");
+client.println("    <div class='grid'>");
 
-client.println("    <div class='row'>");
-client.println("        <button class='btn' onclick=\"sendDirection('down')\">&#9660;</button>");
+for (int r = 0; r < 8; r++) {
+    for (int c = 0; c < 8; c++) {
+
+        String color;
+
+        // Bottom row (row 7) = red gradient
+        // Second-from-bottom row (row 6) = same red gradient
+        if (r == 7 || r == 6) {
+            int shade = 50 + (c * 20);
+            if (shade > 255) shade = 255;
+            color = "rgb(" + String(shade) + ",0,0)";
+        }
+        // 3×3 green block shifted UP one row → now rows 2–4, cols 3–5
+        else if (r >= 2 && r <= 4 && c >= 3 && c <= 5) {
+            int shade = 80 + ((r - 2) * 40) + ((c - 3) * 20);
+            if (shade > 255) shade = 255;
+            color = "rgb(0," + String(shade) + ",0)";
+        }
+        // Default dark gray
+        else {
+            color = "#222";
+        }
+
+        client.print("      <div class='grid-cell' style='background:");
+        client.print(color);
+        client.println("'></div>");
+    }
+}
+
 client.println("    </div>");
+client.println("  </div>");
 client.println("</div>");
 
 client.println("<div class='bottom-buttons'>");
-client.println("    <button class='action-btn' onclick=\"sendAction('start')\">Start</button>");
-client.println("    <button class='action-btn' onclick=\"sendAction('stop')\">Stop</button>");
+client.println("  <button class='action-btn' onclick=\"sendAction('start')\">Start</button>");
+client.println("  <button class='action-btn' onclick=\"sendAction('stop')\">Stop</button>");
 client.println("</div>");
 
 client.println("</body>");
 client.println("</html>");
+
 
 }
 
