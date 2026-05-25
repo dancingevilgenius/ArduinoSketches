@@ -1,12 +1,25 @@
 #include <Arduino.h>
 #include <LittleFS.h>
 
+File root;
+File file;
 
 void setup() {
   Serial.begin(112500);
-  File root = LittleFS.open("/");
-  File file = root.openNextFile();
-  delay(2000);
+  delay(1000);
+
+  LittleFS.begin();
+  Serial.println("Exiting setup()");
+  delay(1000);
+
+}
+
+void loop() {
+
+
+  root = LittleFS.open("/");
+  file = root.openNextFile();
+
   Serial.println("Start List of files on microcontroller:");
   while(file){
       Serial.print("FILE: ");
@@ -14,13 +27,8 @@ void setup() {
       file = root.openNextFile();
   }
 
-  Serial.println("End listing files.");
+  Serial.println("End listing files.\n");
 
-}
-
-void loop() {
-  // put your main code here, to run repeatedly:
-  Serial.println("loop .");
-  delay(5000);
+  delay(2000);
 
 }
