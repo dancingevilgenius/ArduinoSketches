@@ -154,7 +154,8 @@ void setupGridColors(){
   Serial.println("setupGridColors() completed.  Initial display pattern");  
 }
 
-void loop() {
+void loopWebController() {
+
   NetworkClient client = server.available();
   if (!client) return;
 
@@ -233,8 +234,6 @@ void loop() {
         const char* menuValue = doc["menu"];
         Serial.print("Dropdown selected: ");
         Serial.println(menuValue);
-
-        // You can add logic here to react to menu selection
       }
 
       // ----------------------------
@@ -261,7 +260,7 @@ void loop() {
           client.println();
           client.println(out);
           return;
-      }      
+      }
     }
 
     // Build JSON response
@@ -284,8 +283,15 @@ void loop() {
   client.println("HTTP/1.1 400 Bad Request");
   client.println("Connection: close");
   client.println();
-  client.stop();  
+  client.stop();
 }
+
+
+void loop() {
+
+  loopWebController();
+}
+
 
 void sendResponseHeader(NetworkClient client) {
     
