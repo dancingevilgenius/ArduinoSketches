@@ -355,11 +355,20 @@ client.println("</script>");
 client.println("</head>");
 client.println("<body>");
 
+/*
 client.println("<div class='center-column'>");
 client.println("    <select id='dropdown'>");
 client.println("        <option value='robotA' selected>Robot A</option>");
 client.println("        <option value='robotB'>Robot B</option>");
 client.println("        <option value='robotC'>Robot C</option>");
+client.println("    </select>");
+*/
+
+client.println("<div class='center-column'>");
+client.println("    <select id='dropdown'>");
+client.println("        <option value='dpad' selected>DPad</option>");
+client.println("        <option value='8x8'>8x8</option>");
+client.println("        <option value='tba'>TBA</option>");
 client.println("    </select>");
 
 client.println("    <div class='status-row'>");
