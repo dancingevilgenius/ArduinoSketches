@@ -310,37 +310,42 @@ int newCoords[6][2];
 
 void loopSensors() {
 
-    long now = millis();
-    long dt = now - lastSensorUpdateTime;
+  loop8x8Sensors();
 
-    if (dt < SENSOR_INTERVAL_TIME) return;
+}
+
+void loop8x8Sensors() {
+  long now = millis();
+  long dt = now - lastSensorUpdateTime;
+
+  if (dt < SENSOR_INTERVAL_TIME) return;
 
 
-    // -----------------------------------------
-    // MOVE ONLY THE TRACKED GREEN CELL LEFT
-    // -----------------------------------------
+  // -----------------------------------------
+  // MOVE ONLY THE TRACKED GREEN CELL LEFT
+  // -----------------------------------------
 
-    // Get the current value
-    unsigned int value = gridColors[currentRow][currentCol];
+  // Get the current value
+  unsigned int value = gridColors[currentRow][currentCol];
 
-    // Clear old position
-    gridColors[currentRow][currentCol] = 0;
+  // Clear old position
+  gridColors[currentRow][currentCol] = 0;
 
-    // Compute new column with wrap
-    int newCol = currentCol - 1;
-    if (newCol < 0) newCol = 7;
+  // Compute new column with wrap
+  int newCol = currentCol - 1;
+  if (newCol < 0) newCol = 7;
 
-    // Write new position
-    gridColors[currentRow][newCol] = value;
+  // Write new position
+  gridColors[currentRow][newCol] = value;
 
-    // Update global tracker
-    currentCol = newCol;
+  // Update global tracker
+  currentCol = newCol;
 
-    Serial.print("Handle sensors. newCol:");
-    Serial.println(newCol);
+  //Serial.print("Handle sensors. newCol:");
+  //Serial.println(newCol);
 
-    // Update timestamp
-    lastSensorUpdateTime = now;
+  // Update timestamp
+  lastSensorUpdateTime = now;
 }
 
 void loop() {
