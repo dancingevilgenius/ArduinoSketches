@@ -70,6 +70,9 @@ int verticalIndex = 0;
 #define RED_OFFSET    0
 #define GREEN_OFFSET  10
 unsigned int gridColors[8][8];
+int currentRow = 3;
+int currentCol = 5;
+
 
 // ----------------------------
 // NAVIGATION FUNCTION
@@ -140,8 +143,10 @@ void setup() {
   setupGridColors();
 }
 
-void setupGridColors(){
-  gridColors[7][0] = RED_OFFSET + 0; // Black
+void setupGridColors() {
+
+  // Bottom red gradient (unchanged)
+  gridColors[7][0] = RED_OFFSET + 0;
   gridColors[7][1] = RED_OFFSET + 1;
   gridColors[7][2] = RED_OFFSET + 2;
   gridColors[7][3] = RED_OFFSET + 3;
@@ -150,14 +155,14 @@ void setupGridColors(){
   gridColors[7][6] = RED_OFFSET + 6;
   gridColors[7][7] = RED_OFFSET + 7;
 
-  gridColors[2][3] = GREEN_OFFSET + 2;
-  gridColors[2][4] = GREEN_OFFSET + 3;
-  gridColors[2][5] = GREEN_OFFSET + 4;
-  gridColors[3][3] = GREEN_OFFSET + 5;
-  gridColors[3][4] = GREEN_OFFSET + 6;
+  // Only ONE green cell now
   gridColors[3][5] = GREEN_OFFSET + 7;
 
-  Serial.println("setupGridColors() completed.  Initial display pattern");  
+  // Track its starting position
+  currentRow = 3;
+  currentCol = 5;
+
+  Serial.println("setupGridColors() completed. Initial display pattern");
 }
 
 void loopWebController() {
@@ -196,8 +201,8 @@ void loopWebController() {
     while (client.available() < contentLength) delay(1);
     while (client.available()) body += (char)client.read();
 
-    Serial.println("=== JSON BODY RECEIVED ===");
-    Serial.println(body);
+    //Serial.println("=== JSON BODY RECEIVED ===");
+    //Serial.println(body);
 
     StaticJsonDocument<300> doc;
     DeserializationError error = deserializeJson(doc, body);
@@ -292,6 +297,17 @@ void loopWebController() {
   client.stop();
 }
 
+
+// List of the 6 original coordinates
+int coords[6][2] = { 
+      {2,3}, {2,4}, {2,5},
+      {3,3}, {3,4}, {3,5}
+};
+
+// Temporary array to store new positions
+int newCoords[6][2];
+
+
 void loopSensors() {
 
     long now = millis();
@@ -299,55 +315,33 @@ void loopSensors() {
 
     if (dt < SENSOR_INTERVAL_TIME) return;
 
-    Serial.println("Handle sensors");
 
     // -----------------------------------------
-    // SHIFT THE 6 GREEN CELLS LEFT BY 1 COLUMN
+    // MOVE ONLY THE TRACKED GREEN CELL LEFT
     // -----------------------------------------
 
-    // List of the 6 original coordinates
-    int coords[6][2] = {
-        {2,3}, {2,4}, {2,5},
-        {3,3}, {3,4}, {3,5}
-    };
+    // Get the current value
+    unsigned int value = gridColors[currentRow][currentCol];
 
-    // Temporary array to store new positions
-    int newCoords[6][2];
+    // Clear old position
+    gridColors[currentRow][currentCol] = 0;
 
-    // Compute new positions (left shift with wrap)
-    for (int i = 0; i < 6; i++) {
-        int r = coords[i][0];
-        int c = coords[i][1];
+    // Compute new column with wrap
+    int newCol = currentCol - 1;
+    if (newCol < 0) newCol = 7;
 
-        int newC = c - 1;
-        if (newC < 0) newC = 7;   // wrap to right side
+    // Write new position
+    gridColors[currentRow][newCol] = value;
 
-        newCoords[i][0] = r;
-        newCoords[i][1] = newC;
-    }
+    // Update global tracker
+    currentCol = newCol;
 
-    // Clear the old 6 positions
-    for (int i = 0; i < 6; i++) {
-        int r = coords[i][0];
-        int c = coords[i][1];
-        gridColors[r][c] = 0;   // black
-    }
-
-    // Write the shifted values into new positions
-    for (int i = 0; i < 6; i++) {
-        int oldR = coords[i][0];
-        int oldC = coords[i][1];
-        int newR = newCoords[i][0];
-        int newC = newCoords[i][1];
-
-        gridColors[newR][newC] = gridColors[oldR][oldC] + 0;  
-        // (value preserved exactly)
-    }
+    Serial.print("Handle sensors. newCol:");
+    Serial.println(newCol);
 
     // Update timestamp
     lastSensorUpdateTime = now;
 }
-
 
 void loop() {
 
