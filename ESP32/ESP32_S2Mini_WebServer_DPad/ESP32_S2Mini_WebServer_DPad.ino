@@ -23,6 +23,10 @@ bool verbose = false; // Used to hide some of the less important web server conn
 
 #define BUILTIN_LED 15 // ESP32-S2 Mini
 
+// -- For Sensors loop
+#define SENSOR_INTERVAL_TIME 1000   // milliseconds
+long lastSensorUpdateTime = 0;
+
 
 // ----------------------------
 // MENU SYSTEM (Hierarchical)
@@ -286,9 +290,25 @@ void loopWebController() {
   client.stop();
 }
 
+void loopSensors() {
+
+    long now = millis();
+    long dt = now - lastSensorUpdateTime;
+
+    // If not enough time has passed, exit immediately
+    if (dt < SENSOR_INTERVAL_TIME) return;
+
+    // Enough time has passed — handle sensors
+    Serial.println("Handle sensors");
+
+    // Update timestamp
+    lastSensorUpdateTime = now;
+}
+
 
 void loop() {
 
+  loopSensors();
   loopWebController();
 }
 
