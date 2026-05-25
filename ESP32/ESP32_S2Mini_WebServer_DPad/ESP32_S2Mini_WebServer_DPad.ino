@@ -23,6 +23,7 @@ bool verbose = false; // Used to hide some of the less important web server conn
 
 #define BUILTIN_LED 15 // ESP32-S2 Mini
 
+
 // ----------------------------
 // MENU SYSTEM (Hierarchical)
 // ----------------------------
@@ -55,6 +56,14 @@ int verticalCounts[] = {
 };
 
 int verticalIndex = 0;
+
+
+// ---------------------
+//  8x8 web grid colors
+// ---------------------
+#define RED_OFFSET    0
+#define GREEN_OFFSET  10
+unsigned int gridColors[8][8];
 
 // ----------------------------
 // NAVIGATION FUNCTION
@@ -122,8 +131,24 @@ void setup() {
 
   server.begin();
 
+  setupGridColors();
 }
 
+void setupGridColors(){
+  gridColors[7][0] = RED_OFFSET + 1;
+  gridColors[7][1] = RED_OFFSET + 2;
+  gridColors[7][2] = RED_OFFSET + 3;
+  gridColors[7][3] = RED_OFFSET + 4;
+  gridColors[7][4] = RED_OFFSET + 5;
+  gridColors[7][5] = RED_OFFSET + 6;
+  gridColors[7][6] = RED_OFFSET + 7;
+
+  gridColors[2][3] = GREEN_OFFSET + 1;
+  gridColors[2][4] = GREEN_OFFSET + 3;
+  gridColors[3][3] = GREEN_OFFSET + 5;
+
+  Serial.println("setupGridColors() completed.  Initial display pattern");  
+}
 
 void loop() {
   NetworkClient client = server.available();
@@ -207,6 +232,32 @@ void loop() {
 
         // You can add logic here to react to menu selection
       }
+
+      // ----------------------------
+      // FRONTEND PERIODIC GRID REQUEST
+      // ----------------------------
+      if (doc.containsKey("requestGrid")) {
+
+          StaticJsonDocument<700> response;
+
+          JsonArray grid = response.createNestedArray("grid");
+          for (int r = 0; r < 8; r++) {
+              JsonArray row = grid.createNestedArray();
+              for (int c = 0; c < 8; c++) {
+                  row.add(gridColors[r][c]);
+              }
+          }
+
+          String out;
+          serializeJson(response, out);
+
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-Type: application/json");
+          client.println("Connection: close");
+          client.println();
+          client.println(out);
+          return;
+      }      
     }
 
     // Build JSON response
@@ -275,20 +326,86 @@ client.println(".action-btn:active { background: #666; }");
 
 client.println(".grid-container { margin-top: 20px; }");
 client.println(".grid { display: grid; grid-template-columns: repeat(8, 40px); grid-template-rows: repeat(8, 40px); gap: 4px; }");
-client.println(".grid-cell { width: 40px; height: 40px; border-radius: 4px; }");
+client.println(".grid-cell { width: 40px; height: 40px; border-radius: 4px; background: #000; }");
 client.println("</style>");
 
 client.println("<script>");
+
+// ------------------------------
+// SEND DIRECTION
+// ------------------------------
 client.println("function sendDirection(dir) {");
-client.println("  fetch('/controller', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ direction: dir }) })");
+client.println("  fetch('/controller', {");
+client.println("    method: 'POST',");
+client.println("    headers: { 'Content-Type': 'application/json' },");
+client.println("    body: JSON.stringify({ direction: dir })");
+client.println("  })");
 client.println("  .then(r => r.json())");
-client.println("  .then(data => { document.getElementById('hStatus').innerText = data.horiz; document.getElementById('vStatus').innerText = data.vert; });");
+client.println("  .then(data => {");
+client.println("    document.getElementById('hStatus').innerText = data.horiz;");
+client.println("    document.getElementById('vStatus').innerText = data.vert;");
+client.println("    if (data.grid) updateGrid(data.grid);");
+client.println("  });");
 client.println("}");
 
+// ------------------------------
+// SEND ACTION
+// ------------------------------
 client.println("function sendAction(action) {");
-client.println("  fetch('/controller', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: action }) });");
+client.println("  fetch('/controller', {");
+client.println("    method: 'POST',");
+client.println("    headers: { 'Content-Type': 'application/json' },");
+client.println("    body: JSON.stringify({ action: action })");
+client.println("  })");
+client.println("  .then(r => r.json())");
+client.println("  .then(data => { if (data.grid) updateGrid(data.grid); });");
 client.println("}");
 
+// ------------------------------
+// UPDATE GRID COLORS
+// ------------------------------
+client.println("function updateGrid(cells) {");
+client.println("  const grid = document.querySelectorAll('.grid-cell');");
+client.println("  let index = 0;");
+client.println("  for (let r = 0; r < 8; r++) {");
+client.println("    for (let c = 0; c < 8; c++) {");
+client.println("      const val = cells[r][c];");
+client.println("      let color = '#000';");
+
+client.println("      if (val === 0) {");
+client.println("        color = 'rgb(0,0,0)';");
+client.println("      } else if (val >= 1 && val <= 7) {");
+client.println("        const shade = Math.min(255, 30 + val * 30);");
+client.println("        color = `rgb(${shade},0,0)`;");
+client.println("      } else if (val >= 10 && val <= 17) {");
+client.println("        const level = val - 10;");
+client.println("        const shade = Math.min(255, 30 + level * 30);");
+client.println("        color = `rgb(0,${shade},0)`;");
+client.println("      } else {");
+client.println("        color = '#222';");
+client.println("      }");
+
+client.println("      grid[index].style.background = color;");
+client.println("      index++;");
+client.println("    }");
+client.println("  }");
+client.println("}");
+
+client.println("setInterval(() => {");
+client.println("  fetch('/controller', {");
+client.println("    method: 'POST',");
+client.println("    headers: { 'Content-Type': 'application/json' },");
+client.println("    body: JSON.stringify({ requestGrid: true })");
+client.println("  })");
+client.println("  .then(r => r.json())");
+client.println("  .then(data => { if (data.grid) updateGrid(data.grid); });");
+client.println("}, 500);");
+
+
+
+// ------------------------------
+// DROPDOWN TOGGLE
+// ------------------------------
 client.println("document.addEventListener('DOMContentLoaded', () => {");
 client.println("  const dropdown = document.getElementById('dropdown');");
 client.println("  const dpad = document.querySelector('.dpad-container');");
@@ -299,8 +416,8 @@ client.println("    if (this.value === '8x8') { dpad.style.display = 'none'; gri
 client.println("    else { dpad.style.display = 'block'; grid.style.display = 'none'; }");
 client.println("  });");
 client.println("});");
-client.println("</script>");
 
+client.println("</script>");
 client.println("</head>");
 client.println("<body>");
 
@@ -333,30 +450,7 @@ client.println("    <div class='grid'>");
 
 for (int r = 0; r < 8; r++) {
     for (int c = 0; c < 8; c++) {
-
-        String color;
-
-        // Bottom row (row 7) = red gradient
-        // Second-from-bottom row (row 6) = same red gradient
-        if (r == 7 || r == 6) {
-            int shade = 50 + (c * 20);
-            if (shade > 255) shade = 255;
-            color = "rgb(" + String(shade) + ",0,0)";
-        }
-        // 3×3 green block shifted UP one row → now rows 2–4, cols 3–5
-        else if (r >= 2 && r <= 4 && c >= 3 && c <= 5) {
-            int shade = 80 + ((r - 2) * 40) + ((c - 3) * 20);
-            if (shade > 255) shade = 255;
-            color = "rgb(0," + String(shade) + ",0)";
-        }
-        // Default dark gray
-        else {
-            color = "#222";
-        }
-
-        client.print("      <div class='grid-cell' style='background:");
-        client.print(color);
-        client.println("'></div>");
+        client.println("      <div class='grid-cell'></div>");
     }
 }
 
@@ -371,7 +465,6 @@ client.println("</div>");
 
 client.println("</body>");
 client.println("</html>");
-
 
 }
 
