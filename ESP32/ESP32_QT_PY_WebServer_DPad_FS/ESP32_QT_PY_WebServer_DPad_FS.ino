@@ -10,8 +10,10 @@ Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
 
 // Network credentials Here
-const char* ssid     = "STDL5301";	// Change this for your project
-const char* password = "library30";	// Change this for your project
+//const char* ssid     = "STDL5301";	// Change this for your project
+//const char* password = "library30";	// Change this for your project
+const char* ssid     = "TheMandalorian";	// Change this for your project
+const char* password = "6302201111";	// Change this for your project
 
 NetworkServer server(80);
 
@@ -90,16 +92,21 @@ void navigateMenu(const String& direction) {
 }
 
 void setup() {
-  Serial.begin(115200);
-
   delay(2000);
 
+  Serial.begin(115200);
+  delay(2000);
+  Serial.println("Webserver DPAD FS setup()");
 
-  setupLittleFS();
+  esp_log_level_set("*", ESP_LOG_NONE);  
+
+  setupNeopixel();
 
   setupWifiConnection();
 
-  setupNeopixel();
+  setupLittleFS();
+
+
 
 }
 
@@ -109,10 +116,11 @@ void setupWifiConnection(){
   int count=0;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.println("Attempting to connect. count:" + count++);
-    if(count > 15){
-      Serial.println("Too many wifi connection failed attempts. Exiting program");
-      exit(3);
+    Serial.print("Attempting to connect. count:");
+    Serial.println(count++);
+    if(count > 25){
+      Serial.println("Too many wifi connection failed attempts. Exiting wifi setup.");
+      return;
     }
   }
 
@@ -126,21 +134,50 @@ void setupWifiConnection(){
 
 }
 
+bool isFormatted = false;
+
 boolean setupLittleFS(){
 
   // 1. Start LittleFS
   if(!LittleFS.begin()) {
     Serial.println("LittleFS Mount Failed. exiting program");
-    exit(1);
+    delay(3000);
   }
+
+  // if(!isFormatted){
+  //   LittleFS.format();
+  //   isFormatted = true;
+  //   Serial.println("run format.");
+  // }
+
+  listAvailableFiles();
 
   htmlFile = LittleFS.open("/index.html", "r");
   if(!htmlFile){
-    Serial.println("Failed to open index.html  exiting program.");
-    exit(2);
+    Serial.println("Failed to open index.html");
   }  
-
+  Serial.println("setupLittleFS() finished.");
+  delay(3000);
 }
+
+void listAvailableFiles(){
+
+  File root;
+  File file;
+
+  root = LittleFS.open("/");
+  file = root.openNextFile();
+
+  Serial.println("Start List of files on microcontroller:");
+  while(file){
+      Serial.print("FILE: ");
+      Serial.println(file.name());
+      file = root.openNextFile();
+  }
+
+  Serial.println("End listing files.\n");
+}
+
 
 
 
@@ -164,11 +201,20 @@ void serveFile(WiFiClient &client, const char* path) {
     client.write(file.read());
   }
   file.close();
+  Serial.println("Exiting serveFile()");
 }
 
 void loop() {
+
+  Serial.println("loop.");
+
   NetworkClient client = server.available();
-  if (!client) return;
+  if (!client){
+    Serial.println("ERROR: client not available.");
+    delay(500);
+    return;
+  }
+  Serial.println("client available.");
 
   String request = "";
   unsigned long timeout = millis();
@@ -184,6 +230,8 @@ void loop() {
 
   // Serve index.html
   if (request.startsWith("GET / ") || request.startsWith("GET /index.html")) {
+    Serial.println("Initial load of index.html");
+
     serveFile(client, "/index.html");
     client.stop();
     return;
@@ -346,6 +394,7 @@ void setupNeopixel(){
   // Show Green to start
   pixels.fill(0x00FF00);
   pixels.show();
+  Serial.println("setupNeopixel() finished");
 }
 
 
