@@ -295,11 +295,52 @@ void loopSensors() {
     long now = millis();
     long dt = now - lastSensorUpdateTime;
 
-    // If not enough time has passed, exit immediately
     if (dt < SENSOR_INTERVAL_TIME) return;
 
-    // Enough time has passed — handle sensors
     Serial.println("Handle sensors");
+
+    // -----------------------------------------
+    // SHIFT THE 6 GREEN CELLS LEFT BY 1 COLUMN
+    // -----------------------------------------
+
+    // List of the 6 original coordinates
+    int coords[6][2] = {
+        {2,3}, {2,4}, {2,5},
+        {3,3}, {3,4}, {3,5}
+    };
+
+    // Temporary array to store new positions
+    int newCoords[6][2];
+
+    // Compute new positions (left shift with wrap)
+    for (int i = 0; i < 6; i++) {
+        int r = coords[i][0];
+        int c = coords[i][1];
+
+        int newC = c - 1;
+        if (newC < 0) newC = 7;   // wrap to right side
+
+        newCoords[i][0] = r;
+        newCoords[i][1] = newC;
+    }
+
+    // Clear the old 6 positions
+    for (int i = 0; i < 6; i++) {
+        int r = coords[i][0];
+        int c = coords[i][1];
+        gridColors[r][c] = 0;   // black
+    }
+
+    // Write the shifted values into new positions
+    for (int i = 0; i < 6; i++) {
+        int oldR = coords[i][0];
+        int oldC = coords[i][1];
+        int newR = newCoords[i][0];
+        int newC = newCoords[i][1];
+
+        gridColors[newR][newC] = gridColors[oldR][oldC] + 0;  
+        // (value preserved exactly)
+    }
 
     // Update timestamp
     lastSensorUpdateTime = now;
