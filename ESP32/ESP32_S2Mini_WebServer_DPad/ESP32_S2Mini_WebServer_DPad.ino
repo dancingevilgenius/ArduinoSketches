@@ -135,17 +135,21 @@ void setup() {
 }
 
 void setupGridColors(){
-  gridColors[7][0] = RED_OFFSET + 1;
-  gridColors[7][1] = RED_OFFSET + 2;
-  gridColors[7][2] = RED_OFFSET + 3;
-  gridColors[7][3] = RED_OFFSET + 4;
-  gridColors[7][4] = RED_OFFSET + 5;
-  gridColors[7][5] = RED_OFFSET + 6;
-  gridColors[7][6] = RED_OFFSET + 7;
+  gridColors[7][0] = RED_OFFSET + 0; // Black
+  gridColors[7][1] = RED_OFFSET + 1;
+  gridColors[7][2] = RED_OFFSET + 2;
+  gridColors[7][3] = RED_OFFSET + 3;
+  gridColors[7][4] = RED_OFFSET + 4;
+  gridColors[7][5] = RED_OFFSET + 5;
+  gridColors[7][6] = RED_OFFSET + 6;
+  gridColors[7][7] = RED_OFFSET + 7;
 
-  gridColors[2][3] = GREEN_OFFSET + 1;
+  gridColors[2][3] = GREEN_OFFSET + 2;
   gridColors[2][4] = GREEN_OFFSET + 3;
+  gridColors[2][5] = GREEN_OFFSET + 4;
   gridColors[3][3] = GREEN_OFFSET + 5;
+  gridColors[3][4] = GREEN_OFFSET + 6;
+  gridColors[3][5] = GREEN_OFFSET + 7;
 
   Serial.println("setupGridColors() completed.  Initial display pattern");  
 }
