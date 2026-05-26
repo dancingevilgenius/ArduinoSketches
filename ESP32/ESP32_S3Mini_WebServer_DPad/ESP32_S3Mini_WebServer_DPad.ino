@@ -12,10 +12,10 @@
 // Network credentials Here
 //const char* ssid     = "STDL5301";	// Change this for your project
 //const char* password = "library30";	// Change this for your project
-//const char* ssid     = "TheMandalorian";	// Change this for your project
-//const char* password = "6302201111";	// Change this for your project
-const char* ssid     = "TheMandaloriKen";	// Change this for your project
-const char* password = "asdf12346302201111";	// Change this for your project
+const char* ssid     = "TheMandalorian";	// Change this for your project
+const char* password = "6302201111";	// Change this for your project
+//const char* ssid     = "TheMandaloriKen";	// Change this for your project
+//const char* password = "asdf12346302201111";	// Change this for your project
 
 // Set web server port number to 80
 NetworkServer server(80);
@@ -26,7 +26,7 @@ bool verbose = false; // Used to hide some of the less important web server conn
 #define BUILTIN_LED 15 // ESP32-S2 Mini
 
 // -- For Sensors loop
-#define SENSOR_INTERVAL_TIME 1000   // milliseconds
+#define SENSOR_INTERVAL_TIME 150   // milliseconds
 long lastSensorUpdateTime = 0;
 
 
@@ -298,14 +298,7 @@ void loopWebController() {
 }
 
 
-// List of the 6 original coordinates
-int coords[6][2] = { 
-      {2,3}, {2,4}, {2,5},
-      {3,3}, {3,4}, {3,5}
-};
 
-// Temporary array to store new positions
-int newCoords[6][2];
 
 
 void loopSensors() {
@@ -464,6 +457,9 @@ client.println("  }");
 client.println("}");
 
 client.println("setInterval(() => {");
+client.println("  const mode = document.getElementById('dropdown').value;");
+client.println("  if (mode !== '8x8') return;");   // Only poll in 8x8 mode");
+client.println("");
 client.println("  fetch('/controller', {");
 client.println("    method: 'POST',");
 client.println("    headers: { 'Content-Type': 'application/json' },");
@@ -471,8 +467,7 @@ client.println("    body: JSON.stringify({ requestGrid: true })");
 client.println("  })");
 client.println("  .then(r => r.json())");
 client.println("  .then(data => { if (data.grid) updateGrid(data.grid); });");
-client.println("}, 500);");
-
+client.println("}, 100);");
 
 
 // ------------------------------
