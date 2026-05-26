@@ -26,7 +26,7 @@ bool verbose = false; // Used to hide some of the less important web server conn
 #define BUILTIN_LED 15 // ESP32-S2 Mini
 
 // -- For Sensors loop
-#define SENSOR_INTERVAL_TIME 1000   // milliseconds
+#define SENSOR_INTERVAL_TIME 300   // milliseconds
 long lastSensorUpdateTime = 0;
 
 
@@ -298,14 +298,7 @@ void loopWebController() {
 }
 
 
-// List of the 6 original coordinates
-int coords[6][2] = { 
-      {2,3}, {2,4}, {2,5},
-      {3,3}, {3,4}, {3,5}
-};
 
-// Temporary array to store new positions
-int newCoords[6][2];
 
 
 void loopSensors() {
@@ -474,7 +467,7 @@ client.println("    body: JSON.stringify({ requestGrid: true })");
 client.println("  })");
 client.println("  .then(r => r.json())");
 client.println("  .then(data => { if (data.grid) updateGrid(data.grid); });");
-client.println("}, 500);");
+client.println("}, 100);");
 
 
 // ------------------------------
