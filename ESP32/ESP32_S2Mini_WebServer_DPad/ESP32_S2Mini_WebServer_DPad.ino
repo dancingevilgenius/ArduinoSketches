@@ -10,10 +10,12 @@
 #include <ArduinoJson.h>
 
 // Network credentials Here
-const char* ssid     = "STDL5301";	// Change this for your project
-const char* password = "library30";	// Change this for your project
+//const char* ssid     = "STDL5301";	// Change this for your project
+//const char* password = "library30";	// Change this for your project
 //const char* ssid     = "TheMandalorian";	// Change this for your project
 //const char* password = "6302201111";	// Change this for your project
+const char* ssid     = "TheMandaloriKen";	// Change this for your project
+const char* password = "asdf12346302201111";	// Change this for your project
 
 // Set web server port number to 80
 NetworkServer server(80);
@@ -24,7 +26,7 @@ bool verbose = false; // Used to hide some of the less important web server conn
 #define BUILTIN_LED 15 // ESP32-S2 Mini
 
 // -- For Sensors loop
-#define SENSOR_INTERVAL_TIME 1000   // milliseconds
+#define SENSOR_INTERVAL_TIME 150   // milliseconds
 long lastSensorUpdateTime = 0;
 
 
@@ -68,6 +70,9 @@ int verticalIndex = 0;
 #define RED_OFFSET    0
 #define GREEN_OFFSET  10
 unsigned int gridColors[8][8];
+int currentRow = 3;
+int currentCol = 5;
+
 
 // ----------------------------
 // NAVIGATION FUNCTION
@@ -138,8 +143,10 @@ void setup() {
   setupGridColors();
 }
 
-void setupGridColors(){
-  gridColors[7][0] = RED_OFFSET + 0; // Black
+void setupGridColors() {
+
+  // Bottom red gradient (unchanged)
+  gridColors[7][0] = RED_OFFSET + 0;
   gridColors[7][1] = RED_OFFSET + 1;
   gridColors[7][2] = RED_OFFSET + 2;
   gridColors[7][3] = RED_OFFSET + 3;
@@ -148,14 +155,14 @@ void setupGridColors(){
   gridColors[7][6] = RED_OFFSET + 6;
   gridColors[7][7] = RED_OFFSET + 7;
 
-  gridColors[2][3] = GREEN_OFFSET + 2;
-  gridColors[2][4] = GREEN_OFFSET + 3;
-  gridColors[2][5] = GREEN_OFFSET + 4;
-  gridColors[3][3] = GREEN_OFFSET + 5;
-  gridColors[3][4] = GREEN_OFFSET + 6;
+  // Only ONE green cell now
   gridColors[3][5] = GREEN_OFFSET + 7;
 
-  Serial.println("setupGridColors() completed.  Initial display pattern");  
+  // Track its starting position
+  currentRow = 3;
+  currentCol = 5;
+
+  Serial.println("setupGridColors() completed. Initial display pattern");
 }
 
 void loopWebController() {
@@ -194,8 +201,8 @@ void loopWebController() {
     while (client.available() < contentLength) delay(1);
     while (client.available()) body += (char)client.read();
 
-    Serial.println("=== JSON BODY RECEIVED ===");
-    Serial.println(body);
+    //Serial.println("=== JSON BODY RECEIVED ===");
+    //Serial.println(body);
 
     StaticJsonDocument<300> doc;
     DeserializationError error = deserializeJson(doc, body);
@@ -290,62 +297,49 @@ void loopWebController() {
   client.stop();
 }
 
+
+
+
+
 void loopSensors() {
 
-    long now = millis();
-    long dt = now - lastSensorUpdateTime;
+  loop8x8Sensors();
 
-    if (dt < SENSOR_INTERVAL_TIME) return;
-
-    Serial.println("Handle sensors");
-
-    // -----------------------------------------
-    // SHIFT THE 6 GREEN CELLS LEFT BY 1 COLUMN
-    // -----------------------------------------
-
-    // List of the 6 original coordinates
-    int coords[6][2] = {
-        {2,3}, {2,4}, {2,5},
-        {3,3}, {3,4}, {3,5}
-    };
-
-    // Temporary array to store new positions
-    int newCoords[6][2];
-
-    // Compute new positions (left shift with wrap)
-    for (int i = 0; i < 6; i++) {
-        int r = coords[i][0];
-        int c = coords[i][1];
-
-        int newC = c - 1;
-        if (newC < 0) newC = 7;   // wrap to right side
-
-        newCoords[i][0] = r;
-        newCoords[i][1] = newC;
-    }
-
-    // Clear the old 6 positions
-    for (int i = 0; i < 6; i++) {
-        int r = coords[i][0];
-        int c = coords[i][1];
-        gridColors[r][c] = 0;   // black
-    }
-
-    // Write the shifted values into new positions
-    for (int i = 0; i < 6; i++) {
-        int oldR = coords[i][0];
-        int oldC = coords[i][1];
-        int newR = newCoords[i][0];
-        int newC = newCoords[i][1];
-
-        gridColors[newR][newC] = gridColors[oldR][oldC] + 0;  
-        // (value preserved exactly)
-    }
-
-    // Update timestamp
-    lastSensorUpdateTime = now;
 }
 
+void loop8x8Sensors() {
+  long now = millis();
+  long dt = now - lastSensorUpdateTime;
+
+  if (dt < SENSOR_INTERVAL_TIME) return;
+
+
+  // -----------------------------------------
+  // MOVE ONLY THE TRACKED GREEN CELL LEFT
+  // -----------------------------------------
+
+  // Get the current value
+  unsigned int value = gridColors[currentRow][currentCol];
+
+  // Clear old position
+  gridColors[currentRow][currentCol] = 0;
+
+  // Compute new column with wrap
+  int newCol = currentCol - 1;
+  if (newCol < 0) newCol = 7;
+
+  // Write new position
+  gridColors[currentRow][newCol] = value;
+
+  // Update global tracker
+  currentCol = newCol;
+
+  //Serial.print("Handle sensors. newCol:");
+  //Serial.println(newCol);
+
+  // Update timestamp
+  lastSensorUpdateTime = now;
+}
 
 void loop() {
 
@@ -463,6 +457,9 @@ client.println("  }");
 client.println("}");
 
 client.println("setInterval(() => {");
+client.println("  const mode = document.getElementById('dropdown').value;");
+client.println("  if (mode !== '8x8') return;");   // Only poll in 8x8 mode");
+client.println("");
 client.println("  fetch('/controller', {");
 client.println("    method: 'POST',");
 client.println("    headers: { 'Content-Type': 'application/json' },");
@@ -470,8 +467,7 @@ client.println("    body: JSON.stringify({ requestGrid: true })");
 client.println("  })");
 client.println("  .then(r => r.json())");
 client.println("  .then(data => { if (data.grid) updateGrid(data.grid); });");
-client.println("}, 500);");
-
+client.println("}, 100);");
 
 
 // ------------------------------
