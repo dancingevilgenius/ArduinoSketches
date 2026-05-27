@@ -8,7 +8,6 @@ https://github.com/sparkfun/SparkFun_Serial_Controlled_Motor_Driver_Arduino_Libr
 
 Resources:
 Uses Wire.h for i2c operation
-Uses SPI.h for SPI operation
 
 Development environment specifics:
 <arduino/development environment version>
@@ -48,7 +47,6 @@ Distributed as-is; no warranty is given.
 #include "Wire.h"
 #endif
 
-#include "SPI.h"
 
 //****************************************************************************//
 //
@@ -62,11 +60,11 @@ SCMD::SCMD( void )
 	//Construct with these default settings if nothing is specified
 
 	//Select interface mode
-	settings.commInterface = I2C_MODE; //I2C_MODE or SPI_MODE
+	settings.commInterface = I2C_MODE; 
 	//Select default I2C address.
-	settings.I2CAddress = 0x58; //Ignored for SPI_MODE
+	settings.I2CAddress = 0x58; 
 	//Select default SPI CS pin.
-	settings.chipSelectPin = 10; //Ignored for I2C_MODE
+	settings.chipSelectPin = 10; 
 
 }
 
@@ -78,9 +76,6 @@ SCMD::SCMD( void )
 //    This uses the stored SensorSettings to start the IMU.
 //  
 //  Example usage:
-//  //Configure for SPI mode using default CS pin of 10
-//  mySensor.settings.commInterface = SPI_MODE; 
-//  mySensor.begin();
 //
 //****************************************************************************//
 uint8_t SCMD::begin( void )
@@ -93,23 +88,6 @@ uint8_t SCMD::begin( void )
 
 	case I2C_MODE:
 		Wire.begin();
-		break;
-
-	case SPI_MODE:
-		// initalize the  data ready and chip select pins:
-		pinMode(settings.chipSelectPin, OUTPUT);
-		digitalWrite(settings.chipSelectPin, HIGH);
-		// Delay to give the target time to clear any faults induced by the low
-		// start the SPI library:
-		SPI.begin();
-		// Maximum SPI frequency is 1MHz use SPI_CLK_DIV16
-		//SPI.setClockDivider(SPI_CLOCK_DIV32);
-		SPI.beginTransaction(SPISettings(500000, MSBFIRST, SPI_MODE0));
-		// Data is read and written MSb first.
-		SPI.setBitOrder(MSBFIRST);
-		// Data is captured on rising edge of clock (CPHA = 0)
-		// Base value of the clock is LOW (CPOL = 0)
-		SPI.setDataMode(SPI_MODE0);
 		break;
 
 	default:
@@ -444,28 +422,6 @@ uint8_t SCMD::readRegister(uint8_t offset)
 		}
 		break;
 
-	case SPI_MODE:
-		// take the chip select low to select the device:
-		digitalWrite(settings.chipSelectPin, LOW);
-		// send the device the register you want to read:
-		SPI.transfer(offset | 0x80);  //Ored with "read request" bit
-		// take the chip select high to de-select:
-		digitalWrite(settings.chipSelectPin, HIGH);
-		
-		//For loop delay for 16 Mhz CPU
-		for(volatile int i = 0; i < 50; i++);
-		
-		//do a dummy read
-		digitalWrite(settings.chipSelectPin, LOW);
-		// send a value of 80 to read the first byte returned:
-		result = SPI.transfer(0x80);
-		// take the chip select high to de-select:
-		digitalWrite(settings.chipSelectPin, HIGH);
-		
-		//For loop delay for 16 Mhz CPU
-		for(volatile int i = 0; i < 50; i++);
-		
-		break;
 
 	default:
 		break;
@@ -503,20 +459,6 @@ void SCMD::writeRegister(uint8_t offset, uint8_t dataToWrite)
 //		delay(1);
 		break;
 
-	case SPI_MODE:
-		// take the chip select low to select the device:
-		digitalWrite(settings.chipSelectPin, LOW);
-		// send the device the register you want to read:
-		SPI.transfer(offset & 0x7F);
-		// send a value of 0 to read the first byte returned:
-		SPI.transfer(dataToWrite);
-		// decrement the number of bytes left to read:
-		// take the chip select high to de-select:
-		digitalWrite(settings.chipSelectPin, HIGH);
-		
-		for(volatile int i = 0; i < 50; i++);
-		
-		break;
 
 	default:
 		break;
