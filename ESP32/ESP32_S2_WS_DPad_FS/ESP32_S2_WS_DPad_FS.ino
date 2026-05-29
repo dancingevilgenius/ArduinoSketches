@@ -180,6 +180,10 @@ void listAvailableFiles(){
 
 
 void loop() {
+  loopWebServer();
+}
+
+void loopWebServer(){
   WiFiClient client = server.available();
   if (!client){
     return;
@@ -255,6 +259,7 @@ void loop() {
   client.println("Connection: close");
   client.println();
   client.stop();
+
 }
 
 void handleDirectionParam(String direction){
