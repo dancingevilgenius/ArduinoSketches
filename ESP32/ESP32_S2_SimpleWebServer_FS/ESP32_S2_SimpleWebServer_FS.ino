@@ -1,11 +1,9 @@
 #include <WiFi.h>
 #include <LittleFS.h>
 
-
-//const char* ssid     = "STDL5301";    const char* password = "library30";	// Change this for your project
-//const char* ssid     = "TheMandalorian";  const char* password = "6302201111";	// Change this for your project
-const char* ssid     = "TheMandaloriKen";   const char* password = "asdf12346302201111";	// Change this for your project
-
+//const char* ssid     = "STDL5301";    const char* password = "library30";    // Change this for your project
+//const char* ssid     = "TheMandalorian";  const char* password = "6302201111";    // Change this for your project
+const char* ssid     = "TheMandaloriKen";   const char* password = "asdf12346302201111";    // Change this for your project
 
 WiFiServer server(80);
 
@@ -17,13 +15,16 @@ bool loadIndexHtmlToPSRAM() {
     File file = LittleFS.open("/index.html", "r");
     if (!file) {
         Serial.println("Failed to open /index.html from LittleFS");
+        delay(1000);
         return false;
     }
+    delay(1000);
 
     htmlSize = file.size();
     if (htmlSize == 0) {
         Serial.println("/index.html is empty");
         file.close();
+        delay(1000);
         return false;
     }
 
@@ -32,6 +33,7 @@ bool loadIndexHtmlToPSRAM() {
     if (!htmlPage) {
         Serial.println("ps_malloc failed (no PSRAM?)");
         file.close();
+        delay(1000);
         return false;
     }
 
@@ -44,11 +46,13 @@ bool loadIndexHtmlToPSRAM() {
         free(htmlPage);
         htmlPage = nullptr;
         htmlSize = 0;
+        delay(1000);
         return false;
     }
 
-    htmlPage[htmlSize] = '\0'; // null-terminate for safety
+    htmlPage[htmlSize] = '\0';
     Serial.printf("Loaded /index.html into PSRAM (%u bytes)\n", (unsigned)htmlSize);
+    delay(1000);
     return true;
 }
 
@@ -79,8 +83,8 @@ void sendOK(WiFiClient &client, const char* msg) {
 
 void setup() {
     Serial.begin(115200);
-    delay(1000);
-    
+    delay(500);
+
     // Check PSRAM
     if (!psramFound()) {
         Serial.println("PSRAM not found! Make sure it's enabled in board settings.");
@@ -106,7 +110,6 @@ void setup() {
     // WiFi
     WiFi.begin(ssid, password);
     Serial.print("Connecting to WiFi");
-    delay(1000);
     while (WiFi.status() != WL_CONNECTED) {
         delay(300);
         Serial.print(".");
@@ -114,6 +117,7 @@ void setup() {
     Serial.println("\nWiFi connected.");
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
+    delay(1000);
 
     server.begin();
 }
@@ -122,9 +126,8 @@ void loop() {
     WiFiClient client = server.available();
     if (!client) return;
 
-    // Simple request line parsing
     String req = client.readStringUntil('\r');
-    client.readStringUntil('\n'); // consume newline
+    client.readStringUntil('\n');
 
     if (req.startsWith("GET / ")) {
         serveHTML(client);
