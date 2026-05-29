@@ -202,28 +202,25 @@ void serveFile(WiFiClient &client, const char* path) {
 }
 
 void loop() {
-
-
-  NetworkClient client = server.available();
+  WiFiClient client = server.available();
   if (!client){
     return;
   }
-  Serial.println("client available.");
 
-  String request = "";
+  String req = "";
   unsigned long timeout = millis();
 
   // Read headers
   while (client.connected() && millis() - timeout < 2000) {
     if (client.available()) {
       char c = client.read();
-      request += c;
-      if (request.endsWith("\r\n\r\n")) break;
+      req += c;
+      if (req.endsWith("\r\n\r\n")) break;
     }
   }
 
   // Serve index.html
-  if (request.startsWith("GET / ") || request.startsWith("GET /index.html")) {
+  if (req.startsWith("GET / ") || req.startsWith("GET /index.html")) {
     Serial.println("Initial load of index.html");
 
     serveFile(client, "/index.html");
@@ -232,15 +229,15 @@ void loop() {
   }
 
   // Handle POST /controller
-  if (request.startsWith("POST /controller")) {
+  if (req.startsWith("POST /controller")) {
 
       // Extract Content-Length
-      int clIndex = request.indexOf("Content-Length:");
+      int clIndex = req.indexOf("Content-Length:");
       int contentLength = 0;
       if (clIndex != -1) {
         int start = clIndex + 15;
-        int end = request.indexOf("\r\n", start);
-        contentLength = request.substring(start, end).toInt();
+        int end = req.indexOf("\r\n", start);
+        contentLength = req.substring(start, end).toInt();
       }
 
       // Read POST body
@@ -264,8 +261,6 @@ void loop() {
         Serial.println(direction);
         handleDirectionParam(direction);
         navigateMenu(direction);
-        //Serial.print("codename:");
-        //Serial.println(doc["codename"]);
     }
 
     // Respond
@@ -313,7 +308,7 @@ void handleDirectionParam(String direction){
     //pixels.show();
 }
 
-void sendWebpage(NetworkClient client,  File htmlFile){
+void sendWebpage(WiFiClient client,  File htmlFile){
     while (htmlFile.available()) {
       client.write(htmlFile.read());
     }
@@ -462,7 +457,7 @@ void sendOK(WiFiClient &client, const char* msg) {
 }
 
 
-void sendResponseHeader(NetworkClient client) {
+void sendResponseHeader(WiFiClient client) {
     
     // Should not normally edit/remove these 4 lines
     client.println("HTTP/1.1 200 OK");
