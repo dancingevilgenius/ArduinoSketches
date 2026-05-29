@@ -66,11 +66,7 @@ void serveHTML(WiFiClient &client) {
         return;
     }
 
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-Type: text/html");
-    client.println("Connection: close");
-    client.println();
-    client.write(htmlPage, htmlSize);
+    sendOK(client, "OK");
 }
 
 void sendOK(WiFiClient &client, const char* msg) {
@@ -85,6 +81,10 @@ void setup() {
     Serial.begin(115200);
     delay(500);
 
+    setupWebServer();
+}
+
+void setupWebServer(){
     // Check PSRAM
     if (!psramFound()) {
         Serial.println("PSRAM not found! Make sure it's enabled in board settings.");
@@ -122,7 +122,7 @@ void setup() {
     server.begin();
 }
 
-void loop() {
+void loopWebServer(){
     WiFiClient client = server.available();
     if (!client) return;
 
@@ -146,5 +146,9 @@ void loop() {
         client.println();
     }
 
-    client.stop();
+    client.stop();    
+}
+
+void loop() {
+    loopWebServer();
 }
