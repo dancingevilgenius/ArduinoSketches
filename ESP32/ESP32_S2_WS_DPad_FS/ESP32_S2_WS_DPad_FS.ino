@@ -11,9 +11,7 @@
 const char* ssid     = "TheMandaloriKen"; const char* password = "asdf12346302201111";	// Change this for your project
 
 
-NetworkServer server(80);
-
-File htmlFile;
+NetworkServer server(80); 
 
 // PSRAM buffer for index.html
 char* htmlPage = nullptr;
@@ -289,12 +287,6 @@ void handleDirectionParam(String direction){
     //pixels.show();
 }
 
-void sendWebpage(WiFiClient client,  File htmlFile){
-    while (htmlFile.available()) {
-      client.write(htmlFile.read());
-    }
-    htmlFile.close();
-}
 
 String getParam(String request, String key) {
     int keyIndex = request.indexOf(key + "=");
@@ -360,9 +352,9 @@ void handleRequestParamDirection(String request){
 // ------------------------------------------------------------
 //
 bool loadIndexHtmlToPSRAM() {
-    File file = LittleFS.open("/index.html", "r");
+    File file = LittleFS.open("/index_dpad.html", "r");
     if (!file) {
-        Serial.println("Failed to open /index.html from LittleFS");
+        Serial.println("Failed to open /index_dpad.html from LittleFS");
         delay(1000);
         return false;
     }
