@@ -178,28 +178,6 @@ void listAvailableFiles(){
 
 
 
-void serveFile(WiFiClient &client, const char* path) {
-  File file = LittleFS.open(path, "r");
-  if (!file) {
-    client.println("HTTP/1.1 404 Not Found");
-    client.println("Content-Type: text/plain");
-    client.println("Connection: close");
-    client.println();
-    client.println("File not found");
-    return;
-  }
-
-  client.println("HTTP/1.1 200 OK");
-  client.println("Content-Type: text/html");
-  client.println("Connection: close");
-  client.println();
-
-  while (file.available()) {
-    client.write(file.read());
-  }
-  file.close();
-  Serial.println("Exiting serveFile()");
-}
 
 void loop() {
   WiFiClient client = server.available();
@@ -221,9 +199,7 @@ void loop() {
 
   // Serve index.html
   if (req.startsWith("GET / ") || req.startsWith("GET /index.html")) {
-    Serial.println("Initial load of index.html");
-
-    serveFile(client, "/index.html");
+    serveHTML(client);
     client.stop();
     return;
   }
@@ -433,6 +409,7 @@ void serveHTML(WiFiClient &client) {
         client.println("Connection: close");
         client.println();
         client.println("index.html not loaded");
+        Serial.println("serveHTML() fail. 500");
         return;
     }
 
@@ -441,6 +418,7 @@ void serveHTML(WiFiClient &client) {
     client.println("Connection: close");
     client.println();
     client.write(htmlPage, htmlSize);
+    Serial.println("serveHTML() success. 200");
 }
 
 //
