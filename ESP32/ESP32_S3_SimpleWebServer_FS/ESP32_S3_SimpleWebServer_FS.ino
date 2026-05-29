@@ -13,7 +13,7 @@ size_t htmlSize = 0;
 
 //
 // ------------------------------------------------------------
-// setup() — now at the top of the sketch
+// setup() — at the top of the sketch
 // ------------------------------------------------------------
 //
 void setup() {
@@ -152,10 +152,10 @@ void setupWebServer() {
 
 //
 // ------------------------------------------------------------
-// loop()
+// NEW FUNCTION: loopWebServer()
 // ------------------------------------------------------------
 //
-void loop() {
+void loopWebServer() {
     WiFiClient client = server.available();
     if (!client) return;
 
@@ -180,4 +180,13 @@ void loop() {
     }
 
     client.stop();
+}
+
+//
+// ------------------------------------------------------------
+// loop() — now only calls loopWebServer()
+// ------------------------------------------------------------
+//
+void loop() {
+    loopWebServer();
 }
