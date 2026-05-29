@@ -6,14 +6,19 @@
 
 
 // Network credentials Here
-//const char* ssid     = "STDL5301";	// Change this for your project
-//const char* password = "library30";	// Change this for your project
-const char* ssid     = "TheMandalorian";	// Change this for your project
-const char* password = "6302201111";	// Change this for your project
+//const char* ssid     = "STDL5301";	    const char* password = "library30";	// Change this for your project
+//const char* ssid     = "TheMandalorian";  const char* password = "6302201111";	// Change this for your project
+const char* ssid     = "TheMandaloriKen"; const char* password = "asdf12346302201111";	// Change this for your project
+
 
 NetworkServer server(80);
 
 File htmlFile;
+
+// PSRAM buffer for index.html
+char* htmlPage = nullptr;
+size_t htmlSize = 0;
+
 
 
 // Horizontal menu (fixed 4 items)
@@ -89,70 +94,68 @@ void navigateMenu(const String& direction) {
 
 void setup() {
   delay(2000);
-
   Serial.begin(115200);
   delay(2000);
+
   Serial.println("Webserver DPAD FS setup()");
 
   esp_log_level_set("*", ESP_LOG_NONE);  
 
-  setupWifiConnection();
-
-  setupLittleFS();
-
+  setupWebServer();
 
 
 }
 
-void setupWifiConnection(){
-  
- WiFi.begin(ssid,password);
-  int count=0;
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print("Attempting to connect. count:");
-    Serial.println(count++);
-    if(count > 25){
-      Serial.println("Too many wifi connection failed attempts. Exiting wifi setup.");
-      return;
+
+//
+// ------------------------------------------------------------
+// NEW FUNCTION: setupWebServer()
+// ------------------------------------------------------------
+//
+void setupWebServer() {
+
+    // Check PSRAM
+    if (!psramFound()) {
+        Serial.println("PSRAM not found! Make sure it's enabled in board settings.");
+    } else {
+        Serial.println("PSRAM detected.");
     }
-  }
+    delay(1000);
 
-  Serial.println("");
-  Serial.println("WiFi connected.");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+    // Mount LittleFS
+    if (!LittleFS.begin()) {
+        Serial.println("LittleFS mount failed. Did you upload index.html?");
+    } else {
+        Serial.println("LittleFS mounted.");
+    }
+    delay(1000);
 
+    // Load index.html from LittleFS into PSRAM
+    if (!loadIndexHtmlToPSRAM()) {
+        Serial.println("Failed to load index.html into PSRAM.");
+    }
+    delay(1000);
 
-  server.begin();
+    // WiFi
+    WiFi.begin(ssid, password);
+    Serial.print("Connecting to WiFi");
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(300);
+        Serial.print(".");
+    }
+    Serial.println("\nWiFi connected.");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+    delay(1000);
 
+    server.begin();
 }
+
+
 
 bool isFormatted = false;
 
-boolean setupLittleFS(){
 
-  // 1. Start LittleFS
-  if(!LittleFS.begin()) {
-    Serial.println("LittleFS Mount Failed. exiting program");
-    delay(3000);
-  }
-
-  // if(!isFormatted){
-  //   LittleFS.format();
-  //   isFormatted = true;
-  //   Serial.println("run format.");
-  // }
-
-  listAvailableFiles();
-
-  htmlFile = LittleFS.open("/index.html", "r");
-  if(!htmlFile){
-    Serial.println("Failed to open index.html");
-  }  
-  Serial.println("setupLittleFS() finished.");
-  delay(3000);
-}
 
 void listAvailableFiles(){
 
@@ -200,12 +203,9 @@ void serveFile(WiFiClient &client, const char* path) {
 
 void loop() {
 
-  Serial.println("loop.");
 
   NetworkClient client = server.available();
   if (!client){
-    Serial.println("ERROR: client not available.");
-    delay(500);
     return;
   }
   Serial.println("client available.");
@@ -378,6 +378,88 @@ void handleRequestParamDirection(String request){
 }
 
 
+//
+// ------------------------------------------------------------
+// loadIndexHtmlToPSRAM()
+// ------------------------------------------------------------
+//
+bool loadIndexHtmlToPSRAM() {
+    File file = LittleFS.open("/index.html", "r");
+    if (!file) {
+        Serial.println("Failed to open /index.html from LittleFS");
+        delay(1000);
+        return false;
+    }
+    delay(1000);
+
+    htmlSize = file.size();
+    if (htmlSize == 0) {
+        Serial.println("/index.html is empty");
+        file.close();
+        delay(1000);
+        return false;
+    }
+
+    htmlPage = (char*)ps_malloc(htmlSize + 1);
+    if (!htmlPage) {
+        Serial.println("ps_malloc failed (no PSRAM?)");
+        file.close();
+        delay(1000);
+        return false;
+    }
+
+    size_t readBytes = file.readBytes(htmlPage, htmlSize);
+    file.close();
+
+    if (readBytes != htmlSize) {
+        Serial.println("Failed to read full index.html into PSRAM");
+        free(htmlPage);
+        htmlPage = nullptr;
+        htmlSize = 0;
+        delay(1000);
+        return false;
+    }
+
+    htmlPage[htmlSize] = '\0';
+    Serial.printf("Loaded /index.html into PSRAM (%u bytes)\n", (unsigned)htmlSize);
+    delay(1000);
+    return true;
+}
+
+//
+// ------------------------------------------------------------
+// serveHTML()
+// ------------------------------------------------------------
+//
+void serveHTML(WiFiClient &client) {
+    if (!htmlPage || htmlSize == 0) {
+        client.println("HTTP/1.1 500 Internal Server Error");
+        client.println("Content-Type: text/plain");
+        client.println("Connection: close");
+        client.println();
+        client.println("index.html not loaded");
+        return;
+    }
+
+    client.println("HTTP/1.1 200 OK");
+    client.println("Content-Type: text/html");
+    client.println("Connection: close");
+    client.println();
+    client.write(htmlPage, htmlSize);
+}
+
+//
+// ------------------------------------------------------------
+// sendOK()
+// ------------------------------------------------------------
+//
+void sendOK(WiFiClient &client, const char* msg) {
+    client.println("HTTP/1.1 200 OK");
+    client.println("Content-Type: text/plain");
+    client.println("Connection: close");
+    client.println();
+    client.println(msg);
+}
 
 
 void sendResponseHeader(NetworkClient client) {
