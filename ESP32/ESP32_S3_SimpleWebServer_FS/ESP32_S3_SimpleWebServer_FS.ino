@@ -11,23 +11,6 @@ WiFiServer server(80);
 char* htmlPage = nullptr;
 size_t htmlSize = 0;
 
-//
-// ------------------------------------------------------------
-// setup() — at the top of the sketch
-// ------------------------------------------------------------
-//
-void setup() {
-    Serial.begin(115200);
-    delay(500);
-
-    setupWebServer();
-}
-
-//
-// ------------------------------------------------------------
-// loadIndexHtmlToPSRAM()
-// ------------------------------------------------------------
-//
 bool loadIndexHtmlToPSRAM() {
     File file = LittleFS.open("/index.html", "r");
     if (!file) {
@@ -45,6 +28,7 @@ bool loadIndexHtmlToPSRAM() {
         return false;
     }
 
+    // Allocate PSRAM
     htmlPage = (char*)ps_malloc(htmlSize + 1);
     if (!htmlPage) {
         Serial.println("ps_malloc failed (no PSRAM?)");
@@ -53,6 +37,7 @@ bool loadIndexHtmlToPSRAM() {
         return false;
     }
 
+    // Read file into PSRAM
     size_t readBytes = file.readBytes(htmlPage, htmlSize);
     file.close();
 
@@ -71,11 +56,6 @@ bool loadIndexHtmlToPSRAM() {
     return true;
 }
 
-//
-// ------------------------------------------------------------
-// serveHTML()
-// ------------------------------------------------------------
-//
 void serveHTML(WiFiClient &client) {
     if (!htmlPage || htmlSize == 0) {
         client.println("HTTP/1.1 500 Internal Server Error");
@@ -86,18 +66,9 @@ void serveHTML(WiFiClient &client) {
         return;
     }
 
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-Type: text/html");
-    client.println("Connection: close");
-    client.println();
-    client.write(htmlPage, htmlSize);
+    sendOK(client, "OK");
 }
 
-//
-// ------------------------------------------------------------
-// sendOK()
-// ------------------------------------------------------------
-//
 void sendOK(WiFiClient &client, const char* msg) {
     client.println("HTTP/1.1 200 OK");
     client.println("Content-Type: text/plain");
@@ -106,13 +77,14 @@ void sendOK(WiFiClient &client, const char* msg) {
     client.println(msg);
 }
 
-//
-// ------------------------------------------------------------
-// NEW FUNCTION: setupWebServer()
-// ------------------------------------------------------------
-//
-void setupWebServer() {
+void setup() {
+    Serial.begin(115200);
+    delay(500);
 
+    setupWebServer();
+}
+
+void setupWebServer(){
     // Check PSRAM
     if (!psramFound()) {
         Serial.println("PSRAM not found! Make sure it's enabled in board settings.");
@@ -150,12 +122,7 @@ void setupWebServer() {
     server.begin();
 }
 
-//
-// ------------------------------------------------------------
-// NEW FUNCTION: loopWebServer()
-// ------------------------------------------------------------
-//
-void loopWebServer() {
+void loopWebServer(){
     WiFiClient client = server.available();
     if (!client) return;
 
@@ -179,14 +146,9 @@ void loopWebServer() {
         client.println();
     }
 
-    client.stop();
+    client.stop();    
 }
 
-//
-// ------------------------------------------------------------
-// loop() — now only calls loopWebServer()
-// ------------------------------------------------------------
-//
 void loop() {
     loopWebServer();
 }
