@@ -242,11 +242,7 @@ void loopWebServer(){
     }
 
     // Respond
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-Type: text/plain");
-    client.println("Connection: close");
-    client.println();
-    client.println("OK");
+    sendOK(client, "OK");
 
     client.stop();
     return;
@@ -410,10 +406,8 @@ void serveHTML(WiFiClient &client) {
         return;
     }
 
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-Type: text/html");
-    client.println("Connection: close");
-    client.println();
+    sendOK(client, "OK");
+
     client.write(htmlPage, htmlSize);
     Serial.println("serveHTML() success. 200");
 }
@@ -432,13 +426,4 @@ void sendOK(WiFiClient &client, const char* msg) {
 }
 
 
-void sendResponseHeader(WiFiClient client) {
-    
-    // Should not normally edit/remove these 4 lines
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-type:text/html");
-    client.println("Connection: close");
-    client.println();
-
-}
 
