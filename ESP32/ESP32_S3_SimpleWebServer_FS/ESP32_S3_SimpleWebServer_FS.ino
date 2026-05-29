@@ -11,6 +11,23 @@ WiFiServer server(80);
 char* htmlPage = nullptr;
 size_t htmlSize = 0;
 
+//
+// ------------------------------------------------------------
+// setup() — now at the top of the sketch
+// ------------------------------------------------------------
+//
+void setup() {
+    Serial.begin(115200);
+    delay(500);
+
+    setupWebServer();
+}
+
+//
+// ------------------------------------------------------------
+// loadIndexHtmlToPSRAM()
+// ------------------------------------------------------------
+//
 bool loadIndexHtmlToPSRAM() {
     File file = LittleFS.open("/index.html", "r");
     if (!file) {
@@ -28,7 +45,6 @@ bool loadIndexHtmlToPSRAM() {
         return false;
     }
 
-    // Allocate PSRAM
     htmlPage = (char*)ps_malloc(htmlSize + 1);
     if (!htmlPage) {
         Serial.println("ps_malloc failed (no PSRAM?)");
@@ -37,7 +53,6 @@ bool loadIndexHtmlToPSRAM() {
         return false;
     }
 
-    // Read file into PSRAM
     size_t readBytes = file.readBytes(htmlPage, htmlSize);
     file.close();
 
@@ -56,6 +71,11 @@ bool loadIndexHtmlToPSRAM() {
     return true;
 }
 
+//
+// ------------------------------------------------------------
+// serveHTML()
+// ------------------------------------------------------------
+//
 void serveHTML(WiFiClient &client) {
     if (!htmlPage || htmlSize == 0) {
         client.println("HTTP/1.1 500 Internal Server Error");
@@ -73,6 +93,11 @@ void serveHTML(WiFiClient &client) {
     client.write(htmlPage, htmlSize);
 }
 
+//
+// ------------------------------------------------------------
+// sendOK()
+// ------------------------------------------------------------
+//
 void sendOK(WiFiClient &client, const char* msg) {
     client.println("HTTP/1.1 200 OK");
     client.println("Content-Type: text/plain");
@@ -81,9 +106,12 @@ void sendOK(WiFiClient &client, const char* msg) {
     client.println(msg);
 }
 
-void setup() {
-    Serial.begin(115200);
-    delay(500);
+//
+// ------------------------------------------------------------
+// NEW FUNCTION: setupWebServer()
+// ------------------------------------------------------------
+//
+void setupWebServer() {
 
     // Check PSRAM
     if (!psramFound()) {
@@ -122,6 +150,11 @@ void setup() {
     server.begin();
 }
 
+//
+// ------------------------------------------------------------
+// loop()
+// ------------------------------------------------------------
+//
 void loop() {
     WiFiClient client = server.available();
     if (!client) return;
