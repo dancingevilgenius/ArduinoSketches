@@ -20,15 +20,15 @@ size_t htmlSize = 0;
 
 
 // Horizontal menu (fixed 4 items)
-const char* horizontalMenu[] = { "M1", "M2", "M3", "M4" };
+const char* horizontalMenu[] = { "SPEED", "TURNING", "PROPORTIONAL", "INTEGRAL" };
 int horizontalIndex = 0;
 const int horizontalCount = 4;
 
 // Vertical lists for each horizontal menu
-const char* verticalMenu_M1[] = { "A1", "A2", "A3" };
-const char* verticalMenu_M2[] = { "B1", "B2", "B3", "B4" };
-const char* verticalMenu_M3[] = { "C1", "C2" };
-const char* verticalMenu_M4[] = { "D1", "D2", "D3", "D4", "D5" };
+const char* verticalMenu_M1[] = { "50", "60", "70", "80", "90", "100" };
+const char* verticalMenu_M2[] = { "50", "60", "70", "80", "90", "100" };
+const char* verticalMenu_M3[] = { "50", "60", "70", "80", "90" };
+const char* verticalMenu_M4[] = { "0.1", "0.2", "0.3", "0.4", "0.5" };
 
 // Pointer array to vertical menus
 const char** verticalMenus[] = {
@@ -47,6 +47,17 @@ int verticalCounts[] = {
 };
 
 int verticalIndex = 0;
+
+// ---------------------
+//  8x8 web grid colors
+// ---------------------
+#define RED_OFFSET    0
+#define GREEN_OFFSET  10
+unsigned int gridColors[8][8];
+int currentRow = 3;
+int currentCol = 5;
+
+
 
 // ----------------------------
 // NAVIGATION FUNCTION
@@ -101,8 +112,32 @@ void setup() {
 
   setupWebServer();
 
+  setupGridColors();
 
 }
+
+void setupGridColors() {
+
+  // Bottom red gradient (unchanged)
+  gridColors[7][0] = RED_OFFSET + 0;
+  gridColors[7][1] = RED_OFFSET + 1;
+  gridColors[7][2] = RED_OFFSET + 2;
+  gridColors[7][3] = RED_OFFSET + 3;
+  gridColors[7][4] = RED_OFFSET + 4;
+  gridColors[7][5] = RED_OFFSET + 5;
+  gridColors[7][6] = RED_OFFSET + 6;
+  gridColors[7][7] = RED_OFFSET + 7;
+
+  // Only ONE green cell now
+  gridColors[3][5] = GREEN_OFFSET + 7;
+
+  // Track its starting position
+  currentRow = 3;
+  currentCol = 5;
+
+  Serial.println("setupGridColors() completed. Initial display pattern");
+}
+
 
 
 //
@@ -182,77 +217,131 @@ void loop() {
 }
 
 void loopWebServer(){
-  WiFiClient client = server.available();
-  if (!client){
-    return;
-  }
 
-  String req = "";
+  WiFiClient client = server.available();
+  if (!client) return;
+
+  String request = "";
   unsigned long timeout = millis();
 
-  // Read headers
   while (client.connected() && millis() - timeout < 2000) {
     if (client.available()) {
       char c = client.read();
-      req += c;
-      if (req.endsWith("\r\n\r\n")) break;
+      request += c;
+      if (request.endsWith("\r\n\r\n")) break;
     }
   }
 
-  // Serve index.html
-  if (req.startsWith("GET / ") || req.startsWith("GET /index.html")) {
+  if (request.startsWith("GET / ") || request.startsWith("GET /index.html")) {
     serveHTML(client);
     client.stop();
     return;
   }
 
-  // Handle POST /controller
-  if (req.startsWith("POST /controller")) {
+  if (request.startsWith("POST /controller")) {
 
-      // Extract Content-Length
-      int clIndex = req.indexOf("Content-Length:");
-      int contentLength = 0;
-      if (clIndex != -1) {
-        int start = clIndex + 15;
-        int end = req.indexOf("\r\n", start);
-        contentLength = req.substring(start, end).toInt();
-      }
+    int clIndex = request.indexOf("Content-Length:");
+    int contentLength = 0;
+    if (clIndex != -1) {
+      int start = clIndex + 15;
+      int end = request.indexOf("\r\n", start);
+      contentLength = request.substring(start, end).toInt();
+    }
 
-      // Read POST body
-      String body = "";
-      while (client.available() < contentLength) delay(1);
-      while (client.available()) body += (char)client.read();
+    String body = "";
+    while (client.available() < contentLength) delay(1);
+    while (client.available()) body += (char)client.read();
 
-      Serial.println("=== JSON BODY RECEIVED ===");
-      Serial.println(body);
+    //Serial.println("=== JSON BODY RECEIVED ===");
+    //Serial.println(body);
 
-    // Parse JSON using ArduinoJson
-    StaticJsonDocument<200> doc;
+    StaticJsonDocument<300> doc;
     DeserializationError error = deserializeJson(doc, body);
 
     if (error) {
-        Serial.print("JSON parse failed: ");
-        Serial.println(error.c_str());
+      Serial.print("JSON parse failed: ");
+      Serial.println(error.c_str());
     } else {
+
+      // ----------------------------
+      // HANDLE DIRECTION
+      // ----------------------------
+      if (doc.containsKey("direction")) {
         const char* direction = doc["direction"];
-        Serial.print("Parsed direction: ");
+        Serial.print("Direction: ");
         Serial.println(direction);
-        handleDirectionParam(direction);
         navigateMenu(direction);
+      }
+
+      // ----------------------------
+      // HANDLE START / STOP ACTIONS
+      // ----------------------------
+      if (doc.containsKey("action")) {
+        const char* action = doc["action"];
+        Serial.print("Action: ");
+        Serial.println(action);
+
+        if (strcmp(action, "start") == 0) {
+          Serial.println(">>> START triggered");
+        }
+        else if (strcmp(action, "stop") == 0) {
+          Serial.println(">>> STOP triggered");
+        }
+      }
+
+      // ----------------------------
+      // HANDLE DROPDOWN MENU
+      // ----------------------------
+      if (doc.containsKey("menu")) {
+        const char* menuValue = doc["menu"];
+        Serial.print("Dropdown selected: ");
+        Serial.println(menuValue);
+      }
+
+      // ----------------------------
+      // FRONTEND PERIODIC GRID REQUEST
+      // ----------------------------
+      if (doc.containsKey("requestGrid")) {
+
+          StaticJsonDocument<700> response;
+
+          JsonArray grid = response.createNestedArray("grid");
+          for (int r = 0; r < 8; r++) {
+              JsonArray row = grid.createNestedArray();
+              for (int c = 0; c < 8; c++) {
+                  row.add(gridColors[r][c]);
+              }
+          }
+
+          String out;
+          serializeJson(response, out);
+
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-Type: application/json");
+          client.println("Connection: close");
+          client.println();
+          client.println(out);
+          return;
+      }
     }
 
-    // Respond
+    // Build JSON response
+    StaticJsonDocument<200> response;
+    response["horiz"] = horizontalMenu[horizontalIndex];
+    response["vert"]  = verticalMenus[horizontalIndex][verticalIndex];
+
+    String out;
+    serializeJson(response, out);
+
     client.println("HTTP/1.1 200 OK");
-    client.println("Content-Type: text/plain");
+    client.println("Content-Type: application/json");
     client.println("Connection: close");
     client.println();
-    client.println("OK");
-
+    client.println(out);
     client.stop();
     return;
   }
 
-  // Unknown request
   client.println("HTTP/1.1 400 Bad Request");
   client.println("Connection: close");
   client.println();
