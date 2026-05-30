@@ -1,40 +1,33 @@
 #include <Arduino.h>
 #include <LittleFS.h>
-#include <WiFi.h> 
+#include <WiFi.h>
 #include <ArduinoJson.h>
 
+// Network credentials
+//const char* ssid     = "TheMandaloriKen";
+//const char* password = "asdf12346302201111";
 
+NetworkServer server(80);
 
-// Network credentials Here
-//const char* ssid     = "STDL5301";	    const char* password = "library30";	// Change this for your project
-//const char* ssid     = "TheMandalorian";  const char* password = "6302201111";	// Change this for your project
-const char* ssid     = "TheMandaloriKen"; const char* password = "asdf12346302201111";	// Change this for your project
-
-
-NetworkServer server(80); 
-
-// PSRAM buffer for index.html
+// PSRAM buffer for HTML
 char* htmlPage = nullptr;
 size_t htmlSize = 0;
 
-// -- For Sensors loop
-#define SENSOR_INTERVAL_TIME 300   // milliseconds
+// Sensor loop timing
+#define SENSOR_INTERVAL_TIME 300
 long lastSensorUpdateTime = 0;
 
-
-
-// Horizontal menu (fixed 4 items)
+// Horizontal menu
 const char* horizontalMenu[] = { "SPEED", "TURNING", "PROPORTIONAL", "INTEGRAL" };
 int horizontalIndex = 0;
 const int horizontalCount = 4;
 
-// Vertical lists for each horizontal menu
+// Vertical lists
 const char* verticalMenu_M1[] = { "50", "60", "70", "80", "90", "100" };
 const char* verticalMenu_M2[] = { "50", "60", "70", "80", "90", "100" };
 const char* verticalMenu_M3[] = { "50", "60", "70", "80", "90" };
 const char* verticalMenu_M4[] = { "0.1", "0.2", "0.3", "0.4", "0.5" };
 
-// Pointer array to vertical menus
 const char** verticalMenus[] = {
   verticalMenu_M1,
   verticalMenu_M2,
@@ -42,7 +35,6 @@ const char** verticalMenus[] = {
   verticalMenu_M4
 };
 
-// Length of each vertical list
 int verticalCounts[] = {
   sizeof(verticalMenu_M1) / sizeof(verticalMenu_M1[0]),
   sizeof(verticalMenu_M2) / sizeof(verticalMenu_M2[0]),
@@ -52,77 +44,149 @@ int verticalCounts[] = {
 
 int verticalIndex = 0;
 
-// ---------------------
-//  8x8 web grid colors
-// ---------------------
+// 8x8 grid
 #define RED_OFFSET    0
 #define GREEN_OFFSET  10
 unsigned int gridColors[8][8];
 int currentRow = 3;
 int currentCol = 5;
 
+struct WifiCredential {
+  const char* ssid;
+  const char* password;
+};
+
+WifiCredential wifiList[3] = {
+  { "TheMandaloriKen","asdf12346302201111" },
+  { "STDL5301",       "library30" },
+  { "TheMandalorian", "6302201111" }
+};
 
 
-// ----------------------------
-// NAVIGATION FUNCTION
-// ----------------------------
-void navigateMenu(const String& direction) {
 
-  if (direction == "left") {
-    horizontalIndex--;
-    if (horizontalIndex < 0)
-      horizontalIndex = horizontalCount - 1;  // wrap
-    verticalIndex = 0; // reset vertical position
-  }
+// ------------------------------------------------------------
+// loadIndexHtmlToPSRAM() — NEW VERSION WITH FILENAME PARAM
+// ------------------------------------------------------------
+bool loadIndexHtmlToPSRAM(const char* filename) {
 
-  else if (direction == "right") {
-    horizontalIndex++;
-    if (horizontalIndex >= horizontalCount)
-      horizontalIndex = 0;  // wrap
-    verticalIndex = 0; // reset vertical position
-  }
+    File file = LittleFS.open(filename, "r");
+    if (!file) {
+        Serial.print("Failed to open ");
+        Serial.println(filename);
+        return false;
+    }
 
-  else if (direction == "up") {
-    verticalIndex--;
-    if (verticalIndex < 0)
-      verticalIndex = verticalCounts[horizontalIndex] - 1; // wrap
-  }
+    htmlSize = file.size();
+    if (htmlSize == 0) {
+        Serial.print(filename);
+        Serial.println(" is empty");
+        file.close();
+        return false;
+    }
 
-  else if (direction == "down") {
-    verticalIndex++;
-    if (verticalIndex >= verticalCounts[horizontalIndex])
-      verticalIndex = 0; // wrap
-  }
+    htmlPage = (char*)ps_malloc(htmlSize + 1);
+    if (!htmlPage) {
+        Serial.println("ps_malloc failed (no PSRAM?)");
+        file.close();
+        return false;
+    }
 
-  else if (direction == "center") {
-    Serial.println("Center pressed — select/confirm");
-  }
+    size_t readBytes = file.readBytes(htmlPage, htmlSize);
+    file.close();
 
-  // Debug output
-  Serial.print("Menu: ");
-  Serial.print(horizontalMenu[horizontalIndex]);
-  Serial.print(" | Item: ");
-  Serial.println(verticalMenus[horizontalIndex][verticalIndex]);
+    if (readBytes != htmlSize) {
+        Serial.print("Failed to read full ");
+        Serial.print(filename);
+        Serial.println(" into PSRAM");
+        free(htmlPage);
+        htmlPage = nullptr;
+        htmlSize = 0;
+        return false;
+    }
+
+    htmlPage[htmlSize] = '\0';
+
+    Serial.print("Loaded ");
+    Serial.print(filename);
+    Serial.print(" into PSRAM (");
+    Serial.print((unsigned)htmlSize);
+    Serial.println(" bytes)");
+
+    return true;
 }
 
-void setup() {
-  delay(2000);
-  Serial.begin(115200);
-  delay(2000);
 
-  Serial.println("Webserver DPAD FS setup()");
+// ------------------------------------------------------------
+// setupWebServer()
+// ------------------------------------------------------------
+void setupWebServer() {
 
-  esp_log_level_set("*", ESP_LOG_NONE);  
+    if (!psramFound()) {
+        Serial.println("PSRAM not found!");
+    } else {
+        Serial.println("PSRAM detected.");
+    }
 
-  setupWebServer();
+    if (!LittleFS.begin()) {
+        Serial.println("LittleFS mount failed.");
+    } else {
+        Serial.println("LittleFS mounted.");
+    }
 
-  setupGridColors();
+    // Try index_dpad.html first
+    if (!loadIndexHtmlToPSRAM("/index_dpad.html")) {
+        Serial.println("Trying fallback: /index.html");
 
+        if (!loadIndexHtmlToPSRAM("/index.html")) {
+            Serial.println("ERROR: No valid HTML file found.");
+        }
+    }
+
+  connectToWiFi();
+
+  server.begin();
 }
 
+bool connectToWiFi() {
+
+    Serial.println("Starting WiFi credential rotation...");
+
+    for (int i = 0; i < 3; i++) {
+
+        Serial.print("Trying SSID: ");
+        Serial.println(wifiList[i].ssid);
+
+        WiFi.begin(wifiList[i].ssid, wifiList[i].password);
+
+        int failCount = 0;
+
+        while (WiFi.status() != WL_CONNECTED && failCount < 5) {
+            delay(500);
+            Serial.print(".");
+            failCount++;
+        }
+
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println("\nConnected!");
+            Serial.print("IP address: ");
+            Serial.println(WiFi.localIP());
+            return true;   // success
+        }
+
+        Serial.println("\nFailed to connect. Moving to next SSID...");
+    }
+
+    Serial.println("ERROR: Could not connect to ANY WiFi network.");
+    return false;
+}
+
+
+
+// ------------------------------------------------------------
+// setupGridColors()
+// ------------------------------------------------------------
 void setupGridColors() {
 
-  // Bottom red gradient (unchanged)
   gridColors[7][0] = RED_OFFSET + 0;
   gridColors[7][1] = RED_OFFSET + 1;
   gridColors[7][2] = RED_OFFSET + 2;
@@ -132,135 +196,114 @@ void setupGridColors() {
   gridColors[7][6] = RED_OFFSET + 6;
   gridColors[7][7] = RED_OFFSET + 7;
 
-  // Only ONE green cell now
   gridColors[3][5] = GREEN_OFFSET + 7;
 
-  // Track its starting position
   currentRow = 3;
   currentCol = 5;
 
-  Serial.println("setupGridColors() completed. Initial display pattern");
+  Serial.println("setupGridColors() completed.");
 }
 
 
-
-//
 // ------------------------------------------------------------
-// NEW FUNCTION: setupWebServer()
+// navigateMenu()
 // ------------------------------------------------------------
-//
-void setupWebServer() {
+void navigateMenu(const String& direction) {
 
-    // Check PSRAM
-    if (!psramFound()) {
-        Serial.println("PSRAM not found! Make sure it's enabled in board settings.");
-    } else {
-        Serial.println("PSRAM detected.");
-    }
-    delay(1000);
-
-    // Mount LittleFS
-    if (!LittleFS.begin()) {
-        Serial.println("LittleFS mount failed. Did you upload index.html?");
-    } else {
-        Serial.println("LittleFS mounted.");
-    }
-    delay(1000);
-
-    // Load index.html from LittleFS into PSRAM
-    if (!loadIndexHtmlToPSRAM()) {
-        Serial.println("Failed to load index.html into PSRAM.");
-    }
-    delay(1000);
-
-    // WiFi
-    WiFi.begin(ssid, password);
-    Serial.print("Connecting to WiFi");
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(300);
-        Serial.print(".");
-    }
-    Serial.println("\nWiFi connected.");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-    delay(1000);
-
-    server.begin();
-}
-
-
-
-bool isFormatted = false;
-
-
-
-void listAvailableFiles(){
-
-  File root;
-  File file;
-
-  root = LittleFS.open("/");
-  file = root.openNextFile();
-
-  Serial.println("Start List of files on microcontroller:");
-  while(file){
-      Serial.print("FILE: ");
-      Serial.println(file.name());
-      file = root.openNextFile();
+  if (direction == "left") {
+    horizontalIndex--;
+    if (horizontalIndex < 0)
+      horizontalIndex = horizontalCount - 1;
+    verticalIndex = 0;
   }
 
-  Serial.println("End listing files.\n");
+  else if (direction == "right") {
+    horizontalIndex++;
+    if (horizontalIndex >= horizontalCount)
+      horizontalIndex = 0;
+    verticalIndex = 0;
+  }
+
+  else if (direction == "up") {
+    verticalIndex--;
+    if (verticalIndex < 0)
+      verticalIndex = verticalCounts[horizontalIndex] - 1;
+  }
+
+  else if (direction == "down") {
+    verticalIndex++;
+    if (verticalIndex >= verticalCounts[horizontalIndex])
+      verticalIndex = 0;
+  }
+
+  else if (direction == "center") {
+    Serial.println("Center pressed — select/confirm");
+  }
+
+  Serial.print("Menu: ");
+  Serial.print(horizontalMenu[horizontalIndex]);
+  Serial.print(" | Item: ");
+  Serial.println(verticalMenus[horizontalIndex][verticalIndex]);
 }
 
 
-
-void loopSensors() {
-
-  loop8x8Sensors();
-
-}
-
+// ------------------------------------------------------------
+// loop8x8Sensors()
+// ------------------------------------------------------------
 void loop8x8Sensors() {
+
   long now = millis();
   long dt = now - lastSensorUpdateTime;
 
   if (dt < SENSOR_INTERVAL_TIME) return;
 
-
-  // -----------------------------------------
-  // MOVE ONLY THE TRACKED GREEN CELL LEFT
-  // -----------------------------------------
-
-  // Get the current value
   unsigned int value = gridColors[currentRow][currentCol];
-
-  // Clear old position
   gridColors[currentRow][currentCol] = 0;
 
-  // Compute new column with wrap
   int newCol = currentCol - 1;
   if (newCol < 0) newCol = 7;
 
-  // Write new position
   gridColors[currentRow][newCol] = value;
-
-  // Update global tracker
   currentCol = newCol;
 
-  //Serial.print("Handle sensors. newCol:");
-  //Serial.println(newCol);
-
-  // Update timestamp
   lastSensorUpdateTime = now;
 }
 
 
-void loop() {
-  loopSensors();
-  loopWebServer();
+// ------------------------------------------------------------
+// loopSensors()
+// ------------------------------------------------------------
+void loopSensors() {
+  loop8x8Sensors();
 }
 
-void loopWebServer(){
+
+// ------------------------------------------------------------
+// serveHTML()
+// ------------------------------------------------------------
+void serveHTML(WiFiClient &client) {
+
+    if (!htmlPage || htmlSize == 0) {
+        client.println("HTTP/1.1 500 Internal Server Error");
+        client.println("Content-Type: text/plain");
+        client.println("Connection: close");
+        client.println();
+        client.println("HTML not loaded");
+        return;
+    }
+
+    client.println("HTTP/1.1 200 OK");
+    client.println("Content-Type: text/html");
+    client.println("Connection: close");
+    client.println();
+    client.write(htmlPage, htmlSize);
+}
+
+
+// ------------------------------------------------------------
+// loopWebServer()
+// ------------------------------------------------------------
+void loopWebServer() {
 
   WiFiClient client = server.available();
   if (!client) return;
@@ -286,6 +329,7 @@ void loopWebServer(){
 
     int clIndex = request.indexOf("Content-Length:");
     int contentLength = 0;
+
     if (clIndex != -1) {
       int start = clIndex + 15;
       int end = request.indexOf("\r\n", start);
@@ -296,55 +340,13 @@ void loopWebServer(){
     while (client.available() < contentLength) delay(1);
     while (client.available()) body += (char)client.read();
 
-    //Serial.println("=== JSON BODY RECEIVED ===");
-    //Serial.println(body);
-
     StaticJsonDocument<300> doc;
-    DeserializationError error = deserializeJson(doc, body);
+    if (!deserializeJson(doc, body)) {
 
-    if (error) {
-      Serial.print("JSON parse failed: ");
-      Serial.println(error.c_str());
-    } else {
-
-      // ----------------------------
-      // HANDLE DIRECTION
-      // ----------------------------
       if (doc.containsKey("direction")) {
-        const char* direction = doc["direction"];
-        Serial.print("Direction: ");
-        Serial.println(direction);
-        navigateMenu(direction);
+        navigateMenu(doc["direction"]);
       }
 
-      // ----------------------------
-      // HANDLE START / STOP ACTIONS
-      // ----------------------------
-      if (doc.containsKey("action")) {
-        const char* action = doc["action"];
-        Serial.print("Action: ");
-        Serial.println(action);
-
-        if (strcmp(action, "start") == 0) {
-          Serial.println(">>> START triggered");
-        }
-        else if (strcmp(action, "stop") == 0) {
-          Serial.println(">>> STOP triggered");
-        }
-      }
-
-      // ----------------------------
-      // HANDLE DROPDOWN MENU
-      // ----------------------------
-      if (doc.containsKey("menu")) {
-        const char* menuValue = doc["menu"];
-        Serial.print("Dropdown selected: ");
-        Serial.println(menuValue);
-      }
-
-      // ----------------------------
-      // FRONTEND PERIODIC GRID REQUEST
-      // ----------------------------
       if (doc.containsKey("requestGrid")) {
 
           StaticJsonDocument<700> response;
@@ -369,7 +371,6 @@ void loopWebServer(){
       }
     }
 
-    // Build JSON response
     StaticJsonDocument<200> response;
     response["horiz"] = horizontalMenu[horizontalIndex];
     response["vert"]  = verticalMenus[horizontalIndex][verticalIndex];
@@ -390,188 +391,30 @@ void loopWebServer(){
   client.println("Connection: close");
   client.println();
   client.stop();
-
-}
-
-void handleDirectionParam(String direction){
-    if (direction == "up") {
-      //pixels.fill(0xFF00FF);
-      Serial.println("up");
-    }
-    else if (direction == "down") {
-      //pixels.fill(0xFF0000);
-      Serial.println("down");
-    }
-    else if (direction == "left") {
-      //pixels.fill(0x0000FF);
-      Serial.println("left");
-    }
-    else if (direction == "right") {
-      //pixels.fill(0x00FF00);
-      Serial.println("right");
-    }
-    else if (direction == "center") {
-      //pixels.fill(0x000);
-      Serial.println("center");
-    } else {
-      //pixels.fill(0x000);
-      Serial.println("unknown");
-    }
-    //pixels.show();
 }
 
 
-String getParam(String request, String key) {
-    int keyIndex = request.indexOf(key + "=");
-    if (keyIndex == -1) return "";
-
-    int start = keyIndex + key.length() + 1;
-    int end = request.indexOf('&', start);
-    if (end == -1) end = request.indexOf(' ', start);
-
-    return request.substring(start, end);
-}
-
-void handleClientRequest(String request) {
-
-  handleRequestParamDirection(request); // DPad sends form data as 'direction' param.
-}
-
-void handleRequestParamDirection(String request){
-  String direction = getParam(request, "direction");
-
-  String dirSet[] = {"up", "down", "left", "right", "center"};
-
-  int setSize = 5;
-  bool found = false;
-
-  for (int i = 0 ; i < setSize ; i++) {
-    if (direction == dirSet[i]) {
-      found = true;
-      break; // Exit loop early once match is found
-    }
-  }
-
-  //if (direction.length() > 0) {
-  if(found){
-    Serial.print("Direction pressed: ");
-    Serial.println(direction);
-
-    if (direction == "up") {
-      //pixels.fill(0xFF00FF);
-    }
-    else if (direction == "down") {
-      //pixels.fill(0xFF0000);
-    }
-    else if (direction == "left") {
-      //pixels.fill(0x0000FF);
-    }
-    else if (direction == "right") {
-      //pixels.fill(0x00FF00);
-    }
-    else if (direction == "center") {
-      //pixels.fill(0x000);
-    }
-    //pixels.show();
-
-  }
-
-}
-
-
-//
 // ------------------------------------------------------------
-// loadIndexHtmlToPSRAM()
+// setup()
 // ------------------------------------------------------------
-//
-bool loadIndexHtmlToPSRAM() {
-    File file = LittleFS.open("/index_dpad.html", "r");
-    if (!file) {
-        Serial.println("Failed to open /index_dpad.html from LittleFS");
-        delay(1000);
-        return false;
-    }
-    delay(1000);
+void setup() {
+  delay(2000);
+  Serial.begin(115200);
+  delay(2000);
 
-    htmlSize = file.size();
-    if (htmlSize == 0) {
-        Serial.println("/index.html is empty");
-        file.close();
-        delay(1000);
-        return false;
-    }
+  Serial.println("Webserver DPAD FS setup()");
 
-    htmlPage = (char*)ps_malloc(htmlSize + 1);
-    if (!htmlPage) {
-        Serial.println("ps_malloc failed (no PSRAM?)");
-        file.close();
-        delay(1000);
-        return false;
-    }
+  esp_log_level_set("*", ESP_LOG_NONE);
 
-    size_t readBytes = file.readBytes(htmlPage, htmlSize);
-    file.close();
-
-    if (readBytes != htmlSize) {
-        Serial.println("Failed to read full index.html into PSRAM");
-        free(htmlPage);
-        htmlPage = nullptr;
-        htmlSize = 0;
-        delay(1000);
-        return false;
-    }
-
-    htmlPage[htmlSize] = '\0';
-    Serial.printf("Loaded /index.html into PSRAM (%u bytes)\n", (unsigned)htmlSize);
-    delay(1000);
-    return true;
-}
-
-//
-// ------------------------------------------------------------
-// serveHTML()
-// ------------------------------------------------------------
-//
-void serveHTML(WiFiClient &client) {
-    if (!htmlPage || htmlSize == 0) {
-        client.println("HTTP/1.1 500 Internal Server Error");
-        client.println("Content-Type: text/plain");
-        client.println("Connection: close");
-        client.println();
-        client.println("index.html not loaded");
-        Serial.println("serveHTML() fail. 500");
-        return;
-    }
-
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-Type: text/html");
-    client.println("Connection: close");
-    client.println();
-    client.write(htmlPage, htmlSize);
-    Serial.println("serveHTML() success. 200");
-}
-
-//
-// ------------------------------------------------------------
-// sendOK()
-// ------------------------------------------------------------
-//
-void sendOK(WiFiClient &client, const char* msg) {
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-Type: text/plain");
-    client.println("Connection: close");
-    client.println();
-    client.println(msg);
+  setupWebServer();
+  setupGridColors();
 }
 
 
-void sendResponseHeader(WiFiClient client) {
-    
-    // Should not normally edit/remove these 4 lines
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-type:text/html");
-    client.println("Connection: close");
-    client.println();
-
+// ------------------------------------------------------------
+// loop()
+// ------------------------------------------------------------
+void loop() {
+  loopSensors();
+  loopWebServer();
 }
-
