@@ -3,9 +3,23 @@
 #include <WiFi.h>
 #include <ArduinoJson.h>
 
-// Network credentials
-//const char* ssid     = "TheMandaloriKen";
-//const char* password = "asdf12346302201111";
+// ------------------------------------------------------------
+// WiFi Credential Rotation
+// ------------------------------------------------------------
+struct WifiCredential {
+  const char* ssid;
+  const char* password;
+};
+
+WifiCredential wifiList[3] = {
+  { "TheMandaloriKen","asdf12346302201111" },
+  { "STDL5301",       "library30" },
+  { "TheMandalorian", "6302201111" }
+};
+
+// Pending message to send to frontend
+String pendingMessage = "";
+String pendingSeverity = "info";
 
 NetworkServer server(80);
 
@@ -51,21 +65,9 @@ unsigned int gridColors[8][8];
 int currentRow = 3;
 int currentCol = 5;
 
-struct WifiCredential {
-  const char* ssid;
-  const char* password;
-};
-
-WifiCredential wifiList[3] = {
-  { "TheMandaloriKen","asdf12346302201111" },
-  { "STDL5301",       "library30" },
-  { "TheMandalorian", "6302201111" }
-};
-
-
 
 // ------------------------------------------------------------
-// loadIndexHtmlToPSRAM() — NEW VERSION WITH FILENAME PARAM
+// loadIndexHtmlToPSRAM() — filename-aware loader
 // ------------------------------------------------------------
 bool loadIndexHtmlToPSRAM(const char* filename) {
 
@@ -117,6 +119,53 @@ bool loadIndexHtmlToPSRAM(const char* filename) {
 
 
 // ------------------------------------------------------------
+// connectToWiFi() — rotates through 3 SSID/password pairs
+// ------------------------------------------------------------
+bool connectToWiFi() {
+
+    Serial.println("Starting WiFi credential rotation...");
+
+    for (int i = 0; i < 3; i++) {
+
+        Serial.print("Trying SSID: ");
+        Serial.println(wifiList[i].ssid);
+
+        WiFi.begin(wifiList[i].ssid, wifiList[i].password);
+
+        int failCount = 0;
+
+        while (WiFi.status() != WL_CONNECTED && failCount < 5) {
+            delay(500);
+            Serial.print(".");
+            failCount++;
+        }
+
+        if (WiFi.status() == WL_CONNECTED) {
+
+            Serial.println("\nConnected!");
+
+            // Queue message for frontend
+            pendingMessage = String("Connected to ") + wifiList[i].ssid;
+            pendingSeverity = "success";
+
+            Serial.print("IP address: ");
+            Serial.println(WiFi.localIP());
+
+            return true;
+        }
+
+        Serial.println("\nFailed to connect. Moving to next SSID...");
+    }
+
+    pendingMessage = "Failed to connect to any WiFi network";
+    pendingSeverity = "error";
+
+    Serial.println("ERROR: Could not connect to ANY WiFi network.");
+    return false;
+}
+
+
+// ------------------------------------------------------------
 // setupWebServer()
 // ------------------------------------------------------------
 void setupWebServer() {
@@ -142,44 +191,11 @@ void setupWebServer() {
         }
     }
 
-  connectToWiFi();
+    // WiFi connection
+    connectToWiFi();
 
-  server.begin();
+    server.begin();
 }
-
-bool connectToWiFi() {
-
-    Serial.println("Starting WiFi credential rotation...");
-
-    for (int i = 0; i < 3; i++) {
-
-        Serial.print("Trying SSID: ");
-        Serial.println(wifiList[i].ssid);
-
-        WiFi.begin(wifiList[i].ssid, wifiList[i].password);
-
-        int failCount = 0;
-
-        while (WiFi.status() != WL_CONNECTED && failCount < 5) {
-            delay(500);
-            Serial.print(".");
-            failCount++;
-        }
-
-        if (WiFi.status() == WL_CONNECTED) {
-            Serial.println("\nConnected!");
-            Serial.print("IP address: ");
-            Serial.println(WiFi.localIP());
-            return true;   // success
-        }
-
-        Serial.println("\nFailed to connect. Moving to next SSID...");
-    }
-
-    Serial.println("ERROR: Could not connect to ANY WiFi network.");
-    return false;
-}
-
 
 
 // ------------------------------------------------------------
@@ -371,9 +387,17 @@ void loopWebServer() {
       }
     }
 
+    // Build response
     StaticJsonDocument<200> response;
     response["horiz"] = horizontalMenu[horizontalIndex];
     response["vert"]  = verticalMenus[horizontalIndex][verticalIndex];
+
+    // Add pending message if any
+    if (pendingMessage.length() > 0) {
+        response["message"] = pendingMessage;
+        response["severity"] = pendingSeverity;
+        pendingMessage = "";
+    }
 
     String out;
     serializeJson(response, out);
