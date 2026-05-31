@@ -172,7 +172,7 @@ void loopMiniSumoOpponent(){
   //clearLEDMatrix();
   uint16_t oppColor = ledmatrix.color565(0, 150,0);
   uint16_t edgeColor = ledmatrix.color565(150, 0,0);
-
+  uint16_t edgeWarnColor = ledmatrix.color565(180, 180, 0); // FFDE21
 
   tof.getAllData(buf);
   int d_mm = -1;
@@ -188,7 +188,18 @@ void loopMiniSumoOpponent(){
           }
         }
       }
-    } else if(y==7){
+    } else if(y==6){
+      for(uint8_t x = 0; x < TOF_8x8_NUM_COLS; x++){
+        d_mm = buf[y * 8 + x];
+        if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
+          ledmatrix.drawPixel(x+X_OFFSET, y, 0);
+        } else {
+          if(d_mm > 200){
+            ledmatrix.drawPixel(x+X_OFFSET, y, edgeWarnColor);
+          }
+        }
+      }
+    }  else if(y==7){
       for(uint8_t x = 0; x < TOF_8x8_NUM_COLS; x++){
         d_mm = buf[y * 8 + x];
         if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
@@ -200,6 +211,8 @@ void loopMiniSumoOpponent(){
         }
       }
     }
+
+
   }
 }
 
