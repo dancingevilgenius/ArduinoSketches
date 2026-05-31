@@ -160,33 +160,38 @@ uint16_t hue_offset = 0;
 void loop() {
 
     loopMiniSumoOpponent();
-    loopSimulateMiniSumo();
+    //loopSimulateMiniSumo();
 }
 
 
 // 1. Ignore value 4000  (indeterminate)
 // 1. Ignore value > 770  (size of sumo ring)
 void loopMiniSumoOpponent(){
+
+  clearLEDMatrix();
+  uint16_t oppColor = ledmatrix.color565(0, 150,0);
+
+
   tof.getAllData(buf);
   int d_mm = -1;
   bool opponent_detected = false;
-  for(uint8_t i = 0; i < 8; i++){
-    if(i == 5){
+  for(uint8_t y = 0; y < 8; y++){
+    if(y == 5){
 
       opponent_detected = false;
-      for(uint8_t j = 0; j < 8; j++){
-        d_mm = buf[i * 8 + j];
+      for(uint8_t x = 0; x < 8; x++){
+        d_mm = buf[y * 8 + x];
         if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
           // Do nothing
         } else {
-          if(i==5){
+          if(y==5){
             if(d_mm < 250){
               opponent_detected = true;
             }
           }
           // else if(i==6){
           //   if(val < 400){
-          //     oppoenent_detected = true;
+          //     opponent_detected = true;
           //   }
           // }
         }
@@ -194,17 +199,18 @@ void loopMiniSumoOpponent(){
 
       if(opponent_detected){
         Serial.print("Y");
-        Serial.print(i);    
+        Serial.print(y);    
         Serial.print(":\t");
-        for(uint8_t j = 0; j < 8; j++){
-          d_mm = buf[i * 8 + j];
+        for(uint8_t x = 0; x < 8; x++){
+          d_mm = buf[y * 8 + x];
           Serial.print("\t");
           if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
             Serial.print("    ");
           } else {
-            if(i==5){
+            if(y==5){
               if(d_mm < 250){
-                Serial.print("Opp");Serial.print(i);
+                Serial.print("Opp");Serial.print(y);
+                ledmatrix.drawPixel(x+X_OFFSET, y, oppColor);
               } else {
                 Serial.print("-   ");
               }
@@ -222,37 +228,6 @@ void loopMiniSumoOpponent(){
   }
 }
 
-void loopMenu(){
-
-  String str = "FOO";
-  String strArray[] = {"E1", "E2", "OP"};
-  uint16_t color565;
-  color565 = ledmatrix.color565(160, 32, 240); // purple
-  ledmatrix.setTextColor(color565); // No background color needed
-
-
-  
-    int delay_time = 1500;
-    ledMatrixKeyValue(strArray[0], "1", delay_time);
-    ledMatrixKeyValue(strArray[1], "4", delay_time);
-    ledMatrixKeyValue(strArray[2], "9", delay_time);
-}
- void loopMenuColored(){
-
-  String strArray[] = {"E1", "E2", "OP"};
-
-  uint16_t key_color, value_color;
-
-  key_color = ledmatrix.color565(160, 32, 240); // purple
-  value_color = ledmatrix.color565(0, 150, 0);    // green
-
-
-  int delay_time = 1500;
-  ledMatrixKeyValueColor(strArray[0], "1", key_color, value_color, delay_time);
-  ledMatrixKeyValueColor(strArray[1], "4", key_color, value_color, delay_time);
-  ledMatrixKeyValueColor(strArray[2], "7", key_color, value_color, delay_time);
-
- }
 
 void ledMatrixKeyValueColor(String key, String value, uint16_t key_color, uint16_t value_color, int delay_time){
 
