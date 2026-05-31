@@ -11,14 +11,32 @@
         background: #111;
         color: #eee;
     }
+
+    /* Center column wrapper */
+    .center-column {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    select {
+        font-size: 20px;
+        padding: 8px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
     .dpad-container {
         display: inline-block;
-        margin-top: 40px;
+        margin-top: 10px;
     }
+
     .row {
         display: flex;
         justify-content: center;
     }
+
     .btn {
         width: 80px;
         height: 80px;
@@ -34,6 +52,21 @@
     .btn:active {
         background: #555;
     }
+
+    .action-btn {
+        width: 140px;
+        height: 60px;
+        margin: 10px;
+        border-radius: 10px;
+        border: none;
+        background: #444;
+        color: #fff;
+        font-size: 24px;
+        cursor: pointer;
+    }
+    .action-btn:active {
+        background: #666;
+    }
 </style>
 
 <script>
@@ -41,7 +74,16 @@ function sendDirection(dir) {
     fetch("/controller", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ direction: dir, foo: 'bar', codename: 'Wonder Woman'})
+        body: JSON.stringify({ direction: dir })
+    });
+    return false;
+}
+
+function sendAction(action) {
+    fetch("/controller", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: action })
     });
     return false;
 }
@@ -51,6 +93,15 @@ function sendDirection(dir) {
 <body>
 
 <h2>Web D-Pad</h2>
+
+<div class="center-column">
+    <!-- Centered Dropdown -->
+    <select id="dropdown">
+        <option value="item1" selected>Menu Item 1</option>
+        <option value="item2">Menu Item 2</option>
+        <option value="item3">Menu Item 3</option>
+    </select>
+</div>
 
 <div class="dpad-container">
 
@@ -66,6 +117,12 @@ function sendDirection(dir) {
 
     <div class="row">
         <button class="btn" onclick="sendDirection('down')">&#9660;</button>
+    </div>
+
+    <!-- Start / Stop Buttons -->
+    <div class="row">
+        <button class="action-btn" onclick="sendAction('start')">Start</button>
+        <button class="action-btn" onclick="sendAction('stop')">Stop</button>
     </div>
 
 </div>
