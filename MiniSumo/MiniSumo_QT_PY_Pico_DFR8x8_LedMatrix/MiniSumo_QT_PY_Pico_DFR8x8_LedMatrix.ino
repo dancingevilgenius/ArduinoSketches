@@ -100,10 +100,10 @@ void setupDFR8x8(){
 
   int count=0;
   //config matrix mode
-    Serial.print("DFR MatrixLidar init starting. This may take several seconds");
+    Serial.println("DFR MatrixLidar init starting. This may take several seconds");
   while(tof.setRangingMode(eMatrix_8X8) != 0){
-    Serial.print(" ");
     Serial.print(count);
+    Serial.print(" ");
     ++count;
     if(count > 10){
       Serial.println("DFR MatrixLidar not initialized. Leaving setupMatrixLidar()");
@@ -160,6 +160,7 @@ uint16_t hue_offset = 0;
 void loop() {
 
     loopMiniSumoOpponent();
+    loopSimulateMiniSumo();
 }
 
 
