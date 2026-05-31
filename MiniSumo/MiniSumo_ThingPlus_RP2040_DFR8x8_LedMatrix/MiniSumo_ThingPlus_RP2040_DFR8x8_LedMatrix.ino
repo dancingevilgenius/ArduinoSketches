@@ -54,12 +54,18 @@ uint16_t buf[64];
 #define RING_SIZE_MM 770
 #define ROBOT_SIZE_MM 100
 #define MAX_DIST 570    // 770 - 100 - 100
+#define SDA_PIN 5 
+#define SCL_PIN 6 
 // End for DFRobot MatrixLidar ----------------
 
 
 void setup() {
   Serial.begin(115200);
+  while(!Serial){
+  }
   Serial.println("MiniSumo Thing Plus RP2040 LedMatrix and DFR8x8");
+  delay(2000);
+  
 
   setupLedMatrix();
 
@@ -69,6 +75,7 @@ void setup() {
 
 void setupDFR8x8(){
 
+  WIRE_I2C->setPins(SDA_PIN, SCL_PIN);
   WIRE_I2C->begin();
   
   while(tof.begin() != 0){
@@ -101,7 +108,7 @@ void setupLedMatrix(){
 
   if (! ledmatrix.begin(IS3741_ADDR_DEFAULT, WIRE_I2C)) {
     Serial.println("IS41 not found");
-    while (1);
+    return;
   }
 
   Serial.println("IS41 found!");
@@ -142,9 +149,69 @@ void loop() {
   //loopShow8x8LastRow();
   //loopShow8x8Gradients();
   //loopReadFromMatrix();
-  loopSimulateMiniSumo();
+  //loopSimulateMiniSumo();
   //loopMenu();
   //loopMenuColored();
+    loopMiniSumoOpponent();
+}
+
+
+// 1. Ignore value 4000  (indeterminate)
+// 1. Ignore value > 770  (size of sumo ring)
+void loopMiniSumoOpponent(){
+  tof.getAllData(buf);
+  int d_mm = -1;
+  bool opponent_detected = false;
+  for(uint8_t i = 0; i < 8; i++){
+    if(i == 5){
+
+      opponent_detected = false;
+      for(uint8_t j = 0; j < 8; j++){
+        d_mm = buf[i * 8 + j];
+        if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
+          // Do nothing
+        } else {
+          if(i==5){
+            if(d_mm < 250){
+              opponent_detected = true;
+            }
+          }
+          // else if(i==6){
+          //   if(val < 400){
+          //     oppoenent_detected = true;
+          //   }
+          // }
+        }
+      }
+
+      if(opponent_detected){
+        Serial.print("Y");
+        Serial.print(i);    
+        Serial.print(":\t");
+        for(uint8_t j = 0; j < 8; j++){
+          d_mm = buf[i * 8 + j];
+          Serial.print("\t");
+          if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
+            Serial.print("    ");
+          } else {
+            if(i==5){
+              if(d_mm < 250){
+                Serial.print("Opp1");
+              } else {
+                Serial.print("-   ");
+              }
+            }
+                        
+          }
+        }
+        Serial.println("");
+        Serial.println("------------------------------");
+
+      }
+
+
+    }
+  }
 }
 
 void loopMenu(){
