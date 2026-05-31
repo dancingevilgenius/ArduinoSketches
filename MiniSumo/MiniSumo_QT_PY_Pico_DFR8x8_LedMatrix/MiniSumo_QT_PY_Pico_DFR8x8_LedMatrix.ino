@@ -161,6 +161,7 @@ void loop() {
 
     loopMiniSumoOpponent();
     //loopSimulateMiniSumo();
+    delay(80);
 }
 
 
@@ -174,53 +175,18 @@ void loopMiniSumoOpponent(){
 
   tof.getAllData(buf);
   int d_mm = -1;
-  bool opponent_detected = false;
-  for(uint8_t y = 0; y < 8; y++){
-    if(y == 5){
+  for(uint8_t y = 0; y < TOF_8x8_NUM_ROWS; y++){
+    if(y==3 || y==4){
 
-      opponent_detected = false;
-      for(uint8_t x = 0; x < 8; x++){
+      for(uint8_t x = 0; x < TOF_8x8_NUM_COLS; x++){
         d_mm = buf[y * 8 + x];
         if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
           // Do nothing
         } else {
-          if(y==5){
-            if(d_mm < 250){
-              opponent_detected = true;
-            }
-          }
-          // else if(i==6){
-          //   if(val < 400){
-          //     opponent_detected = true;
-          //   }
-          // }
-        }
-      }
-
-      if(opponent_detected){
-        Serial.print("Y");
-        Serial.print(y);    
-        Serial.print(":\t");
-        for(uint8_t x = 0; x < 8; x++){
-          d_mm = buf[y * 8 + x];
-          Serial.print("\t");
-          if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
-            Serial.print("    ");
-          } else {
-            if(y==5){
-              if(d_mm < 250){
-                Serial.print("Opp");Serial.print(y);
-                ledmatrix.drawPixel(x+X_OFFSET, y, oppColor);
-              } else {
-                Serial.print("-   ");
-              }
-            }
-                        
+          if(d_mm < 500){
+            ledmatrix.drawPixel(x+X_OFFSET, y, oppColor);
           }
         }
-        Serial.println("");
-        Serial.println("------------------------------");
-
       }
 
 
