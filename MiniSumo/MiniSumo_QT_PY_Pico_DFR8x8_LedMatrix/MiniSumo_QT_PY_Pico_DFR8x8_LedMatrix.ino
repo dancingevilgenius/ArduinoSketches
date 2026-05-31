@@ -169,7 +169,7 @@ void loop() {
 // 1. Ignore value > 770  (size of sumo ring)
 void loopMiniSumoOpponent(){
 
-  clearLEDMatrix();
+  //clearLEDMatrix();
   uint16_t oppColor = ledmatrix.color565(0, 150,0);
 
 
@@ -181,7 +181,7 @@ void loopMiniSumoOpponent(){
       for(uint8_t x = 0; x < TOF_8x8_NUM_COLS; x++){
         d_mm = buf[y * 8 + x];
         if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
-          // Do nothing
+          ledmatrix.drawPixel(x+X_OFFSET, y, 0);
         } else {
           if(d_mm < 500){
             ledmatrix.drawPixel(x+X_OFFSET, y, oppColor);
