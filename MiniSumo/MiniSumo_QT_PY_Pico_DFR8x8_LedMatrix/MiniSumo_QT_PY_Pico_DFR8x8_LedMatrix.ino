@@ -90,8 +90,6 @@ void setupI2C(){
 
 void setupDFR8x8(){
 
-  // WIRE_I2C->setPins(SDA_PIN, SCL_PIN);
-  // WIRE_I2C->begin();
   
   while(tof.begin() != 0){
     Serial.println("DFR MatrixLidar not found");
@@ -102,9 +100,10 @@ void setupDFR8x8(){
 
   int count=0;
   //config matrix mode
+    Serial.print("DFR MatrixLidar init starting. This may take several seconds");
   while(tof.setRangingMode(eMatrix_8X8) != 0){
-    Serial.print("DFR MatrixLidar setRangingMode() error count: ");
-    Serial.println(count);
+    Serial.print(" ");
+    Serial.print(count);
     ++count;
     if(count > 10){
       Serial.println("DFR MatrixLidar not initialized. Leaving setupMatrixLidar()");
@@ -122,11 +121,11 @@ void setupDFR8x8(){
 void setupLedMatrix(){
 
   if (! ledmatrix.begin(IS3741_ADDR_DEFAULT, WIRE_I2C)) {
-    Serial.println("IS41 not found");
+    Serial.println("LED 13x9 Matrix not found");
     return;
   }
 
-  Serial.println("IS41 found!");
+  Serial.println("LED 13x9 Matrix found!");
 
   // By default the LED controller communicates over I2C at 400 KHz.
   // Arduino Uno can usually do 800 KHz, and 32-bit microcontrollers 1 MHz.
@@ -160,14 +159,6 @@ uint16_t hue_offset = 0;
 
 void loop() {
 
-  //loopSameColor();
-  //loopShowLastRow();
-  //loopShow8x8LastRow();
-  //loopShow8x8Gradients();
-  //loopReadFromMatrix();
-  //loopSimulateMiniSumo();
-  //loopMenu();
-  //loopMenuColored();
     loopMiniSumoOpponent();
 }
 
@@ -212,7 +203,7 @@ void loopMiniSumoOpponent(){
           } else {
             if(i==5){
               if(d_mm < 250){
-                Serial.print("Opp1");
+                Serial.print("Opp");Serial.print(i);
               } else {
                 Serial.print("-   ");
               }
