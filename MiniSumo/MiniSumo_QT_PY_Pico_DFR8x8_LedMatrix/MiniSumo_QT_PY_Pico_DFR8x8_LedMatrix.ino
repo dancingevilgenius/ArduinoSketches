@@ -171,13 +171,13 @@ void loopMiniSumoOpponent(){
 
   //clearLEDMatrix();
   uint16_t oppColor = ledmatrix.color565(0, 150,0);
+  uint16_t edgeColor = ledmatrix.color565(150, 0,0);
 
 
   tof.getAllData(buf);
   int d_mm = -1;
   for(uint8_t y = 0; y < TOF_8x8_NUM_ROWS; y++){
     if(y==3 || y==4){
-
       for(uint8_t x = 0; x < TOF_8x8_NUM_COLS; x++){
         d_mm = buf[y * 8 + x];
         if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
@@ -188,8 +188,17 @@ void loopMiniSumoOpponent(){
           }
         }
       }
-
-
+    } else if(y==7){
+      for(uint8_t x = 0; x < TOF_8x8_NUM_COLS; x++){
+        d_mm = buf[y * 8 + x];
+        if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
+          ledmatrix.drawPixel(x+X_OFFSET, y, 0);
+        } else {
+          if(d_mm > 170){
+            ledmatrix.drawPixel(x+X_OFFSET, y, edgeColor);
+          }
+        }
+      }
     }
   }
 }
