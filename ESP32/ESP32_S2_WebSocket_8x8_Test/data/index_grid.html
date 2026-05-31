@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>8x8 Grid WebSocket Viewer</title>
+
+<style>
+    body {
+        background: #111;
+        color: #fff;
+        font-family: Arial, sans-serif;
+        text-align: center;
+    }
+
+    .row {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .grid-container {
+        margin-top: 20px;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(8, 40px);
+        grid-template-rows: repeat(8, 40px);
+        gap: 4px;
+    }
+
+    .grid-cell {
+        width: 40px;
+        height: 40px;
+        background: #333;
+        border-radius: 4px;
+        transition: background 0.1s linear;
+    }
+</style>
+</head>
+
+<body>
+
+<h2>8×8 Grid WebSocket Display</h2>
+
+<div class="row">
+    <div id="grid8x8" class="grid-container">
+        <div id="grid" class="grid"></div>
+    </div>
+</div>
+
+<script>
+// ------------------------------------------------------------
+// Build 8×8 grid dynamically
+// ------------------------------------------------------------
+const gridElement = document.getElementById("grid");
+const cells = [];
+
+for (let i = 0; i < 64; i++) {
+    const div = document.createElement("div");
+    div.className = "grid-cell";
+    gridElement.appendChild(div);
+    cells.push(div);
+}
+
+// ------------------------------------------------------------
+// WebSocket connection
+// ------------------------------------------------------------
+const socket = new WebSocket("ws://ESP32_IP_ADDRESS/ws");
+socket.binaryType = "arraybuffer";
+
+socket.onopen = () => {
+    console.log("WebSocket connected");
+};
+
+socket.onmessage = (event) => {
+    const buf = event.data;
+
+    if (buf.byteLength === 128) {
+        // --------------------------------------------------------
+        // FULL GRID: 64 × uint16_t (128 bytes)
+        // --------------------------------------------------------
+        const view = new DataView(buf);
+
+        for (let i = 0; i < 64; i++) {
+            const value = view.getUint16(i * 2, true); // little-endian
+            updateCellColor(i, value);
+        }
+    }
+    else if (buf.byteLength === 8) {
+        // --------------------------------------------------------
+        // BITMASK GRID: uint64_t (8 bytes)
+        // --------------------------------------------------------
+        const view = new DataView(buf);
+        const bits = view.getBigUint64(0, true);
+
+        for (let i = 0; i < 64; i++) {
+            const bit = (bits >> BigInt(i)) & 1n;
+            updateCellColor(i, bit === 1n ? 1 : 0);
+        }
+    }
+    else {
+        console.warn("Unknown message size:", buf.byteLength);
+    }
+};
+
+// ------------------------------------------------------------
+// Update cell color based on value
+// ------------------------------------------------------------
+function updateCellColor(index, value) {
+    // For now: non-zero = green, zero = dark gray
+    if (value === 0) {
+        cells[index].style.background = "#333";
+    } else {
+        cells[index].style.background = "limegreen";
+    }
+}
+</script>
+
+</body>
+</html>
