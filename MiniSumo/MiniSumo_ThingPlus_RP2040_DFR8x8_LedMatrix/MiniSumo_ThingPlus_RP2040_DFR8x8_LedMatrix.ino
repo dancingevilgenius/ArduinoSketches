@@ -66,6 +66,7 @@ void setup() {
   Serial.println("MiniSumo Thing Plus RP2040 LedMatrix and DFR8x8");
   delay(2000);
   
+  setupI2C();
 
   setupLedMatrix();
 
@@ -73,10 +74,15 @@ void setup() {
 
 }
 
-void setupDFR8x8(){
-
+void setupI2C(){
   WIRE_I2C->setPins(SDA_PIN, SCL_PIN);
   WIRE_I2C->begin();
+}
+
+void setupDFR8x8(){
+
+  // WIRE_I2C->setPins(SDA_PIN, SCL_PIN);
+  // WIRE_I2C->begin();
   
   while(tof.begin() != 0){
     Serial.println("DFR MatrixLidar not found");
@@ -98,7 +104,7 @@ void setupDFR8x8(){
     delay(250);
   }
 
-  Serial.println("DFR MatrixLidar initialized! Starting readings in 3 seconds");
+  Serial.println("DFR MatrixLidar initialized!");
 }
 
 
@@ -115,7 +121,7 @@ void setupLedMatrix(){
 
   // By default the LED controller communicates over I2C at 400 KHz.
   // Arduino Uno can usually do 800 KHz, and 32-bit microcontrollers 1 MHz.
-  WIRE_I2C->setClock(800000);
+  //WIRE_I2C->setClock(800000);
 
   // Set brightness to max and bring controller out of shutdown state
   ledmatrix.setLEDscaling(0xAA); //0xFF
@@ -137,6 +143,7 @@ void setupLedMatrix(){
   clearLEDMatrix();
   ledMatrixKeyValue("MA", "OK", 1500);
   clearLEDMatrix();
+  delay(2000);
 
 }
 
