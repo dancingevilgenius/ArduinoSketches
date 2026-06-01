@@ -224,20 +224,24 @@ void setupWebServer() {
                   size_t len) {
         if (type == WS_EVT_CONNECT) {
             Serial.printf("WS: Client %u connected\n", client->id());
-        }
-        else if (type == WS_EVT_DISCONNECT) {
-            Serial.printf("WS: Client %u disconnected\n", client->id());
-        }
-        else if (type == WS_EVT_DATA) {
+        } else if (type == WS_EVT_DISCONNECT) {
+            Serial.printf("WS: Client %u disconnected\n", client->id());        
+        } else if (type == WS_EVT_DATA) {
             AwsFrameInfo *info = (AwsFrameInfo*)arg;
+
             if (info->opcode == WS_TEXT) {
                 String msg;
-                for (size_t i = 0; i < len; i++) {
-                    msg += (char)data[i];
+                for (size_t i = 0; i < len; i++) msg += (char)data[i];
+
+                if (msg == "PING") {
+                    client->text("PONG");
+                    return;
                 }
+
                 handleCommand(msg);
             }
         }
+
     });
 
     server.addHandler(&ws);

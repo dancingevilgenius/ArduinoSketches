@@ -52,6 +52,12 @@
         border-radius: 6px;
     }
 
+    /* EXTRA 5px vertical spacing */
+    .controls label {
+        display: block;
+        margin-bottom: 5px;
+    }
+
     input[type="range"] {
         width: 120px;
     }
@@ -71,40 +77,53 @@
     button:hover {
         background: #444;
     }
+
+    #stats {
+        margin-top: 10px;
+        font-size: 18px;
+        color: #0f0;
+    }
 </style>
 </head>
 
 <body>
 
 <h2>8×8 Grid WebSocket Display</h2>
+
 <div id="fps" style="color:#0f0; font-size:20px; margin-top:10px;">FPS: --</div>
+
+<div id="stats">
+    Latency: <span id="lat">--</span> ms |
+    Packet: <span id="pkt">--</span> bytes
+</div>
 
 <div class="controls">
     <div>
+        <label>Animation</label>
         <button id="btnRun">Pause</button>
     </div>
+
     <div>
-        <label>FPS:
-            <span id="fpsValue">10</span>
-        </label><br>
+        <label>FPS: <span id="fpsValue">10</span></label>
         <input id="fpsSlider" type="range" min="1" max="60" value="10">
     </div>
+
     <div>
-        <label>Pattern:</label><br>
+        <label>Pattern</label>
         <select id="patternSelect">
             <option value="0">Wave</option>
             <option value="1">Diagonal</option>
             <option value="2">Checker</option>
         </select>
     </div>
+
     <div>
-        <label>Brightness:
-            <span id="briValue">1.0</span>
-        </label><br>
+        <label>Brightness: <span id="briValue">1.0</span></label>
         <input id="briSlider" type="range" min="0" max="100" value="100">
     </div>
+
     <div>
-        <label>Mode:</label><br>
+        <label>Mode</label>
         <select id="modeSelect">
             <option value="FULL">Full Grid</option>
             <option value="BIT">Bitmask</option>
@@ -124,7 +143,6 @@
 // ------------------------------------------------------------
 const gridElement = document.getElementById("grid");
 const cells = [];
-
 for (let i = 0; i < 64; i++) {
     const div = document.createElement("div");
     div.className = "grid-cell";
@@ -138,12 +156,46 @@ for (let i = 0; i < 64; i++) {
 const socket = new WebSocket("ws://" + location.host + "/ws");
 socket.binaryType = "arraybuffer";
 
-socket.onopen = () => {
-    console.log("WebSocket connected");
-};
+let lastPing = 0;
 
-socket.onclose = () => {
-    console.log("WebSocket closed");
+// Send ping every 2 seconds
+setInterval(() => {
+    if (socket.readyState === WebSocket.OPEN) {
+        lastPing = performance.now();
+        socket.send("PING");
+    }
+}, 2000);
+
+socket.onmessage = (event) => {
+    // Handle PONG latency response
+    if (typeof event.data === "string") {
+        if (event.data === "PONG") {
+            const latency = performance.now() - lastPing;
+            document.getElementById("lat").textContent = latency.toFixed(1);
+        }
+        return;
+    }
+
+    // Binary frame
+    const buf = event.data;
+    document.getElementById("pkt").textContent = buf.byteLength;
+
+    frameCount++;
+    updateFPS();
+
+    if (buf.byteLength === 128) {
+        const view = new DataView(buf);
+        for (let i = 0; i < 64; i++) {
+            updateCellColor(i, view.getUint16(i * 2, true));
+        }
+    }
+    else if (buf.byteLength === 8) {
+        const view = new DataView(buf);
+        const bits = view.getBigUint64(0, true);
+        for (let i = 0; i < 64; i++) {
+            updateCellColor(i, (bits >> BigInt(i)) & 1n ? 1 : 0);
+        }
+    }
 };
 
 // ------------------------------------------------------------
@@ -165,46 +217,10 @@ function updateFPS() {
 }
 
 // ------------------------------------------------------------
-// WebSocket message handler
-// ------------------------------------------------------------
-socket.onmessage = (event) => {
-    // Only handle binary frames here
-    if (typeof event.data === "string") {
-        console.log("Text message from ESP32:", event.data);
-        return;
-    }
-
-    frameCount++;
-    updateFPS();
-
-    const buf = event.data;
-
-    if (buf.byteLength === 128) {
-        const view = new DataView(buf);
-        for (let i = 0; i < 64; i++) {
-            const value = view.getUint16(i * 2, true);
-            updateCellColor(i, value);
-        }
-    }
-    else if (buf.byteLength === 8) {
-        const view = new DataView(buf);
-        const bits = view.getBigUint64(0, true);
-        for (let i = 0; i < 64; i++) {
-            const bit = (bits >> BigInt(i)) & 1n;
-            updateCellColor(i, bit === 1n ? 1 : 0);
-        }
-    }
-};
-
-// ------------------------------------------------------------
 // Update cell color
 // ------------------------------------------------------------
 function updateCellColor(index, value) {
-    if (value === 0) {
-        cells[index].style.background = "#333";
-    } else {
-        cells[index].style.background = "limegreen";
-    }
+    cells[index].style.background = value === 0 ? "#333" : "limegreen";
 }
 
 // ------------------------------------------------------------
@@ -213,8 +229,6 @@ function updateCellColor(index, value) {
 function sendCommand(cmd) {
     if (socket.readyState === WebSocket.OPEN) {
         socket.send(cmd);
-    } else {
-        console.warn("WebSocket not open, cannot send:", cmd);
     }
 }
 
@@ -244,19 +258,17 @@ fpsSlider.oninput = () => {
 };
 
 patternSelect.onchange = () => {
-    const v = parseInt(patternSelect.value, 10);
-    sendCommand("PAT:" + v);
+    sendCommand("PAT:" + patternSelect.value);
 };
 
 briSlider.oninput = () => {
-    const v = parseInt(briSlider.value, 10) / 100.0;
-    briValue.textContent = v.toFixed(2);
-    sendCommand("BRI:" + v.toFixed(2));
+    const v = (parseInt(briSlider.value, 10) / 100).toFixed(2);
+    briValue.textContent = v;
+    sendCommand("BRI:" + v);
 };
 
 modeSelect.onchange = () => {
-    const v = modeSelect.value; // "FULL" or "BIT"
-    sendCommand("MODE:" + v);
+    sendCommand("MODE:" + modeSelect.value);
 };
 </script>
 
