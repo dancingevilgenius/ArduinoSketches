@@ -6,8 +6,8 @@
 // ------------------------------------------------------------
 // WiFi Credentials
 // ------------------------------------------------------------
-const char* ssid = "YOUR_SSID";
-const char* password = "YOUR_PASSWORD";
+const char* ssid = "TheMandaloriKen";
+const char* password = "asdf12346302201111";
 
 // ------------------------------------------------------------
 // Web Server + WebSocket
@@ -24,7 +24,7 @@ uint16_t colorGrid[8][8];
 // PSRAM HTML Buffer
 // ------------------------------------------------------------
 //char* htmlBuffer = nullptr;
-const uint8_t* htmlBuffer = nullptr;
+char* htmlBuffer = nullptr;
 size_t htmlSize = 0;
 
 
@@ -112,8 +112,12 @@ void setupWebServer() {
 
     // Serve HTML from PSRAM
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+        // AsyncWebServerResponse *response =
+        //     request->beginResponse(200, "text/html", (const char*)htmlBuffer, htmlSize);
         AsyncWebServerResponse *response =
-            request->beginResponse(200, "text/html", htmlBuffer, htmlSize);
+            request->beginResponse(200, "text/html",
+                                (const uint8_t*)htmlBuffer, htmlSize);
+
         response->addHeader("Cache-Control", "no-cache");
         request->send(response);
     });

@@ -66,7 +66,7 @@ for (let i = 0; i < 64; i++) {
 // ------------------------------------------------------------
 // WebSocket connection
 // ------------------------------------------------------------
-const socket = new WebSocket("ws://ESP32_IP_ADDRESS/ws");
+const socket = new WebSocket("ws://192.168.50.93/ws");
 socket.binaryType = "arraybuffer";
 
 socket.onopen = () => {
