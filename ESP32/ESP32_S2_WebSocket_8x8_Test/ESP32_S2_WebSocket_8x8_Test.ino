@@ -286,7 +286,7 @@ void loop() {
 
         updateGrid();
 
-        if (ws.count() > 0 && ws.availableForWriteAll()) {
+        if (ws.count() > 0 ) {
             if (sendMode == MODE_FULL) {
                 sendFullGrid();
             } else {
