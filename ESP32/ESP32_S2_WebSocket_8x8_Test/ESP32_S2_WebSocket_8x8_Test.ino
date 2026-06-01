@@ -23,11 +23,8 @@ uint16_t colorGrid[8][8];
 // ------------------------------------------------------------
 // PSRAM HTML Buffer
 // ------------------------------------------------------------
-//char* htmlBuffer = nullptr;
 char* htmlBuffer = nullptr;
 size_t htmlSize = 0;
-
-
 
 // ------------------------------------------------------------
 // Load HTML file from LittleFS → PSRAM
@@ -112,12 +109,9 @@ void setupWebServer() {
 
     // Serve HTML from PSRAM
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        // AsyncWebServerResponse *response =
-        //     request->beginResponse(200, "text/html", (const char*)htmlBuffer, htmlSize);
         AsyncWebServerResponse *response =
             request->beginResponse(200, "text/html",
-                                (const uint8_t*)htmlBuffer, htmlSize);
-
+                                   (const uint8_t*)htmlBuffer, htmlSize);
         response->addHeader("Cache-Control", "no-cache");
         request->send(response);
     });
@@ -142,6 +136,12 @@ void setupWebServer() {
 
     Serial.println("Web server started");
 }
+
+// ------------------------------------------------------------
+// Smooth Animation Timer
+// ------------------------------------------------------------
+unsigned long lastSend = 0;
+const unsigned long frameInterval = 100;  // 10 Hz
 
 // ------------------------------------------------------------
 // Setup
@@ -172,11 +172,20 @@ void setup() {
 }
 
 // ------------------------------------------------------------
-// Loop
+// Loop (Smooth, Continuous Animation)
 // ------------------------------------------------------------
 void loop() {
-    updateGrid();
-    sendFullGrid();   // send 128-byte version
-    sendBitGrid();    // send 8-byte version
-    delay(100);       // ~10 Hz
+    unsigned long now = millis();
+
+    if (now - lastSend >= frameInterval) {
+        lastSend = now;
+
+        updateGrid();
+
+        // Only send if WebSocket is ready (prevents freezing)
+        if (ws.count() > 0 && ws.availableForWriteAll()) {
+            sendFullGrid();
+            // sendBitGrid();  // optional
+        }
+    }
 }
