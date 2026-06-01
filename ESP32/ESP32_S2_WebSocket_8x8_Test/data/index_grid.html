@@ -36,12 +36,81 @@
         border-radius: 4px;
         transition: background 0.1s linear;
     }
+
+    .controls {
+        margin-top: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+        font-size: 14px;
+    }
+
+    .controls > div {
+        background: #222;
+        padding: 10px 14px;
+        border-radius: 6px;
+    }
+
+    input[type="range"] {
+        width: 120px;
+    }
+
+    select, button {
+        background: #333;
+        color: #fff;
+        border: 1px solid #555;
+        border-radius: 4px;
+        padding: 4px 8px;
+    }
+
+    button {
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #444;
+    }
 </style>
 </head>
 
 <body>
 
 <h2>8×8 Grid WebSocket Display</h2>
+<div id="fps" style="color:#0f0; font-size:20px; margin-top:10px;">FPS: --</div>
+
+<div class="controls">
+    <div>
+        <button id="btnRun">Pause</button>
+    </div>
+    <div>
+        <label>FPS:
+            <span id="fpsValue">10</span>
+        </label><br>
+        <input id="fpsSlider" type="range" min="1" max="60" value="10">
+    </div>
+    <div>
+        <label>Pattern:</label><br>
+        <select id="patternSelect">
+            <option value="0">Wave</option>
+            <option value="1">Diagonal</option>
+            <option value="2">Checker</option>
+        </select>
+    </div>
+    <div>
+        <label>Brightness:
+            <span id="briValue">1.0</span>
+        </label><br>
+        <input id="briSlider" type="range" min="0" max="100" value="100">
+    </div>
+    <div>
+        <label>Mode:</label><br>
+        <select id="modeSelect">
+            <option value="FULL">Full Grid</option>
+            <option value="BIT">Bitmask</option>
+        </select>
+    </div>
+</div>
 
 <div class="row">
     <div id="grid8x8" class="grid-container">
@@ -66,55 +135,129 @@ for (let i = 0; i < 64; i++) {
 // ------------------------------------------------------------
 // WebSocket connection
 // ------------------------------------------------------------
-const socket = new WebSocket("ws://192.168.50.93/ws");
+const socket = new WebSocket("ws://" + location.host + "/ws");
 socket.binaryType = "arraybuffer";
 
 socket.onopen = () => {
     console.log("WebSocket connected");
 };
 
+socket.onclose = () => {
+    console.log("WebSocket closed");
+};
+
+// ------------------------------------------------------------
+// FPS Counter
+// ------------------------------------------------------------
+let frameCount = 0;
+let lastFPSUpdate = performance.now();
+
+function updateFPS() {
+    const now = performance.now();
+    const elapsed = now - lastFPSUpdate;
+
+    if (elapsed >= 1000) {
+        const fps = Math.round((frameCount / elapsed) * 1000);
+        document.getElementById("fps").textContent = "FPS: " + fps;
+        frameCount = 0;
+        lastFPSUpdate = now;
+    }
+}
+
+// ------------------------------------------------------------
+// WebSocket message handler
+// ------------------------------------------------------------
 socket.onmessage = (event) => {
+    // Only handle binary frames here
+    if (typeof event.data === "string") {
+        console.log("Text message from ESP32:", event.data);
+        return;
+    }
+
+    frameCount++;
+    updateFPS();
+
     const buf = event.data;
 
     if (buf.byteLength === 128) {
-        // --------------------------------------------------------
-        // FULL GRID: 64 × uint16_t (128 bytes)
-        // --------------------------------------------------------
         const view = new DataView(buf);
-
         for (let i = 0; i < 64; i++) {
-            const value = view.getUint16(i * 2, true); // little-endian
+            const value = view.getUint16(i * 2, true);
             updateCellColor(i, value);
         }
     }
     else if (buf.byteLength === 8) {
-        // --------------------------------------------------------
-        // BITMASK GRID: uint64_t (8 bytes)
-        // --------------------------------------------------------
         const view = new DataView(buf);
         const bits = view.getBigUint64(0, true);
-
         for (let i = 0; i < 64; i++) {
             const bit = (bits >> BigInt(i)) & 1n;
             updateCellColor(i, bit === 1n ? 1 : 0);
         }
     }
-    else {
-        console.warn("Unknown message size:", buf.byteLength);
-    }
 };
 
 // ------------------------------------------------------------
-// Update cell color based on value
+// Update cell color
 // ------------------------------------------------------------
 function updateCellColor(index, value) {
-    // For now: non-zero = green, zero = dark gray
     if (value === 0) {
         cells[index].style.background = "#333";
     } else {
         cells[index].style.background = "limegreen";
     }
 }
+
+// ------------------------------------------------------------
+// Command helpers
+// ------------------------------------------------------------
+function sendCommand(cmd) {
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(cmd);
+    } else {
+        console.warn("WebSocket not open, cannot send:", cmd);
+    }
+}
+
+// ------------------------------------------------------------
+// UI Controls
+// ------------------------------------------------------------
+const btnRun = document.getElementById("btnRun");
+const fpsSlider = document.getElementById("fpsSlider");
+const fpsValue = document.getElementById("fpsValue");
+const patternSelect = document.getElementById("patternSelect");
+const briSlider = document.getElementById("briSlider");
+const briValue = document.getElementById("briValue");
+const modeSelect = document.getElementById("modeSelect");
+
+let running = true;
+
+btnRun.onclick = () => {
+    running = !running;
+    btnRun.textContent = running ? "Pause" : "Resume";
+    sendCommand("RUN:" + (running ? "1" : "0"));
+};
+
+fpsSlider.oninput = () => {
+    const v = parseInt(fpsSlider.value, 10);
+    fpsValue.textContent = v;
+    sendCommand("FPS:" + v);
+};
+
+patternSelect.onchange = () => {
+    const v = parseInt(patternSelect.value, 10);
+    sendCommand("PAT:" + v);
+};
+
+briSlider.oninput = () => {
+    const v = parseInt(briSlider.value, 10) / 100.0;
+    briValue.textContent = v.toFixed(2);
+    sendCommand("BRI:" + v.toFixed(2));
+};
+
+modeSelect.onchange = () => {
+    const v = modeSelect.value; // "FULL" or "BIT"
+    sendCommand("MODE:" + v);
+};
 </script>
 
 </body>
