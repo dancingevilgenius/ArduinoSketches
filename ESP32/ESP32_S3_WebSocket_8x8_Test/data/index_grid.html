@@ -14,32 +14,25 @@
         text-align: center;
     }
 
-    /* NEW: Outer wrapper that controls width ONLY on desktop */
     .page-wrapper {
-        width: 80vw;              /* mobile: 80% of viewport */
+        width: 80vw;
         margin: 0 auto;
-    }
-
-    @media (min-width: 700px) {
-        .page-wrapper {
-            max-width: 300px;     /* desktop: cap width */
-        }
     }
 
     h2 {
         margin-top: 15px;
-        font-size: 24px;
+        font-size: 48px;
     }
 
     #stats {
         margin-top: 10px;
-        font-size: 18px;
+        font-size: 32px;
         color: #0f0;
     }
 
     /* GRID */
     .grid-container {
-        width: 100%;              /* now inherits wrapper width */
+        width: 100%;
         margin-top: 20px;
     }
 
@@ -58,45 +51,48 @@
         transition: background 0.1s linear;
     }
 
-    /* CONTROLS BELOW GRID */
+    /* CONTROLS */
     .controls-wrapper {
         width: 100%;
-        margin-top: 20px;
+        margin-top: 30px;
         display: flex;
         flex-direction: column;
-        gap: 14px;
-        margin-bottom: 20px;
+        gap: 20px;
+        margin-bottom: 40px;
     }
 
-    .control-box {
+    .control-row {
+        display: flex;
+        align-items: center;
         background: #222;
-        padding: 10px;
-        border-radius: 8px;
-        text-align: center;
+        padding: 16px;
+        border-radius: 10px;
+        width: 100%;
     }
 
-    .control-box label {
-        display: block;
-        margin-bottom: 6px;
-        font-size: 16px;
+    /* Label = 25% width */
+    .control-row label {
+        width: 25%;
+        font-size: 32px;
         font-weight: bold;
+        text-align: left;
+        white-space: nowrap;
     }
 
-    input[type="range"] {
-        width: 100%;
-    }
-
-    select, button {
-        width: 100%;
-        padding: 8px;
-        font-size: 16px;
-        border-radius: 6px;
+    /* Control = 75% width */
+    .control-row input[type="range"],
+    .control-row select,
+    .control-row button {
+        width: 75%;
+        font-size: 28px;
+        padding: 12px;
+        border-radius: 8px;
         border: 1px solid #555;
         background: #333;
         color: #fff;
     }
 
-    button:hover {
+    .control-row button:hover {
         background: #444;
     }
 </style>
@@ -104,7 +100,6 @@
 
 <body>
 
-<!-- EVERYTHING NOW LIVES INSIDE THIS WRAPPER -->
 <div class="page-wrapper">
 
     <h2>8×8 Grid WebSocket Display</h2>
@@ -120,25 +115,25 @@
         <div id="grid" class="grid"></div>
     </div>
 
-    <!-- CONTROLS BELOW GRID -->
+    <!-- CONTROLS -->
     <div class="controls-wrapper">
 
-        <div class="control-box">
+        <div class="control-row">
             <label>FPS</label>
             <input id="fpsSlider" type="range" min="1" max="60" value="10">
         </div>
 
-        <div class="control-box">
+        <div class="control-row">
             <label>Brightness</label>
             <input id="briSlider" type="range" min="0" max="100" value="100">
         </div>
 
-        <div class="control-box">
+        <div class="control-row">
             <label>Animation</label>
             <button id="btnRun">Pause</button>
         </div>
 
-        <div class="control-box">
+        <div class="control-row">
             <label>Pattern</label>
             <select id="patternSelect">
                 <option value="0">Wave</option>
@@ -147,7 +142,7 @@
             </select>
         </div>
 
-        <div class="control-box">
+        <div class="control-row">
             <label>Mode</label>
             <select id="modeSelect">
                 <option value="FULL">Full Grid</option>
@@ -157,7 +152,7 @@
 
     </div>
 
-</div> <!-- end page-wrapper -->
+</div>
 
 <script>
 // Build 8×8 grid
@@ -170,13 +165,69 @@ for (let i = 0; i < 64; i++) {
     cells.push(div);
 }
 
-// WebSocket
-const socket = new WebSocket("ws://" + location.host + "/ws");
-socket.binaryType = "arraybuffer";
+// ------------------------------------------------------------
+// WebSocket with Auto-Reconnect
+// ------------------------------------------------------------
+let socket = null;
+let reconnectTimer = null;
 
-let lastPing = 0;
+function connectWebSocket() {
+    const host = window.location.hostname;
+    socket = new WebSocket(`ws://${host}/ws`);
+    socket.binaryType = "arraybuffer";
+
+    socket.onopen = () => {
+        console.log("WS connected");
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+        }
+    };
+
+    socket.onclose = () => {
+        console.log("WS closed, reconnecting...");
+        reconnectTimer = setTimeout(connectWebSocket, 500);
+    };
+
+    socket.onerror = () => {
+        console.log("WS error");
+        socket.close();
+    };
+
+    socket.onmessage = (event) => {
+        if (typeof event.data === "string") {
+            if (event.data === "PONG") {
+                const latency = performance.now() - lastPing;
+                document.getElementById("lat").textContent = latency.toFixed(1);
+            }
+            return;
+        }
+
+        const buf = event.data;
+        document.getElementById("pkt").textContent = buf.byteLength;
+
+        frameCount++;
+        updateFPS();
+
+        if (buf.byteLength === 128) {
+            const view = new DataView(buf);
+            for (let i = 0; i < 64; i++) {
+                updateCellColor(i, view.getUint16(i * 2, true));
+            }
+        } else if (buf.byteLength === 8) {
+            const view = new DataView(buf);
+            const bits = view.getBigUint64(0, true);
+            for (let i = 0; i < 64; i++) {
+                updateCellColor(i, (bits >> BigInt(i)) & 1n ? 1 : 0);
+            }
+        }
+    };
+}
+
+connectWebSocket();
 
 // Ping every 2 seconds
+let lastPing = 0;
 setInterval(() => {
     if (socket.readyState === WebSocket.OPEN) {
         lastPing = performance.now();
@@ -184,36 +235,9 @@ setInterval(() => {
     }
 }, 2000);
 
-socket.onmessage = (event) => {
-    if (typeof event.data === "string") {
-        if (event.data === "PONG") {
-            const latency = performance.now() - lastPing;
-            document.getElementById("lat").textContent = latency.toFixed(1);
-        }
-        return;
-    }
-
-    const buf = event.data;
-    document.getElementById("pkt").textContent = buf.byteLength;
-
-    frameCount++;
-    updateFPS();
-
-    if (buf.byteLength === 128) {
-        const view = new DataView(buf);
-        for (let i = 0; i < 64; i++) {
-            updateCellColor(i, view.getUint16(i * 2, true));
-        }
-    } else if (buf.byteLength === 8) {
-        const view = new DataView(buf);
-        const bits = view.getBigUint64(0, true);
-        for (let i = 0; i < 64; i++) {
-            updateCellColor(i, (bits >> BigInt(i)) & 1n ? 1 : 0);
-        }
-    }
-};
-
+// ------------------------------------------------------------
 // FPS counter
+// ------------------------------------------------------------
 let frameCount = 0;
 let lastFPSUpdate = performance.now();
 
@@ -239,12 +263,13 @@ function sendCommand(cmd) {
     }
 }
 
+// ------------------------------------------------------------
 // Controls
+// ------------------------------------------------------------
 const btnRun = document.getElementById("btnRun");
 const fpsSlider = document.getElementById("fpsSlider");
 const patternSelect = document.getElementById("patternSelect");
 const briSlider = document.getElementById("briSlider");
-const briValue = document.getElementById("briValue");
 const modeSelect = document.getElementById("modeSelect");
 
 let running = true;

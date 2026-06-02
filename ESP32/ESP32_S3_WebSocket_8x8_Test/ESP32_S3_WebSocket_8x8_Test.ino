@@ -32,10 +32,52 @@ size_t htmlSize = 0;
 bool animationRunning = true;
 unsigned long lastSend = 0;
 unsigned long frameInterval = 100;  // ms, default 10 FPS
-uint8_t patternIndex = 0;           // 0,1,2...
-float brightness = 1.0f;            // 0.0–1.0
+uint8_t patternIndex = 0;
+float brightness = 1.0f;
 enum SendMode { MODE_FULL, MODE_BITMASK };
 SendMode sendMode = MODE_FULL;
+
+// ------------------------------------------------------------
+// WiFi Event Handler
+// ------------------------------------------------------------
+void WiFiEvent(WiFiEvent_t event) {
+  switch (event) {
+
+    case ARDUINO_EVENT_WIFI_STA_START:
+      Serial.println("[WiFi] STA Started");
+      break;
+
+    case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+      Serial.println("[WiFi] Connected to AP");
+      break;
+
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+      Serial.println("\n[WiFi] Connection Established!");
+      Serial.print("[WiFi] IP Address: ");
+      Serial.println(WiFi.localIP());
+      break;
+
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+      Serial.println("\n[WiFi] Connection Lost! Attempting to reconnect...");
+      WiFi.reconnect();
+      break;
+
+    default:
+      Serial.printf("[WiFi] Event: %d\n", event);
+      break;
+  }
+}
+
+// ------------------------------------------------------------
+// WiFi Setup (non-blocking)
+// ------------------------------------------------------------
+void setupWiFi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.onEvent(WiFiEvent);
+
+  Serial.printf("[WiFi] Connecting to %s...\n", ssid);
+  WiFi.begin(ssid, password);
+}
 
 // ------------------------------------------------------------
 // Helpers
@@ -77,14 +119,14 @@ bool serveHTML(const char* filename) {
 }
 
 // ------------------------------------------------------------
-// Send full 8×8 grid as 64 × uint16_t (128 bytes)
+// Send full 8×8 grid (128 bytes)
 // ------------------------------------------------------------
 void sendFullGrid() {
     ws.binaryAll((uint8_t*)colorGrid, sizeof(colorGrid));
 }
 
 // ------------------------------------------------------------
-// Send compact 64-bit bitmask (uint64_t)
+// Send compact 64-bit bitmask
 // ------------------------------------------------------------
 void sendBitGrid() {
     uint64_t bits = 0;
@@ -147,54 +189,51 @@ void updateGrid() {
 }
 
 // ------------------------------------------------------------
-// Command parsing (simple text protocol)
-// ------------------------------------------------------------
-// Commands (text frames):
-// RUN:0 or RUN:1
-// FPS:<int>   (1–60)
-// PAT:<int>   (0–2)
-// BRI:<float> (0.0–1.0)
-// MODE:FULL or MODE:BIT
+// Command parsing
 // ------------------------------------------------------------
 void handleCommand(const String& msg) {
     Serial.println("CMD: " + msg);
 
     if (msg.startsWith("RUN:")) {
-        int v = msg.substring(4).toInt();
-        animationRunning = (v != 0);
-        Serial.printf("animationRunning = %d\n", animationRunning);
+        animationRunning = msg.substring(4).toInt() != 0;
     }
     else if (msg.startsWith("FPS:")) {
         int fps = msg.substring(4).toInt();
-        if (fps < 1) fps = 1;
-        if (fps > 60) fps = 60;
-        frameInterval = 1000UL / (unsigned long)fps;
-        Serial.printf("FPS = %d, frameInterval = %lu ms\n", fps, frameInterval);
+        fps = constrain(fps, 1, 60);
+        frameInterval = 1000UL / fps;
     }
     else if (msg.startsWith("PAT:")) {
-        int p = msg.substring(4).toInt();
-        if (p < 0) p = 0;
-        if (p > 2) p = 2;
-        patternIndex = (uint8_t)p;
-        Serial.printf("patternIndex = %d\n", patternIndex);
+        patternIndex = constrain(msg.substring(4).toInt(), 0, 2);
     }
     else if (msg.startsWith("BRI:")) {
-        float b = msg.substring(4).toFloat();
-        if (b < 0.0f) b = 0.0f;
-        if (b > 1.0f) b = 1.0f;
-        brightness = b;
-        Serial.printf("brightness = %.2f\n", brightness);
+        brightness = constrain(msg.substring(4).toFloat(), 0.0f, 1.0f);
     }
     else if (msg.startsWith("MODE:")) {
         String m = msg.substring(5);
         m.toUpperCase();
-        if (m == "FULL") {
-            sendMode = MODE_FULL;
-        } else if (m == "BIT") {
-            sendMode = MODE_BITMASK;
-        }
-        Serial.printf("sendMode = %s\n", sendMode == MODE_FULL ? "FULL" : "BIT");
+        sendMode = (m == "BIT") ? MODE_BITMASK : MODE_FULL;
     }
+}
+
+// ------------------------------------------------------------
+// Multi-client viewer list + cleanup
+// ------------------------------------------------------------
+void printClientList() {
+    Serial.println("---- WebSocket Clients ----");
+
+    for (AsyncWebSocketClient& c : ws.getClients()) {
+        AsyncWebSocketClient* client = &c;
+
+        if (client->status() == WS_CONNECTED) {
+            Serial.printf("Client %u: CONNECTED\n", client->id());
+        } else {
+            Serial.printf("Client %u: NOT CONNECTED (closing)\n", client->id());
+            client->close();
+        }
+    }
+
+    Serial.printf("Active client count (ws.count): %u\n", ws.count());
+    Serial.println("---------------------------");
 }
 
 // ------------------------------------------------------------
@@ -206,7 +245,6 @@ void setupWebServer() {
         return;
     }
 
-    // Serve HTML from PSRAM
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         AsyncWebServerResponse *response =
             request->beginResponse(200, "text/html",
@@ -215,18 +253,23 @@ void setupWebServer() {
         request->send(response);
     });
 
-    // WebSocket events
     ws.onEvent([](AsyncWebSocket *server,
                   AsyncWebSocketClient *client,
                   AwsEventType type,
                   void *arg,
                   uint8_t *data,
                   size_t len) {
+
         if (type == WS_EVT_CONNECT) {
             Serial.printf("WS: Client %u connected\n", client->id());
-        } else if (type == WS_EVT_DISCONNECT) {
-            Serial.printf("WS: Client %u disconnected\n", client->id());        
-        } else if (type == WS_EVT_DATA) {
+        }
+
+        if (type == WS_EVT_DISCONNECT) {
+            Serial.printf("WS: Client %u disconnected\n", client->id());
+            ws.cleanupClients();
+        }
+
+        if (type == WS_EVT_DATA) {
             AwsFrameInfo *info = (AwsFrameInfo*)arg;
 
             if (info->opcode == WS_TEXT) {
@@ -241,13 +284,10 @@ void setupWebServer() {
                 handleCommand(msg);
             }
         }
-
     });
 
     server.addHandler(&ws);
     server.begin();
-
-    Serial.println("Web server started");
 }
 
 // ------------------------------------------------------------
@@ -257,26 +297,14 @@ void setup() {
     Serial.begin(115200);
     delay(500);
 
-    if (!LittleFS.begin()) {
-        Serial.println("LittleFS mount failed");
-    } else {
-        Serial.println("LittleFS mounted");
-    }
+    LittleFS.begin();
 
-    WiFi.begin(ssid, password);
-    Serial.print("Connecting");
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(300);
-        Serial.print(".");
-    }
-    Serial.println("\nConnected!");
-    Serial.println(WiFi.localIP());
-
+    setupWiFi();
     setupWebServer();
 }
 
 // ------------------------------------------------------------
-// Loop (Smooth, Continuous Animation with Command Control)
+// OFFICIAL LOOP — always send frames when connected
 // ------------------------------------------------------------
 void loop() {
     unsigned long now = millis();
@@ -286,12 +314,20 @@ void loop() {
 
         updateGrid();
 
-        if (ws.count() > 0 ) {
+        if (ws.count() > 0) {
             if (sendMode == MODE_FULL) {
                 sendFullGrid();
             } else {
                 sendBitGrid();
             }
         }
+    }
+
+    // Periodic multi-client viewer list + deep cleanup
+    static unsigned long lastClientPrint = 0;
+    if (now - lastClientPrint > 5000) {
+        lastClientPrint = now;
+        printClientList();
+        ws.cleanupClients();
     }
 }
