@@ -45,9 +45,10 @@
         gap: 4px;
     }
 
+    /* Softer, more rounded cells */
     .grid-cell {
         background: #333;
-        border-radius: 4px;
+        border-radius: 14px;
         transition: background 0.1s linear;
     }
 
@@ -73,7 +74,7 @@
     /* Label = 25% width */
     .control-row label {
         width: 25%;
-        font-size: 32px;
+        font-size: 36px;
         font-weight: bold;
         text-align: left;
         white-space: nowrap;
@@ -84,12 +85,24 @@
     .control-row select,
     .control-row button {
         width: 75%;
-        font-size: 28px;
-        padding: 12px;
-        border-radius: 8px;
+        font-size: 34px;
+        padding: 16px;
+        border-radius: 10px;
         border: 1px solid #555;
         background: #333;
         color: #fff;
+    }
+
+    /* Center dropdown text */
+    .control-row select {
+        text-align: center;
+        text-align-last: center;
+    }
+
+    /* Shorter sliders to avoid label overlap */
+    .control-row input[type="range"] {
+        width: 65%;
+        margin-left: 10%;
     }
 
     .control-row button:hover {
@@ -120,7 +133,7 @@
 
         <div class="control-row">
             <label>FPS</label>
-            <input id="fpsSlider" type="range" min="1" max="60" value="10">
+            <input id="fpsSlider" type="range" min="1" max="20" value="10">
         </div>
 
         <div class="control-row">
@@ -253,8 +266,22 @@ function updateFPS() {
     }
 }
 
+// ------------------------------------------------------------
+// Improved brightness rendering
+// ------------------------------------------------------------
 function updateCellColor(index, value) {
-    cells[index].style.background = value === 0 ? "#333" : "limegreen";
+    // value is 0–32 from backend
+    const brightness = briSlider.value / 100;
+
+    const scaled = Math.min(
+        255,
+        Math.floor((value / 32) * brightness * 255)
+    );
+
+    cells[index].style.background =
+        scaled === 0
+            ? "#222"
+            : `rgb(${scaled}, 255, ${scaled})`;
 }
 
 function sendCommand(cmd) {
@@ -299,3 +326,4 @@ modeSelect.onchange = () => {
 
 </body>
 </html>
+ 
