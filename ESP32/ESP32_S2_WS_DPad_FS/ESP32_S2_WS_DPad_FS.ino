@@ -1,10 +1,20 @@
+// ------------------------------------------------------------
+// Project: D-Pad loaded from HTML
+// Backend: ESP32 AsyncWebServer + AsyncWebSocket + LittleFS
+// Frontend: index_dpad.html (WebSocket grid)
+// Status: Merged baseline (HTTP D-Pad + WS grid, no patterns)
+// ------------------------------------------------------------
+
 #include <Arduino.h>
-#include <LittleFS.h>
 #include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <LittleFS.h>
 #include <ArduinoJson.h>
+#include <map>
 
 // ------------------------------------------------------------
-// WiFi Credential Rotation
+// WiFi Credential Rotation (REORDERED)
 // ------------------------------------------------------------
 struct WifiCredential {
   const char* ssid;
@@ -12,31 +22,60 @@ struct WifiCredential {
 };
 
 WifiCredential wifiList[3] = {
-  { "TheMandalorian", "6302201111" },
-  { "TheMandaloriKen","asdf12346302201111" },
-  { "STDL5301",       "library30" },
+  { "TheMandaloriKen", "asdf12346302201111" },
+  { "TheMandalorian",  "6302201111" },
+  { "STDL5301",        "library30" }
 };
 
-// Pending message to send to frontend
 String pendingMessage = "";
 String pendingSeverity = "info";
 
-NetworkServer server(80);
+// ------------------------------------------------------------
+// Web Server + WebSocket
+// ------------------------------------------------------------
+AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
 
-// PSRAM buffer for HTML
-char* htmlPage = nullptr;
+// Store User-Agent strings per WebSocket client ID
+std::map<uint32_t, String> clientUserAgents;
+
+// ------------------------------------------------------------
+// 8×8 Grid (uint16_t) for WebSocket + demo animation
+// ------------------------------------------------------------
+uint16_t colorGrid[8][8];
+
+// simple right-to-left green pixel animation
+int currentRow = 3;
+int currentCol = 5;
+
+// ------------------------------------------------------------
+// PSRAM HTML Buffer
+// ------------------------------------------------------------
+char* htmlBuffer = nullptr;
 size_t htmlSize = 0;
 
-// Sensor loop timing
-#define SENSOR_INTERVAL_TIME 300
-long lastSensorUpdateTime = 0;
+// ------------------------------------------------------------
+// Animation / Control State (no pattern logic)
+// ------------------------------------------------------------
+bool animationRunning = true;
 
-// Horizontal menu
+unsigned long lastAnimationTime = 0;
+unsigned long lastClientCleanupTime = 0;
+
+unsigned long INTERVAL_ANIMATION = 100;           // ms, default 10 FPS
+unsigned long INTERVAL_CLIENT_CLEANUP = 5000;     // ms, default 5 seconds
+
+float brightness = 1.0f;
+enum SendMode { MODE_FULL, MODE_BITMASK };
+SendMode sendMode = MODE_FULL;
+
+// ------------------------------------------------------------
+// D-Pad menu state (from original backend)
+// ------------------------------------------------------------
 const char* horizontalMenu[] = { "SPEED", "TURNING", "PROPORTIONAL", "INTEGRAL" };
 int horizontalIndex = 0;
 const int horizontalCount = 4;
 
-// Vertical lists
 const char* verticalMenu_M1[] = { "50", "60", "70", "80", "90", "100" };
 const char* verticalMenu_M2[] = { "50", "60", "70", "80", "90", "100" };
 const char* verticalMenu_M3[] = { "50", "60", "70", "80", "90" };
@@ -58,365 +97,398 @@ int verticalCounts[] = {
 
 int verticalIndex = 0;
 
-// 8x8 grid
-#define RED_OFFSET    0
-#define GREEN_OFFSET  10
-unsigned int gridColors[8][8];
-int currentRow = 3;
-int currentCol = 5;
-
-
 // ------------------------------------------------------------
-// loadIndexHtmlToPSRAM() — filename-aware loader
-// ------------------------------------------------------------
-bool loadIndexHtmlToPSRAM(const char* filename) {
-
-    File file = LittleFS.open(filename, "r");
-    if (!file) {
-        Serial.print("Failed to open ");
-        Serial.println(filename);
-        return false;
-    }
-
-    htmlSize = file.size();
-    if (htmlSize == 0) {
-        Serial.print(filename);
-        Serial.println(" is empty");
-        file.close();
-        return false;
-    }
-
-    htmlPage = (char*)ps_malloc(htmlSize + 1);
-    if (!htmlPage) {
-        Serial.println("ps_malloc failed (no PSRAM?)");
-        file.close();
-        return false;
-    }
-
-    size_t readBytes = file.readBytes(htmlPage, htmlSize);
-    file.close();
-
-    if (readBytes != htmlSize) {
-        Serial.print("Failed to read full ");
-        Serial.print(filename);
-        Serial.println(" into PSRAM");
-        free(htmlPage);
-        htmlPage = nullptr;
-        htmlSize = 0;
-        return false;
-    }
-
-    htmlPage[htmlSize] = '\0';
-
-    Serial.print("Loaded ");
-    Serial.print(filename);
-    Serial.print(" into PSRAM (");
-    Serial.print((unsigned)htmlSize);
-    Serial.println(" bytes)");
-
-    return true;
-}
-
-
-// ------------------------------------------------------------
-// connectToWiFi() — rotates through 3 SSID/password pairs
+// WiFi rotation connect
 // ------------------------------------------------------------
 bool connectToWiFi() {
+  Serial.println("Starting WiFi credential rotation...");
 
-    Serial.println("Starting WiFi credential rotation...");
+  for (int i = 0; i < 3; i++) {
+    Serial.print("Trying SSID: ");
+    Serial.println(wifiList[i].ssid);
 
-    for (int i = 0; i < 3; i++) {
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(wifiList[i].ssid, wifiList[i].password);
 
-        Serial.print("Trying SSID: ");
-        Serial.println(wifiList[i].ssid);
-
-        WiFi.begin(wifiList[i].ssid, wifiList[i].password);
-
-        int failCount = 0;
-
-        while (WiFi.status() != WL_CONNECTED && failCount < 15) {
-            delay(500);
-            Serial.print(".");
-            failCount++;
-        }
-
-        if (WiFi.status() == WL_CONNECTED) {
-
-            Serial.println("\nConnected!");
-
-            // Queue message for frontend
-            pendingMessage = String("Connected to ") + wifiList[i].ssid;
-            pendingSeverity = "success";
-
-            Serial.print("IP address: ");
-            Serial.println(WiFi.localIP());
-
-            return true;
-        }
-
-        Serial.println("\nFailed to connect. Moving to next SSID...");
+    int failCount = 0;
+    while (WiFi.status() != WL_CONNECTED && failCount < 20) {
+      delay(500);
+      Serial.print(".");
+      failCount++;
     }
 
-    pendingMessage = "Failed to connect to any WiFi network";
-    pendingSeverity = "error";
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("\nConnected!");
+      pendingMessage = String("Connected to ") + wifiList[i].ssid;
+      pendingSeverity = "success";
 
-    Serial.println("ERROR: Could not connect to ANY WiFi network.");
+      Serial.print("IP address: ");
+      Serial.println(WiFi.localIP());
+      return true;
+    }
+
+    Serial.println("\nFailed to connect. Moving to next SSID...");
+  }
+
+  pendingMessage = "Failed to connect to any WiFi network";
+  pendingSeverity = "error";
+
+  Serial.println("ERROR: Could not connect to ANY WiFi network.");
+  return false;
+}
+
+// ------------------------------------------------------------
+// Load HTML file from LittleFS → PSRAM
+// ------------------------------------------------------------
+bool loadHTMLToPSRAM(const char* filename) {
+  if (!LittleFS.exists(filename)) {
+    Serial.printf("ERROR: File %s not found\n", filename);
     return false;
+  }
+
+  File file = LittleFS.open(filename, "r");
+  if (!file) {
+    Serial.println("ERROR: Failed to open HTML file");
+    return false;
+  }
+
+  htmlSize = file.size();
+  htmlBuffer = (char*)ps_malloc(htmlSize + 1);
+
+  if (!htmlBuffer) {
+    Serial.println("ERROR: PSRAM allocation failed");
+    file.close();
+    return false;
+  }
+
+  file.readBytes(htmlBuffer, htmlSize);
+  htmlBuffer[htmlSize] = '\0';
+  file.close();
+
+  Serial.printf("Loaded %s (%u bytes)\n", filename, (unsigned)htmlSize);
+  return true;
 }
 
-
 // ------------------------------------------------------------
-// setupWebServer()
+// Device Parsing Helpers (for client list)
 // ------------------------------------------------------------
-void setupWebServer() {
+String parseDeviceName(const String& ua) {
+  String u = ua;
+  u.toLowerCase();
 
-    if (!psramFound()) {
-        Serial.println("PSRAM not found!");
-    } else {
-        Serial.println("PSRAM detected.");
-    }
+  if (u.indexOf("iphone") >= 0) return "iPhone (iOS)";
+  if (u.indexOf("ipad") >= 0) return "iPad (iOS)";
+  if (u.indexOf("mac os") >= 0 || u.indexOf("macintosh") >= 0) return "Mac";
 
-    if (!LittleFS.begin()) {
-        Serial.println("LittleFS mount failed.");
-    } else {
-        Serial.println("LittleFS mounted.");
-    }
+  if (u.indexOf("android") >= 0) {
+    if (u.indexOf("sm-s92") >= 0) return "Samsung Galaxy S24 Ultra (Android)";
+    if (u.indexOf("sm-s91") >= 0) return "Samsung Galaxy S24 (Android)";
+    if (u.indexOf("pixel") >= 0) return "Google Pixel (Android)";
+    return "Android Device";
+  }
 
-    // Try index_dpad.html first
-    if (!loadIndexHtmlToPSRAM("/index_dpad.html")) {
-        Serial.println("Trying fallback: /index.html");
+  if (u.indexOf("windows nt") >= 0) return "Windows PC";
+  if (u.indexOf("linux") >= 0) return "Linux PC";
 
-        if (!loadIndexHtmlToPSRAM("/index.html")) {
-            Serial.println("ERROR: No valid HTML file found.");
-        }
-    }
-
-    // WiFi connection
-    connectToWiFi();
-
-    server.begin();
+  return "Unknown Device";
 }
 
+String parseBrowser(const String& ua) {
+  String u = ua;
+  u.toLowerCase();
+
+  if (u.indexOf("chrome/") >= 0) return "Chrome";
+  if (u.indexOf("safari/") >= 0 && u.indexOf("chrome") < 0) return "Safari";
+  if (u.indexOf("firefox/") >= 0) return "Firefox";
+  if (u.indexOf("edg/") >= 0) return "Edge";
+
+  return "Unknown Browser";
+}
 
 // ------------------------------------------------------------
-// setupGridColors()
+// Send full 8×8 grid (128 bytes)
 // ------------------------------------------------------------
-void setupGridColors() {
+void sendFullGrid() {
+  ws.binaryAll((uint8_t*)colorGrid, sizeof(colorGrid));
+}
 
-  gridColors[7][0] = RED_OFFSET + 0;
-  gridColors[7][1] = RED_OFFSET + 1;
-  gridColors[7][2] = RED_OFFSET + 2;
-  gridColors[7][3] = RED_OFFSET + 3;
-  gridColors[7][4] = RED_OFFSET + 4;
-  gridColors[7][5] = RED_OFFSET + 5;
-  gridColors[7][6] = RED_OFFSET + 6;
-  gridColors[7][7] = RED_OFFSET + 7;
+// ------------------------------------------------------------
+// Send compact 64-bit bitmask
+// ------------------------------------------------------------
+void sendBitGrid() {
+  uint64_t bits = 0;
 
-  gridColors[3][5] = GREEN_OFFSET + 7;
+  for (int r = 0; r < 8; r++) {
+    for (int c = 0; c < 8; c++) {
+      if (colorGrid[r][c] != 0) {
+        bits |= (uint64_t)1 << (r * 8 + c);
+      }
+    }
+  }
+
+  ws.binaryAll((uint8_t*)&bits, sizeof(bits));
+}
+
+// ------------------------------------------------------------
+// Demo animation: single green pixel moving right→left
+// ------------------------------------------------------------
+void initGrid() {
+  for (int r = 0; r < 8; r++) {
+    for (int c = 0; c < 8; c++) {
+      colorGrid[r][c] = 0;
+    }
+  }
 
   currentRow = 3;
   currentCol = 5;
-
-  Serial.println("setupGridColors() completed.");
+  uint16_t base = (uint16_t)(32 * brightness);
+  colorGrid[currentRow][currentCol] = base;
 }
 
-
-// ------------------------------------------------------------
-// navigateMenu()
-// ------------------------------------------------------------
-void navigateMenu(const String& direction) {
-
-  if (direction == "left") {
-    horizontalIndex--;
-    if (horizontalIndex < 0)
-      horizontalIndex = horizontalCount - 1;
-    verticalIndex = 0;
-  }
-
-  else if (direction == "right") {
-    horizontalIndex++;
-    if (horizontalIndex >= horizontalCount)
-      horizontalIndex = 0;
-    verticalIndex = 0;
-  }
-
-  else if (direction == "up") {
-    verticalIndex--;
-    if (verticalIndex < 0)
-      verticalIndex = verticalCounts[horizontalIndex] - 1;
-  }
-
-  else if (direction == "down") {
-    verticalIndex++;
-    if (verticalIndex >= verticalCounts[horizontalIndex])
-      verticalIndex = 0;
-  }
-
-  else if (direction == "center") {
-    Serial.println("Center pressed — select/confirm");
-  }
-
-  Serial.print("Menu: ");
-  Serial.print(horizontalMenu[horizontalIndex]);
-  Serial.print(" | Item: ");
-  Serial.println(verticalMenus[horizontalIndex][verticalIndex]);
-}
-
-
-// ------------------------------------------------------------
-// loop8x8Sensors()
-// ------------------------------------------------------------
-void loop8x8Sensors() {
-
-  long now = millis();
-  long dt = now - lastSensorUpdateTime;
-
-  if (dt < SENSOR_INTERVAL_TIME) return;
-
-  unsigned int value = gridColors[currentRow][currentCol];
-  gridColors[currentRow][currentCol] = 0;
+void updateGridAnimation() {
+  colorGrid[currentRow][currentCol] = 0;
 
   int newCol = currentCol - 1;
   if (newCol < 0) newCol = 7;
 
-  gridColors[currentRow][newCol] = value;
   currentCol = newCol;
 
-  lastSensorUpdateTime = now;
+  uint16_t base = (uint16_t)(32 * brightness);
+  colorGrid[currentRow][currentCol] = base;
 }
 
-
 // ------------------------------------------------------------
-// loopSensors()
+// Command parsing (no pattern logic)
 // ------------------------------------------------------------
-void loopSensors() {
-  loop8x8Sensors();
-}
-
-
-// ------------------------------------------------------------
-// serveHTML()
-// ------------------------------------------------------------
-void serveHTML(WiFiClient &client) {
-
-    if (!htmlPage || htmlSize == 0) {
-        client.println("HTTP/1.1 500 Internal Server Error");
-        client.println("Content-Type: text/plain");
-        client.println("Connection: close");
-        client.println();
-        client.println("HTML not loaded");
-        return;
-    }
-
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-Type: text/html");
-    client.println("Connection: close");
-    client.println();
-    client.write(htmlPage, htmlSize);
-}
-
-
-// ------------------------------------------------------------
-// loopWebServer()
-// ------------------------------------------------------------
-void loopWebServer() {
-
-  WiFiClient client = server.available();
-  if (!client) return;
-
-  String request = "";
-  unsigned long timeout = millis();
-
-  while (client.connected() && millis() - timeout < 2000) {
-    if (client.available()) {
-      char c = client.read();
-      request += c;
-      if (request.endsWith("\r\n\r\n")) break;
-    }
-  }
-
-  if (request.startsWith("GET / ") || request.startsWith("GET /index.html")) {
-    serveHTML(client);
-    client.stop();
+void handleCommand(const String& msg, AsyncWebSocketClient* client) {
+  if (msg.startsWith("UA:")) {
+    clientUserAgents[client->id()] = msg.substring(3);
+    Serial.printf("UA received for client %u\n", client->id());
     return;
   }
 
-  if (request.startsWith("POST /controller")) {
+  if (msg.startsWith("RUN:")) {
+    animationRunning = msg.substring(4).toInt();
+  }
+  else if (msg.startsWith("FPS:")) {
+    int fps = msg.substring(4).toInt();
+    fps = constrain(fps, 1, 60);
+    INTERVAL_ANIMATION = 1000UL / fps;
+  }
+  else if (msg.startsWith("BRI:")) {
+    float b = msg.substring(4).toFloat();
+    brightness = constrain(b, 0.0f, 1.0f);
+  }
+  else if (msg.startsWith("MODE:")) {
+    String m = msg.substring(5);
+    sendMode = (m == "BIT") ? MODE_BITMASK : MODE_FULL;
+  }
+}
 
-    int clIndex = request.indexOf("Content-Length:");
-    int contentLength = 0;
+// ------------------------------------------------------------
+// Multi-client viewer list + cleanup
+// ------------------------------------------------------------
+void printClientList() {
+  String hostIP = WiFi.localIP().toString();
+  int32_t rssi = WiFi.RSSI();
 
-    if (clIndex != -1) {
-      int start = clIndex + 15;
-      int end = request.indexOf("\r\n", start);
-      contentLength = request.substring(start, end).toInt();
+  Serial.printf("---- WebSocket Clients (Host: %s | RSSI: %d dBm) ----\n",
+                hostIP.c_str(), rssi);
+
+  for (AsyncWebSocketClient& c : ws.getClients()) {
+    AsyncWebSocketClient* client = &c;
+
+    uint32_t cid = client->id();
+    IPAddress ip = client->remoteIP();
+
+    String ua = clientUserAgents.count(cid) ? clientUserAgents[cid] : "Unknown";
+    String device = parseDeviceName(ua);
+    String browser = parseBrowser(ua);
+
+    if (client->status() == WS_CONNECTED) {
+      Serial.printf(
+        "Client %u: CONNECTED | IP: %s | Device: %s | Browser: %s\n",
+        cid,
+        ip.toString().c_str(),
+        device.c_str(),
+        browser.c_str()
+      );
+    } else {
+      Serial.printf(
+        "Client %u: NOT CONNECTED (closing) | IP: %s | Device: %s | Browser: %s\n",
+        cid,
+        ip.toString().c_str(),
+        device.c_str(),
+        browser.c_str()
+      );
+      client->close();
     }
+  }
 
-    String body = "";
-    while (client.available() < contentLength) delay(1);
-    while (client.available()) body += (char)client.read();
+  Serial.printf("Active client count: %u\n", ws.count());
+  Serial.println("-------------------------------------------");
+}
 
-    StaticJsonDocument<300> doc;
-    if (!deserializeJson(doc, body)) {
+// ------------------------------------------------------------
+// Setup Web Server (root + /controller + WebSocket)
+// ------------------------------------------------------------
+void setupWebServer() {
+  if (!LittleFS.begin()) {
+    Serial.println("LittleFS mount failed.");
+  } else {
+    Serial.println("LittleFS mounted.");
+  }
 
+  if (!loadHTMLToPSRAM("/index_dpad.html")) {
+    Serial.println("FATAL: Could not load /index_dpad.html");
+  }
+
+  // Serve HTML
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!htmlBuffer || htmlSize == 0) {
+      request->send(500, "text/plain", "HTML not loaded");
+      return;
+    }
+    AsyncWebServerResponse *response =
+      request->beginResponse(200, "text/html",
+                             (const uint8_t*)htmlBuffer, htmlSize);
+    response->addHeader("Cache-Control", "no-cache");
+    request->send(response);
+  });
+
+  // D-Pad /controller endpoint (JSON in, JSON out, no grid)
+  server.on(
+    "/controller",
+    HTTP_POST,
+    [](AsyncWebServerRequest *request) { /* response sent in body handler */ },
+    NULL,
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+      String body;
+      body.reserve(total);
+      for (size_t i = 0; i < len; i++) body += (char)data[i];
+
+      StaticJsonDocument<300> doc;
+      DeserializationError err = deserializeJson(doc, body);
+      if (err) {
+        request->send(400, "application/json", "{\"error\":\"bad json\"}");
+        return;
+      }
+
+      // direction / action handling (same as original, but no grid)
       if (doc.containsKey("direction")) {
-        navigateMenu(doc["direction"]);
+        String direction = doc["direction"];
+
+        if (direction == "left") {
+          horizontalIndex--;
+          if (horizontalIndex < 0) horizontalIndex = horizontalCount - 1;
+          verticalIndex = 0;
+        }
+        else if (direction == "right") {
+          horizontalIndex++;
+          if (horizontalIndex >= horizontalCount) horizontalIndex = 0;
+          verticalIndex = 0;
+        }
+        else if (direction == "up") {
+          verticalIndex--;
+          if (verticalIndex < 0) verticalIndex = verticalCounts[horizontalIndex] - 1;
+        }
+        else if (direction == "down") {
+          verticalIndex++;
+          if (verticalIndex >= verticalCounts[horizontalIndex]) verticalIndex = 0;
+        }
       }
 
-      if (doc.containsKey("requestGrid")) {
-
-          StaticJsonDocument<700> response;
-
-          JsonArray grid = response.createNestedArray("grid");
-          for (int r = 0; r < 8; r++) {
-              JsonArray row = grid.createNestedArray();
-              for (int c = 0; c < 8; c++) {
-                  row.add(gridColors[r][c]);
-              }
-          }
-
-          String out;
-          serializeJson(response, out);
-
-          client.println("HTTP/1.1 200 OK");
-          client.println("Content-Type: application/json");
-          client.println("Connection: close");
-          client.println();
-          client.println(out);
-          return;
+      if (doc.containsKey("action")) {
+        String action = doc["action"];
+        if (action == "start") animationRunning = true;
+        if (action == "stop")  animationRunning = false;
       }
-    }
 
-    // Build response
-    StaticJsonDocument<200> response;
-    response["horiz"] = horizontalMenu[horizontalIndex];
-    response["vert"]  = verticalMenus[horizontalIndex][verticalIndex];
+      StaticJsonDocument<256> response;
+      response["horiz"] = horizontalMenu[horizontalIndex];
+      response["vert"]  = verticalMenus[horizontalIndex][verticalIndex];
 
-    // Add pending message if any
-    if (pendingMessage.length() > 0) {
-        response["message"] = pendingMessage;
+      if (pendingMessage.length() > 0) {
+        response["message"]  = pendingMessage;
         response["severity"] = pendingSeverity;
         pendingMessage = "";
+      }
+
+      String out;
+      serializeJson(response, out);
+      request->send(200, "application/json", out);
+    }
+  );
+
+  // WebSocket
+  ws.onEvent([](AsyncWebSocket *server,
+                AsyncWebSocketClient *client,
+                AwsEventType type,
+                void *arg,
+                uint8_t *data,
+                size_t len) {
+
+    if (type == WS_EVT_CONNECT) {
+      Serial.printf("WS: Client %u connected | IP: %s\n",
+                    client->id(),
+                    client->remoteIP().toString().c_str());
     }
 
-    String out;
-    serializeJson(response, out);
+    if (type == WS_EVT_DISCONNECT) {
+      Serial.printf("WS: Client %u disconnected\n", client->id());
+    }
 
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-Type: application/json");
-    client.println("Connection: close");
-    client.println();
-    client.println(out);
-    client.stop();
-    return;
-  }
+    if (type == WS_EVT_DATA) {
+      AwsFrameInfo *info = (AwsFrameInfo*)arg;
 
-  client.println("HTTP/1.1 400 Bad Request");
-  client.println("Connection: close");
-  client.println();
-  client.stop();
+      if (info->opcode == WS_TEXT) {
+        String msg;
+        for (size_t i = 0; i < len; i++) msg += (char)data[i];
+
+        if (msg == "PING") {
+          client->text("PONG");
+          return;
+        }
+
+        handleCommand(msg, client);
+      }
+    }
+  });
+
+  server.addHandler(&ws);
+  server.begin();
 }
 
+// ------------------------------------------------------------
+// Extracted animation loop
+// ------------------------------------------------------------
+void loopAnimation() {
+  unsigned long now = millis();
+
+  if (animationRunning && now - lastAnimationTime >= INTERVAL_ANIMATION) {
+    lastAnimationTime = now;
+
+    updateGridAnimation();
+
+    if (ws.count() > 0) {
+      if (sendMode == MODE_FULL) sendFullGrid();
+      else sendBitGrid();
+    }
+  }
+}
+
+// ------------------------------------------------------------
+// Extracted client cleanup loop
+// ------------------------------------------------------------
+void loopClientCleanup() {
+  unsigned long now = millis();
+
+  if (now - lastClientCleanupTime > INTERVAL_CLIENT_CLEANUP) {
+    lastClientCleanupTime = now;
+    printClientList();
+    ws.cleanupClients();
+  }
+}
 
 // ------------------------------------------------------------
 // setup()
@@ -426,19 +498,17 @@ void setup() {
   Serial.begin(115200);
   delay(2000);
 
-  Serial.println("Webserver DPAD FS setup()");
+  Serial.println("Merged D-Pad + WebSocket backend setup()");
 
-  esp_log_level_set("*", ESP_LOG_NONE);
-
+  connectToWiFi();
+  initGrid();
   setupWebServer();
-  setupGridColors();
 }
-
 
 // ------------------------------------------------------------
 // loop()
 // ------------------------------------------------------------
 void loop() {
-  loopSensors();
-  loopWebServer();
+  loopAnimation();
+  loopClientCleanup();
 }
