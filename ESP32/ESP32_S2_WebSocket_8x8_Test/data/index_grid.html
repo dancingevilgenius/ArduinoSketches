@@ -30,7 +30,6 @@
         color: #0f0;
     }
 
-    /* GRID */
     .grid-container {
         width: 100%;
         margin-top: 20px;
@@ -45,14 +44,12 @@
         gap: 4px;
     }
 
-    /* Softer, more rounded cells */
     .grid-cell {
         background: #333;
         border-radius: 14px;
         transition: background 0.1s linear;
     }
 
-    /* CONTROLS */
     .controls-wrapper {
         width: 100%;
         margin-top: 30px;
@@ -71,7 +68,6 @@
         width: 100%;
     }
 
-    /* Label = 25% width */
     .control-row label {
         width: 25%;
         font-size: 36px;
@@ -80,7 +76,6 @@
         white-space: nowrap;
     }
 
-    /* Control = 75% width */
     .control-row input[type="range"],
     .control-row select,
     .control-row button {
@@ -93,13 +88,11 @@
         color: #fff;
     }
 
-    /* Center dropdown text */
     .control-row select {
         text-align: center;
         text-align-last: center;
     }
 
-    /* Shorter sliders to avoid label overlap */
     .control-row input[type="range"] {
         width: 65%;
         margin-left: 10%;
@@ -123,12 +116,10 @@
         Packet: <span id="pkt">--</span> bytes
     </div>
 
-    <!-- GRID -->
     <div class="grid-container">
         <div id="grid" class="grid"></div>
     </div>
 
-    <!-- CONTROLS -->
     <div class="controls-wrapper">
 
         <div class="control-row">
@@ -178,9 +169,6 @@ for (let i = 0; i < 64; i++) {
     cells.push(div);
 }
 
-// ------------------------------------------------------------
-// WebSocket with Auto-Reconnect
-// ------------------------------------------------------------
 let socket = null;
 let reconnectTimer = null;
 
@@ -191,6 +179,10 @@ function connectWebSocket() {
 
     socket.onopen = () => {
         console.log("WS connected");
+
+        // Send User-Agent to backend
+        socket.send("UA:" + navigator.userAgent);
+
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
             reconnectTimer = null;
@@ -239,7 +231,6 @@ function connectWebSocket() {
 
 connectWebSocket();
 
-// Ping every 2 seconds
 let lastPing = 0;
 setInterval(() => {
     if (socket.readyState === WebSocket.OPEN) {
@@ -248,9 +239,6 @@ setInterval(() => {
     }
 }, 2000);
 
-// ------------------------------------------------------------
-// FPS counter
-// ------------------------------------------------------------
 let frameCount = 0;
 let lastFPSUpdate = performance.now();
 
@@ -266,17 +254,9 @@ function updateFPS() {
     }
 }
 
-// ------------------------------------------------------------
-// Improved brightness rendering
-// ------------------------------------------------------------
 function updateCellColor(index, value) {
-    // value is 0–32 from backend
     const brightness = briSlider.value / 100;
-
-    const scaled = Math.min(
-        255,
-        Math.floor((value / 32) * brightness * 255)
-    );
+    const scaled = Math.min(255, Math.floor((value / 32) * brightness * 255));
 
     cells[index].style.background =
         scaled === 0
@@ -290,9 +270,6 @@ function sendCommand(cmd) {
     }
 }
 
-// ------------------------------------------------------------
-// Controls
-// ------------------------------------------------------------
 const btnRun = document.getElementById("btnRun");
 const fpsSlider = document.getElementById("fpsSlider");
 const patternSelect = document.getElementById("patternSelect");
@@ -307,23 +284,11 @@ btnRun.onclick = () => {
     sendCommand("RUN:" + (running ? "1" : "0"));
 };
 
-fpsSlider.oninput = () => {
-    sendCommand("FPS:" + fpsSlider.value);
-};
-
-patternSelect.onchange = () => {
-    sendCommand("PAT:" + patternSelect.value);
-};
-
-briSlider.oninput = () => {
-    sendCommand("BRI:" + (briSlider.value / 100).toFixed(2));
-};
-
-modeSelect.onchange = () => {
-    sendCommand("MODE:" + modeSelect.value);
-};
+fpsSlider.oninput = () => sendCommand("FPS:" + fpsSlider.value);
+patternSelect.onchange = () => sendCommand("PAT:" + patternSelect.value);
+briSlider.oninput = () => sendCommand("BRI:" + (briSlider.value / 100).toFixed(2));
+modeSelect.onchange = () => sendCommand("MODE:" + modeSelect.value);
 </script>
 
 </body>
 </html>
- 
