@@ -35,7 +35,7 @@ size_t htmlSize = 0;
 // ------------------------------------------------------------
 bool animationRunning = true;
 
-// Renamed variables
+// Renamed timing variables
 unsigned long lastAnimationTime = 0;
 unsigned long lastClientCleanupTime = 0;
 
@@ -316,6 +316,36 @@ void setupWebServer() {
 }
 
 // ------------------------------------------------------------
+// Extracted animation loop
+// ------------------------------------------------------------
+void loopAnimation() {
+    unsigned long now = millis();
+
+    if (animationRunning && now - lastAnimationTime >= INTERVAL_ANIMATION) {
+        lastAnimationTime = now;
+        updateGrid();
+
+        if (ws.count() > 0) {
+            if (sendMode == MODE_FULL) sendFullGrid();
+            else sendBitGrid();
+        }
+    }
+}
+
+// ------------------------------------------------------------
+// Extracted client cleanup loop
+// ------------------------------------------------------------
+void loopClientCleanup() {
+    unsigned long now = millis();
+
+    if (now - lastClientCleanupTime > INTERVAL_CLIENT_CLEANUP) {
+        lastClientCleanupTime = now;
+        printClientList();
+        ws.cleanupClients();
+    }
+}
+
+// ------------------------------------------------------------
 // Setup
 // ------------------------------------------------------------
 void setup() {
@@ -329,23 +359,6 @@ void setup() {
 // Loop
 // ------------------------------------------------------------
 void loop() {
-    unsigned long now = millis();
-
-    // Animation timing
-    if (animationRunning && now - lastAnimationTime >= INTERVAL_ANIMATION) {
-        lastAnimationTime = now;
-        updateGrid();
-
-        if (ws.count() > 0) {
-            if (sendMode == MODE_FULL) sendFullGrid();
-            else sendBitGrid();
-        }
-    }
-
-    // Client cleanup timing
-    if (now - lastClientCleanupTime > INTERVAL_CLIENT_CLEANUP) {
-        lastClientCleanupTime = now;
-        printClientList();
-        ws.cleanupClients();
-    }
+    loopAnimation();
+    loopClientCleanup();
 }
