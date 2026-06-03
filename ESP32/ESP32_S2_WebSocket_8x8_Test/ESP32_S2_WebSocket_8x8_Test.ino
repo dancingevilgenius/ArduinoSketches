@@ -34,8 +34,14 @@ size_t htmlSize = 0;
 // Animation / Control State
 // ------------------------------------------------------------
 bool animationRunning = true;
-unsigned long lastSend = 0;
-unsigned long frameInterval = 100;  // ms, default 10 FPS
+
+// Renamed variables
+unsigned long lastAnimationTime = 0;
+unsigned long lastClientCleanupTime = 0;
+
+unsigned long INTERVAL_ANIMATION = 100;            // ms, default 10 FPS
+unsigned long INTERVAL_CLIENT_CLEANUP = 5000;      // ms, default 5 seconds
+
 uint8_t patternIndex = 0;
 float brightness = 1.0f;
 enum SendMode { MODE_FULL, MODE_BITMASK };
@@ -204,7 +210,7 @@ void handleCommand(const String& msg, AsyncWebSocketClient* client) {
     }
 
     if (msg.startsWith("RUN:")) animationRunning = msg.substring(4).toInt();
-    else if (msg.startsWith("FPS:")) frameInterval = 1000UL / constrain(msg.substring(4).toInt(), 1, 60);
+    else if (msg.startsWith("FPS:")) INTERVAL_ANIMATION = 1000UL / constrain(msg.substring(4).toInt(), 1, 60);
     else if (msg.startsWith("PAT:")) patternIndex = constrain(msg.substring(4).toInt(), 0, 2);
     else if (msg.startsWith("BRI:")) brightness = constrain(msg.substring(4).toFloat(), 0.0f, 1.0f);
     else if (msg.startsWith("MODE:")) sendMode = (msg.substring(5) == "BIT") ? MODE_BITMASK : MODE_FULL;
@@ -325,8 +331,9 @@ void setup() {
 void loop() {
     unsigned long now = millis();
 
-    if (animationRunning && now - lastSend >= frameInterval) {
-        lastSend = now;
+    // Animation timing
+    if (animationRunning && now - lastAnimationTime >= INTERVAL_ANIMATION) {
+        lastAnimationTime = now;
         updateGrid();
 
         if (ws.count() > 0) {
@@ -335,9 +342,9 @@ void loop() {
         }
     }
 
-    static unsigned long lastPrint = 0;
-    if (now - lastPrint > 5000) {
-        lastPrint = now;
+    // Client cleanup timing
+    if (now - lastClientCleanupTime > INTERVAL_CLIENT_CLEANUP) {
+        lastClientCleanupTime = now;
         printClientList();
         ws.cleanupClients();
     }
