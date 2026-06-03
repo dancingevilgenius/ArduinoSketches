@@ -2,6 +2,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
+#include <map>
 
 // ------------------------------------------------------------
 // WiFi Credentials
@@ -14,6 +15,9 @@ const char* password = "asdf12346302201111";
 // ------------------------------------------------------------
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
+
+// Store User-Agent strings per WebSocket client ID
+std::map<uint32_t, String> clientUserAgents;
 
 // ------------------------------------------------------------
 // 8×8 Grid (uint16_t)
@@ -219,21 +223,32 @@ void handleCommand(const String& msg) {
 // Multi-client viewer list + cleanup
 // ------------------------------------------------------------
 void printClientList() {
-    Serial.println("---- WebSocket Clients ----");
+    String hostIP = WiFi.localIP().toString();
+    Serial.printf("---- WebSocket Clients (Host: %s) ----\n", hostIP.c_str());
 
     for (AsyncWebSocketClient& c : ws.getClients()) {
         AsyncWebSocketClient* client = &c;
 
+        IPAddress ip = client->remoteIP();
+        uint32_t cid = client->id();
+        String ua = clientUserAgents.count(cid) ? clientUserAgents[cid] : "Unknown";
+
         if (client->status() == WS_CONNECTED) {
-            Serial.printf("Client %u: CONNECTED\n", client->id());
+            Serial.printf("Client %u: CONNECTED | IP: %s | UA: %s\n",
+                          cid,
+                          ip.toString().c_str(),
+                          ua.c_str());
         } else {
-            Serial.printf("Client %u: NOT CONNECTED (closing)\n", client->id());
+            Serial.printf("Client %u: NOT CONNECTED (closing) | IP: %s | UA: %s\n",
+                          cid,
+                          ip.toString().c_str(),
+                          ua.c_str());
             client->close();
         }
     }
 
     Serial.printf("Active client count (ws.count): %u\n", ws.count());
-    Serial.println("---------------------------");
+    Serial.println("-------------------------------------------");
 }
 
 // ------------------------------------------------------------
@@ -245,7 +260,14 @@ void setupWebServer() {
         return;
     }
 
+    // Capture User-Agent during HTTP GET
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (request->hasHeader("User-Agent")) {
+            String ua = request->getHeader("User-Agent")->value();
+            uint32_t tempKey = request->client()->remotePort();
+            clientUserAgents[tempKey] = ua;
+        }
+
         AsyncWebServerResponse *response =
             request->beginResponse(200, "text/html",
                                    (const uint8_t*)htmlBuffer, htmlSize);
@@ -261,7 +283,19 @@ void setupWebServer() {
                   size_t len) {
 
         if (type == WS_EVT_CONNECT) {
-            Serial.printf("WS: Client %u connected\n", client->id());
+            uint32_t cid = client->id();
+            IPAddress ip = client->remoteIP();
+
+            // Move UA from temp key to real WebSocket ID
+            if (clientUserAgents.count(client->remotePort())) {
+                clientUserAgents[cid] = clientUserAgents[client->remotePort()];
+                clientUserAgents.erase(client->remotePort());
+            }
+
+            Serial.printf("WS: Client %u connected | IP: %s | UA: %s\n",
+                          cid,
+                          ip.toString().c_str(),
+                          clientUserAgents[cid].c_str());
         }
 
         if (type == WS_EVT_DISCONNECT) {
