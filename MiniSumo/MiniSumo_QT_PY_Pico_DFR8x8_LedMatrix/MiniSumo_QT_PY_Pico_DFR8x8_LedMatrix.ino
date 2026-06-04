@@ -487,10 +487,28 @@ void setupLedMatrix(){
 
 uint16_t hue_offset = 0;
 
+
+// ------------------------------------------------------------
+// Extracted client cleanup loop
+// ------------------------------------------------------------
+void loopClientCleanup() {
+  unsigned long now = millis();
+
+  if (now - lastClientCleanupTime > INTERVAL_CLIENT_CLEANUP) {
+    lastClientCleanupTime = now;
+    printClientList();
+    ws.cleanupClients();
+  }
+}
+
+
 void loop() {
 
     loopMiniSumoOpponent();
     //loopSimulateMiniSumo();
+
+    loopClientCleanup();    
+
     delay(80);
 }
 
@@ -758,3 +776,86 @@ void loopSwirlDemo(){
 
   ledmatrix.setGlobalCurrent(hue_offset / 256); // Demonstrate global current
 }
+
+
+// ------------------------------------------------------------
+// Multi-client viewer list + cleanup
+// ------------------------------------------------------------
+void printClientList() {
+  String hostIP = WiFi.localIP().toString();
+  int32_t rssi = WiFi.RSSI();
+
+  Serial.printf("---- WebSocket Clients (Host: %s | RSSI: %d dBm) ----\n",
+                hostIP.c_str(), rssi);
+
+  for (AsyncWebSocketClient& c : ws.getClients()) {
+    AsyncWebSocketClient* client = &c;
+
+    uint32_t cid = client->id();
+    IPAddress ip = client->remoteIP();
+
+    String ua = clientUserAgents.count(cid) ? clientUserAgents[cid] : "Unknown";
+    String device = parseDeviceName(ua);
+    String browser = parseBrowser(ua);
+
+    if (client->status() == WS_CONNECTED) {
+      Serial.printf(
+        "Client %u: CONNECTED | IP: %s | Device: %s | Browser: %s\n",
+        cid,
+        ip.toString().c_str(),
+        device.c_str(),
+        browser.c_str()
+      );
+    } else {
+      Serial.printf(
+        "Client %u: NOT CONNECTED (closing) | IP: %s | Device: %s | Browser: %s\n",
+        cid,
+        ip.toString().c_str(),
+        device.c_str(),
+        browser.c_str()
+      );
+      client->close();
+    }
+  }
+
+  Serial.printf("Active client count: %u\n", ws.count());
+  Serial.println("-------------------------------------------");
+}
+
+// ------------------------------------------------------------
+// Device Parsing Helpers (for client list)
+// ------------------------------------------------------------
+String parseDeviceName(const String& ua) {
+  String u = ua;
+  u.toLowerCase();
+
+  if (u.indexOf("iphone") >= 0) return "iPhone (iOS)";
+  if (u.indexOf("ipad") >= 0) return "iPad (iOS)";
+  if (u.indexOf("mac os") >= 0 || u.indexOf("macintosh") >= 0) return "Mac";
+
+  if (u.indexOf("android") >= 0) {
+    if (u.indexOf("sm-s92") >= 0) return "Samsung Galaxy S24 Ultra (Android)";
+    if (u.indexOf("sm-s91") >= 0) return "Samsung Galaxy S24 (Android)";
+    if (u.indexOf("pixel") >= 0) return "Google Pixel (Android)";
+    return "Android Device";
+  }
+
+  if (u.indexOf("windows nt") >= 0) return "Windows PC";
+  if (u.indexOf("linux") >= 0) return "Linux PC";
+
+  return "Unknown Device";
+}
+
+String parseBrowser(const String& ua) {
+  String u = ua;
+  u.toLowerCase();
+
+  if (u.indexOf("chrome/") >= 0) return "Chrome";
+  if (u.indexOf("safari/") >= 0 && u.indexOf("chrome") < 0) return "Safari";
+  if (u.indexOf("firefox/") >= 0) return "Firefox";
+  if (u.indexOf("edg/") >= 0) return "Edge";
+
+  return "Unknown Browser";
+}
+
+
