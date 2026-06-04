@@ -74,7 +74,7 @@ TwoWire *WIRE_I2C = &Wire1; // QT PY Pico,
 // ------------------------------------------------------------
 // 8×8 Grid (uint16_t) for WebSocket + demo animation
 // ------------------------------------------------------------
-//uint16_t colorGrid[8][8];
+uint16_t colorGrid[8][8];
 
 
 
@@ -485,7 +485,6 @@ void setupLedMatrix(){
 
   // Set all pixels to black 0x000
   clearLEDMatrix();
-  ledMatrixKeyValue("MA", "OK", 1500);
   clearLEDMatrix();
   delay(2000);
 
@@ -533,8 +532,11 @@ void loopAnimation() {
     lastAnimationTime = now;
 
     if (ws.count() > 0) {
-      if (sendMode == MODE_FULL) sendFullGrid();
-      else sendBitGrid();
+      if (sendMode == MODE_FULL){
+        sendFullGrid();
+      } else {
+        sendBitGrid();
+      }
     }
   }
 }
@@ -550,6 +552,9 @@ void loopMiniSumoOpponent(){
   uint16_t edgeColor = ledmatrix.color565(150, 0,0);
   uint16_t edgeWarnColor = ledmatrix.color565(180, 180, 0); // FFDE21
 
+  uint16_t base = (uint16_t)(32 * brightness);
+  
+
   tof.getAllData(lidarGrid);
   int d_mm = -1;
   for(uint8_t y = 0; y < TOF_8x8_NUM_ROWS; y++){
@@ -558,9 +563,11 @@ void loopMiniSumoOpponent(){
         d_mm = lidarGrid[y * 8 + x];
         if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
           ledmatrix.drawPixel(x+X_OFFSET, y, 0);
+          colorGrid[y][x] = 0;
         } else {
           if(d_mm < 500){
             ledmatrix.drawPixel(x+X_OFFSET, y, oppColor);
+            colorGrid[y][x] = 8888;
           }
         }
       }
@@ -569,9 +576,11 @@ void loopMiniSumoOpponent(){
         d_mm = lidarGrid[y * 8 + x];
         if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
           ledmatrix.drawPixel(x+X_OFFSET, y, 0);
+          colorGrid[y][x] = 0;
         } else {
           if(d_mm > 200){
             ledmatrix.drawPixel(x+X_OFFSET, y, edgeWarnColor);
+            colorGrid[y][x] = 999999999;
           }
         }
       }
@@ -580,9 +589,11 @@ void loopMiniSumoOpponent(){
         d_mm = lidarGrid[y * 8 + x];
         if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
           ledmatrix.drawPixel(x+X_OFFSET, y, 0);
+          colorGrid[y][x] = 0;
         } else {
           if(d_mm > 170){
             ledmatrix.drawPixel(x+X_OFFSET, y, edgeColor);
+            colorGrid[y][x] = 999999999;
           }
         }
       }
@@ -597,7 +608,7 @@ void loopMiniSumoOpponent(){
 // Send full 8×8 grid (128 bytes)
 // ------------------------------------------------------------
 void sendFullGrid() {
-  ws.binaryAll((uint8_t*)lidarGrid, sizeof(lidarGrid));
+  ws.binaryAll((uint8_t*)colorGrid, sizeof(colorGrid));
 }
 
 // ------------------------------------------------------------
@@ -608,8 +619,7 @@ void sendBitGrid() {
 
   for (int y = 0; y < 8; y++) {
     for (int x = 0; x < 8; x++) {
-      //if (lidarGrid[r][c] != 0) {
-      if (lidarGrid[y * 8 + x] != 0) {
+      if (colorGrid[y][x] != 0) {
         bits |= (uint64_t)1 << (y * 8 + x);
       }
     }
@@ -620,45 +630,7 @@ void sendBitGrid() {
 
 
 
-void ledMatrixKeyValueColor(String key, String value, uint16_t key_color, uint16_t value_color, int delay_time){
 
-  ledMatrixStringColor(key,   key_color, delay_time);
-  ledMatrixStringColor(value, value_color, delay_time);
-}
-
-
-void ledMatrixKeyValue(String key, String value, int delay_time){
-
-  uint16_t color565;
-  color565 = ledmatrix.color565(160, 32, 240); // purple
-  ledmatrix.setTextColor(color565); // No background color needed
-
-  ledMatrixStringColor(key,   color565, delay_time);
-  ledMatrixStringColor(value, color565, delay_time);
-}
-
-
-void ledMatrixStringColor(String s, uint16_t color565, int delay_time){
-
-    ledmatrix.setTextColor(color565); // No background color needed
-
-    ledmatrix.setCursor(text_x, text_y);
-    ledmatrix.fill(0); // Fill screen to erase old text
-    ledmatrix.print(s); // write the string
-    ledmatrix.show(); // Buffered matrix MUST use show() to update!
-    delay(delay_time);
-}
-
-
-
-
-void ledMatrixString(String s, int delay_time){
-    ledmatrix.setCursor(text_x, text_y);
-    ledmatrix.fill(0); // Fill screen to erase old text
-    ledmatrix.print(s); // write the string
-    ledmatrix.show(); // Buffered matrix MUST use show() to update!
-    delay(delay_time);
-}
 
 void loopSimulateMiniSumo(){
   uint16_t color565;
@@ -674,6 +646,7 @@ void loopSimulateMiniSumo(){
           color565 = ledmatrix.color565(0, 0, 0);
         }
         ledmatrix.drawPixel(x+X_OFFSET, y, color565);
+        colorGrid[y][x] = color565;
       } else {
         if(y == 6){
           if(d > D_EDGE6_MAX){
@@ -689,6 +662,7 @@ void loopSimulateMiniSumo(){
           }
         }
         ledmatrix.drawPixel(x+X_OFFSET, y, color565);
+        colorGrid[y][x] = color565;
       }
     }
   }
