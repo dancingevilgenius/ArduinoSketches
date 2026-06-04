@@ -1,15 +1,40 @@
-// Rainbow swirl example for the Adafruit IS31FL3741 13x9 PWM RGB LED
-// Matrix Driver w/STEMMA QT / Qwiic connector. This is the simplest
-// version and should fit on small microcontrollers like Arduino Uno.
-// Tradeoff is that animation isn't always as smooth as seen in the
-// buffered example. Each LED changes state immediately when accessed,
-// there is no show() or display() function as with NeoPixels or some
-// OLED screens.
+//  Mini Sumo
+//  Hardware:
+//    DFRobot TOF 8x8 Matrix
+//    Adafruit 13x9 LED Matrix
+//
+//  Other Features:
+//    Send 8x8 matrix data to web page
+//    Load from index_dpad.html file saved on PSRAM.
+
 
 #include "Arduino.h"
-#include "Wire.h"
-#include "DFRobot_MatrixLidar.h"
-#include <Adafruit_IS31FL3741.h>
+#include "Wire.h"               // I2C communication
+#include "DFRobot_MatrixLidar.h"// 8x8 Lidar Matrix
+#include <Adafruit_IS31FL3741.h>// 13x9 LED Matrix
+#include <WiFi.h>               // Web Server
+#include <AsyncTCP.h>           // Web sockets
+#include <ESPAsyncWebServer.h>  // Web sockets
+#include <LittleFS.h>           // PSRAM local storage
+#include <ArduinoJson.h>
+#include <map>
+
+// ------------------------------------------------------------
+// WiFi Credential Rotation (REORDERED)
+// ------------------------------------------------------------
+struct WifiCredential {
+  const char* ssid;
+  const char* password;
+};
+
+WifiCredential wifiList[3] = {
+  { "TheMandaloriKen", "asdf12346302201111" },
+  { "TheMandalorian",  "6302201111" },
+  { "STDL5301",        "library30" }
+};
+String pendingMessage = "";
+String pendingSeverity = "info";
+
 
 Adafruit_IS31FL3741_QT ledmatrix;
 // If colors appear wrong on matrix, try invoking constructor like so:
@@ -46,7 +71,6 @@ int text_min;                // Pos. where text resets (calc'd later)
 TwoWire *WIRE_I2C = &Wire1; // QT PY Pico,
 
 
-#include "DFRobot_MatrixLidar.h"
 
 // Start for DFRobot MatrixLidar ----------------
 DFRobot_MatrixLidar_I2C tof(0x33, WIRE_I2C);
@@ -74,6 +98,8 @@ void setup() {
 
   Serial.println("MiniSumo QT PY Pico LedMatrix and DFR8x8");
   
+  connectToWiFi();
+
   setupI2C();
 
   setupLedMatrix();
@@ -81,6 +107,47 @@ void setup() {
   setupDFR8x8();
 
 }
+
+// ------------------------------------------------------------
+// WiFi rotation connect
+// ------------------------------------------------------------
+bool connectToWiFi() {
+  Serial.println("Starting WiFi credential rotation...");
+
+  for (int i = 0; i < 3; i++) {
+    Serial.print("Trying SSID: ");
+    Serial.println(wifiList[i].ssid);
+
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(wifiList[i].ssid, wifiList[i].password);
+
+    int failCount = 0;
+    while (WiFi.status() != WL_CONNECTED && failCount < 20) {
+      delay(500);
+      Serial.print(".");
+      failCount++;
+    }
+
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("\nConnected!");
+      pendingMessage = String("Connected to ") + wifiList[i].ssid;
+      pendingSeverity = "success";
+
+      Serial.print("IP address: ");
+      Serial.println(WiFi.localIP());
+      return true;
+    }
+
+    Serial.println("\nFailed to connect. Moving to next SSID...");
+  }
+
+  pendingMessage = "Failed to connect to any WiFi network";
+  pendingSeverity = "error";
+
+  Serial.println("ERROR: Could not connect to ANY WiFi network.");
+  return false;
+}
+
 
 void setupI2C(){
   // Pro Micro ESP32-C3 needs the next line.
