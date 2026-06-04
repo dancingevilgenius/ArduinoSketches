@@ -121,23 +121,29 @@
         transition: background 0.1s linear;
     }
 
-    /* Stats + controls */
+    /* Stats */
     #stats {
-        margin-top: 10px;
-        font-size: 14px;
+        margin-bottom: 4px;
+        font-size: 9px;          /* reduced even more */
         color: #0f0;
-        max-width: 100%;
-        overflow-wrap: break-word;
+        width: 100%;
+        box-sizing: border-box;
         text-align: center;
+        font-family: monospace;
+        letter-spacing: 1px;
+        overflow-wrap: break-word;
     }
 
+    /* Controls */
     .controls-wrapper {
-        width: 100%;
+        width: 100%;              /* EXACT width of grid */
         max-width: 100%;
-        margin-top: 20px;
+        min-width: 100%;
+        box-sizing: border-box;
+        margin-top: 12px;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
     }
 
     .control-row {
@@ -145,28 +151,35 @@
         flex-wrap: wrap;
         align-items: center;
         background: #222;
-        padding: 8px;
+        padding: 6px;
         border-radius: 10px;
         width: 100%;
+        max-width: 100%;
+        min-width: 100%;
+        box-sizing: border-box;
     }
 
     .control-row label {
-        width: 30%;
-        font-size: 16px;
+        width: 28%;
+        max-width: 28%;
+        min-width: 28%;
+        font-size: 14px;
         text-align: left;
     }
 
-.control-row input[type="range"],
-.control-row select,
-.control-row button {
-    width: 60%;   /* reduced from 70% to prevent wrapping */
-    font-size: 14px;
-    padding: 6px;
-    border-radius: 10px;
-    border: 1px solid #555;
-    background: #333;
-    color: #fff;
-}
+    .control-row input[type="range"],
+    .control-row select,
+    .control-row button {
+        width: 60%;
+        max-width: 60%;
+        min-width: 60%;
+        font-size: 13px;
+        padding: 6px;
+        border-radius: 10px;
+        border: 1px solid #555;
+        background: #333;
+        color: #fff;
+    }
 
     .control-row button:hover {
         background: #444;
@@ -174,6 +187,24 @@
 </style>
 
 <script>
+// -----------------------------
+// Padding helpers for fixed-width stats
+// -----------------------------
+function pad2(n) {
+    return n.toString().padStart(2, ' ');
+}
+
+// Latency must always be 6 chars: "XXXX.X"
+function padLatency(n) {
+    let parts = n.toFixed(1).split('.');
+    let whole = parts[0].padStart(4, ' ');
+    return whole + '.' + parts[1];  // total length = 6
+}
+
+function pad3(n) {
+    return n.toString().padStart(3, ' ');
+}
+
 // -----------------------------
 // D-Pad HTTP control
 // -----------------------------
@@ -227,14 +258,12 @@ document.addEventListener('DOMContentLoaded', () => {
             dpad.style.display = 'none';
             grid8.style.display = 'block';
 
-            // Hide non-WebSocket controls
             statusRow.style.display = 'none';
             bottomButtons.style.display = 'none';
         } else {
             dpad.style.display = 'block';
             grid8.style.display = 'none';
 
-            // Restore non-WebSocket controls
             statusRow.style.display = 'flex';
             bottomButtons.style.display = 'flex';
         }
@@ -252,36 +281,27 @@ function connectWebSocket() {
     socket.binaryType = "arraybuffer";
 
     socket.onopen = () => {
-        console.log("WS connected");
         socket.send("UA:" + navigator.userAgent);
-
-        if (reconnectTimer) {
-            clearTimeout(reconnectTimer);
-            reconnectTimer = null;
-        }
+        if (reconnectTimer) clearTimeout(reconnectTimer);
     };
 
     socket.onclose = () => {
-        console.log("WS closed, reconnecting...");
         reconnectTimer = setTimeout(connectWebSocket, 500);
     };
 
-    socket.onerror = () => {
-        console.log("WS error");
-        socket.close();
-    };
+    socket.onerror = () => socket.close();
 
     socket.onmessage = (event) => {
         if (typeof event.data === "string") {
             if (event.data === "PONG") {
                 const latency = performance.now() - lastPing;
-                document.getElementById("lat").textContent = latency.toFixed(1);
+                document.getElementById("lat").textContent = padLatency(latency);
             }
             return;
         }
 
         const buf = event.data;
-        document.getElementById("pkt").textContent = buf.byteLength;
+        document.getElementById("pkt").textContent = pad3(buf.byteLength);
 
         frameCount++;
         updateFPS();
@@ -316,7 +336,7 @@ function updateFPS() {
 
     if (elapsed >= 1000) {
         const fps = Math.round((frameCount / elapsed) * 1000);
-        document.getElementById("fps").textContent = fps;
+        document.getElementById("fps").textContent = pad2(fps);
         frameCount = 0;
         lastFPSUpdate = now;
     }
@@ -328,9 +348,7 @@ function updateCellColor(index, value) {
     const scaled = Math.min(255, Math.floor((value / 32) * brightness * 255));
 
     cells[index].style.background =
-        scaled === 0
-            ? "#222"
-            : `rgb(${scaled}, 255, ${scaled})`;
+        scaled === 0 ? "#222" : `rgb(${scaled}, 255, ${scaled})`;
 }
 
 function sendCommand(cmd) {
@@ -393,10 +411,11 @@ function setupControls() {
 <div id="grid8x8" class="grid-container" style="display:none;">
     <div class="grid-wrapper">
 
+        <!-- Stats inside bounding box -->
         <div id="stats">
-            FPS: <span id="fps">--</span> |
-            Latency: <span id="lat">--</span> ms |
-            Packet: <span id="pkt">--</span> bytes
+            FPS: <span id="fps"> 0</span> |
+            Latency: <span id="lat">   0.0</span> ms |
+            Packet: <span id="pkt">  0</span> bytes
         </div>
 
         <div class="row">
