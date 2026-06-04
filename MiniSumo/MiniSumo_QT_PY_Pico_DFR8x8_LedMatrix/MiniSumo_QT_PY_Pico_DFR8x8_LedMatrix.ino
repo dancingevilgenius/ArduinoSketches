@@ -71,10 +71,16 @@ int text_min;                // Pos. where text resets (calc'd later)
 TwoWire *WIRE_I2C = &Wire1; // QT PY Pico,
 
 
+// ------------------------------------------------------------
+// 8×8 Grid (uint16_t) for WebSocket + demo animation
+// ------------------------------------------------------------
+//uint16_t colorGrid[8][8];
+
+
 
 // Start for DFRobot MatrixLidar ----------------
 DFRobot_MatrixLidar_I2C tof(0x33, WIRE_I2C);
-uint16_t buf[64];
+uint16_t lidarGrid[64];
 #define INVALID_VAL 4000
 #define RING_SIZE_MM 770
 #define ROBOT_SIZE_MM 100
@@ -505,12 +511,34 @@ void loopClientCleanup() {
 void loop() {
 
     loopMiniSumoOpponent();
-    //loopSimulateMiniSumo();
+
+    loopAnimation();
 
     loopClientCleanup();    
 
     delay(80);
 }
+
+
+
+
+
+// ------------------------------------------------------------
+// Extracted animation loop
+// ------------------------------------------------------------
+void loopAnimation() {
+  unsigned long now = millis();
+
+  if (animationRunning && now - lastAnimationTime >= INTERVAL_ANIMATION) {
+    lastAnimationTime = now;
+
+    if (ws.count() > 0) {
+      if (sendMode == MODE_FULL) sendFullGrid();
+      else sendBitGrid();
+    }
+  }
+}
+
 
 
 // 1. Ignore value 4000  (indeterminate)
@@ -522,12 +550,12 @@ void loopMiniSumoOpponent(){
   uint16_t edgeColor = ledmatrix.color565(150, 0,0);
   uint16_t edgeWarnColor = ledmatrix.color565(180, 180, 0); // FFDE21
 
-  tof.getAllData(buf);
+  tof.getAllData(lidarGrid);
   int d_mm = -1;
   for(uint8_t y = 0; y < TOF_8x8_NUM_ROWS; y++){
     if(y==3 || y==4){
       for(uint8_t x = 0; x < TOF_8x8_NUM_COLS; x++){
-        d_mm = buf[y * 8 + x];
+        d_mm = lidarGrid[y * 8 + x];
         if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
           ledmatrix.drawPixel(x+X_OFFSET, y, 0);
         } else {
@@ -538,7 +566,7 @@ void loopMiniSumoOpponent(){
       }
     } else if(y==6){
       for(uint8_t x = 0; x < TOF_8x8_NUM_COLS; x++){
-        d_mm = buf[y * 8 + x];
+        d_mm = lidarGrid[y * 8 + x];
         if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
           ledmatrix.drawPixel(x+X_OFFSET, y, 0);
         } else {
@@ -549,7 +577,7 @@ void loopMiniSumoOpponent(){
       }
     }  else if(y==7){
       for(uint8_t x = 0; x < TOF_8x8_NUM_COLS; x++){
-        d_mm = buf[y * 8 + x];
+        d_mm = lidarGrid[y * 8 + x];
         if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
           ledmatrix.drawPixel(x+X_OFFSET, y, 0);
         } else {
@@ -563,6 +591,33 @@ void loopMiniSumoOpponent(){
 
   }
 }
+
+
+// ------------------------------------------------------------
+// Send full 8×8 grid (128 bytes)
+// ------------------------------------------------------------
+void sendFullGrid() {
+  ws.binaryAll((uint8_t*)lidarGrid, sizeof(lidarGrid));
+}
+
+// ------------------------------------------------------------
+// Send compact 64-bit bitmask
+// ------------------------------------------------------------
+void sendBitGrid() {
+  uint64_t bits = 0;
+
+  for (int y = 0; y < 8; y++) {
+    for (int x = 0; x < 8; x++) {
+      //if (lidarGrid[r][c] != 0) {
+      if (lidarGrid[y * 8 + x] != 0) {
+        bits |= (uint64_t)1 << (y * 8 + x);
+      }
+    }
+  }
+
+  ws.binaryAll((uint8_t*)&bits, sizeof(bits));
+}
+
 
 
 void ledMatrixKeyValueColor(String key, String value, uint16_t key_color, uint16_t value_color, int delay_time){
