@@ -89,6 +89,69 @@ uint16_t buf[64];
 // End for DFRobot MatrixLidar ----------------
 
 
+// ------------------------------------------------------------
+// Web Server + WebSocket
+// ------------------------------------------------------------
+AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
+
+// Store User-Agent strings per WebSocket client ID
+std::map<uint32_t, String> clientUserAgents;
+
+
+// ------------------------------------------------------------
+// PSRAM HTML Buffer
+// ------------------------------------------------------------
+char* htmlBuffer = nullptr;
+size_t htmlSize = 0;
+
+
+// ------------------------------------------------------------
+// Animation / Control State (no pattern logic)
+// ------------------------------------------------------------
+bool animationRunning = true;
+
+unsigned long lastAnimationTime = 0;
+unsigned long lastClientCleanupTime = 0;
+
+unsigned long INTERVAL_ANIMATION = 100;           // ms, default 10 FPS
+unsigned long INTERVAL_CLIENT_CLEANUP = 5000;     // ms, default 5 seconds
+
+float brightness = 1.0f;
+enum SendMode { MODE_FULL, MODE_BITMASK };
+SendMode sendMode = MODE_FULL;
+
+// ------------------------------------------------------------
+// D-Pad menu state (from original backend)
+// ------------------------------------------------------------
+const char* horizontalMenu[] = { "SPEED", "TURNING", "PROPORTIONAL", "INTEGRAL" };
+int horizontalIndex = 0;
+const int horizontalCount = 4;
+
+const char* verticalMenu_M1[] = { "50", "60", "70", "80", "90", "100" };
+const char* verticalMenu_M2[] = { "50", "60", "70", "80", "90", "100" };
+const char* verticalMenu_M3[] = { "50", "60", "70", "80", "90" };
+const char* verticalMenu_M4[] = { "0.1", "0.2", "0.3", "0.4", "0.5" };
+
+const char** verticalMenus[] = {
+  verticalMenu_M1,
+  verticalMenu_M2,
+  verticalMenu_M3,
+  verticalMenu_M4
+};
+
+int verticalCounts[] = {
+  sizeof(verticalMenu_M1) / sizeof(verticalMenu_M1[0]),
+  sizeof(verticalMenu_M2) / sizeof(verticalMenu_M2[0]),
+  sizeof(verticalMenu_M3) / sizeof(verticalMenu_M3[0]),
+  sizeof(verticalMenu_M4) / sizeof(verticalMenu_M4[0])
+};
+
+int verticalIndex = 0;
+
+
+
+
 void setup() {
   Serial.begin(115200);
   while(!Serial){
@@ -99,6 +162,8 @@ void setup() {
   Serial.println("MiniSumo QT PY Pico LedMatrix and DFR8x8");
   
   connectToWiFi();
+  //initGrid();
+
 
   setupI2C();
 
@@ -106,7 +171,205 @@ void setup() {
 
   setupDFR8x8();
 
+  setupWebServer();
+
 }
+
+
+// ------------------------------------------------------------
+// Setup Web Server (root + /controller + WebSocket)
+// ------------------------------------------------------------
+void setupWebServer() {
+  if (!LittleFS.begin()) {
+    Serial.println("LittleFS mount failed.");
+  } else {
+    Serial.println("LittleFS mounted.");
+  }
+
+  if (!loadHTMLToPSRAM("/index_dpad.html")) {
+    Serial.println("FATAL: Could not load /index_dpad.html");
+  }
+
+  // Serve HTML
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!htmlBuffer || htmlSize == 0) {
+      request->send(500, "text/plain", "HTML not loaded");
+      return;
+    }
+    AsyncWebServerResponse *response =
+      request->beginResponse(200, "text/html",
+                             (const uint8_t*)htmlBuffer, htmlSize);
+    response->addHeader("Cache-Control", "no-cache");
+    request->send(response);
+  });
+
+  // D-Pad /controller endpoint (JSON in, JSON out, no grid)
+  server.on(
+    "/controller",
+    HTTP_POST,
+    [](AsyncWebServerRequest *request) { /* response sent in body handler */ },
+    NULL,
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+      String body;
+      body.reserve(total);
+      for (size_t i = 0; i < len; i++) body += (char)data[i];
+
+      StaticJsonDocument<300> doc;
+      DeserializationError err = deserializeJson(doc, body);
+      if (err) {
+        request->send(400, "application/json", "{\"error\":\"bad json\"}");
+        return;
+      }
+
+      // direction / action handling (same as original, but no grid)
+      if (doc.containsKey("direction")) {
+        String direction = doc["direction"];
+
+        if (direction == "left") {
+          horizontalIndex--;
+          if (horizontalIndex < 0) horizontalIndex = horizontalCount - 1;
+          verticalIndex = 0;
+        }
+        else if (direction == "right") {
+          horizontalIndex++;
+          if (horizontalIndex >= horizontalCount) horizontalIndex = 0;
+          verticalIndex = 0;
+        }
+        else if (direction == "up") {
+          verticalIndex--;
+          if (verticalIndex < 0) verticalIndex = verticalCounts[horizontalIndex] - 1;
+        }
+        else if (direction == "down") {
+          verticalIndex++;
+          if (verticalIndex >= verticalCounts[horizontalIndex]) verticalIndex = 0;
+        }
+      }
+
+      if (doc.containsKey("action")) {
+        String action = doc["action"];
+        if (action == "start") animationRunning = true;
+        if (action == "stop")  animationRunning = false;
+      }
+
+      StaticJsonDocument<256> response;
+      response["horiz"] = horizontalMenu[horizontalIndex];
+      response["vert"]  = verticalMenus[horizontalIndex][verticalIndex];
+
+      if (pendingMessage.length() > 0) {
+        response["message"]  = pendingMessage;
+        response["severity"] = pendingSeverity;
+        pendingMessage = "";
+      }
+
+      String out;
+      serializeJson(response, out);
+      request->send(200, "application/json", out);
+    }
+  );
+
+  // WebSocket
+  ws.onEvent([](AsyncWebSocket *server,
+                AsyncWebSocketClient *client,
+                AwsEventType type,
+                void *arg,
+                uint8_t *data,
+                size_t len) {
+
+    if (type == WS_EVT_CONNECT) {
+      Serial.printf("WS: Client %u connected | IP: %s\n",
+                    client->id(),
+                    client->remoteIP().toString().c_str());
+    }
+
+    if (type == WS_EVT_DISCONNECT) {
+      Serial.printf("WS: Client %u disconnected\n", client->id());
+    }
+
+    if (type == WS_EVT_DATA) {
+      AwsFrameInfo *info = (AwsFrameInfo*)arg;
+
+      if (info->opcode == WS_TEXT) {
+        String msg;
+        for (size_t i = 0; i < len; i++) msg += (char)data[i];
+
+        if (msg == "PING") {
+          client->text("PONG");
+          return;
+        }
+
+        handleCommand(msg, client);
+      }
+    }
+  });
+
+  server.addHandler(&ws);
+  server.begin();
+}
+
+
+// ------------------------------------------------------------
+// Command parsing (no pattern logic)
+// ------------------------------------------------------------
+void handleCommand(const String& msg, AsyncWebSocketClient* client) {
+  if (msg.startsWith("UA:")) {
+    clientUserAgents[client->id()] = msg.substring(3);
+    Serial.printf("UA received` for client %u\n", client->id());
+    return;
+  }
+
+  if (msg.startsWith("RUN:")) {
+    animationRunning = msg.substring(4).toInt();
+  }
+  else if (msg.startsWith("FPS:")) {
+    int fps = msg.substring(4).toInt();
+    fps = constrain(fps, 1, 60);
+    INTERVAL_ANIMATION = 1000UL / fps;
+  }
+  else if (msg.startsWith("BRI:")) {
+    float b = msg.substring(4).toFloat();
+    brightness = constrain(b, 0.0f, 1.0f);
+  }
+  else if (msg.startsWith("MODE:")) {
+    String m = msg.substring(5);
+    sendMode = (m == "BIT") ? MODE_BITMASK : MODE_FULL;
+  }
+}
+
+
+// ------------------------------------------------------------
+// Load HTML file from LittleFS → PSRAM
+// ------------------------------------------------------------
+bool loadHTMLToPSRAM(const char* filename) {
+  if (!LittleFS.exists(filename)) {
+    Serial.printf("ERROR: File %s not found\n", filename);
+    return false;
+  }
+
+  File file = LittleFS.open(filename, "r");
+  if (!file) {
+    Serial.println("ERROR: Failed to open HTML file");
+    return false;
+  }
+
+  htmlSize = file.size();
+  htmlBuffer = (char*)ps_malloc(htmlSize + 1);
+
+  if (!htmlBuffer) {
+    Serial.println("ERROR: PSRAM allocation failed");
+    file.close();
+    return false;
+  }
+
+  file.readBytes(htmlBuffer, htmlSize);
+  htmlBuffer[htmlSize] = '\0';
+  file.close();
+
+  Serial.printf("Loaded %s (%u bytes)\n", filename, (unsigned)htmlSize);
+  return true;
+}
+
+
+
 
 // ------------------------------------------------------------
 // WiFi rotation connect
