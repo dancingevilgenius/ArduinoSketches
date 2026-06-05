@@ -197,6 +197,13 @@
 </style>
 
 <script>
+
+function runHealthChecks() {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send("HEALTHCHECK");
+    }
+}
+
 // -----------------------------
 // Padding helpers
 // -----------------------------
@@ -235,7 +242,7 @@ function showSnackbar(message, type = "success") {
     setTimeout(() => {
         bar.classList.remove("show");
         setTimeout(() => bar.remove(), 300);
-    }, 3000);
+    }, 6000);
 }
 
 // -----------------------------
@@ -286,18 +293,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusRow = document.querySelector('.status-row');
     const bottomButtons = document.querySelector('.bottom-buttons');
 
+
+
     dropdown.addEventListener('change', function() {
-        if (this.value === '8x8') {
-            dpad.style.display = 'none';
-            grid8.style.display = 'block';
-            statusRow.style.display = 'none';
-            bottomButtons.style.display = 'none';
-        } else {
-            dpad.style.display = 'block';
-            grid8.style.display = 'none';
-            statusRow.style.display = 'flex';
-            bottomButtons.style.display = 'flex';
-        }
+		const healthBtn = document.getElementById("healthBtnContainer");
+
+		if (this.value === '8x8') {
+			dpad.style.display = 'none';
+			grid8.style.display = 'block';
+			statusRow.style.display = 'none';
+			bottomButtons.style.display = 'none';
+			healthBtn.style.display = 'none';
+		} else {
+			dpad.style.display = 'block';
+			grid8.style.display = 'none';
+			statusRow.style.display = 'flex';
+			bottomButtons.style.display = 'flex';
+			healthBtn.style.display = 'block';
+		}
+	
     });
 
     cells = Array.from(document.querySelectorAll('.grid-cell'));
@@ -471,6 +485,15 @@ function setupControls() {
         <button class="btn" onclick="sendDirection('down')">&#9660;</button>
     </div>
 </div>
+
+<div id="healthBtnContainer" style="margin-top:20px;">
+    <button class="action-btn" onclick="runHealthChecks()">Health Check</button>
+</div>
+
+
+
+
+
 
 <div id="grid8x8" class="grid-container" style="display:none;">
     <div class="grid-wrapper">

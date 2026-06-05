@@ -208,11 +208,7 @@ void setupWebServer() {
                     client->id(),
                     client->remoteIP().toString().c_str());
 
-          client->text("SNACK:success:Message 1");
-          delay(1000);
-          client->text("SNACK:warning:Message 2");
-          delay(1000);
-          client->text("SNACK:error:Message 3");                    
+
     }
 
     if (type == WS_EVT_DISCONNECT) {
@@ -272,7 +268,15 @@ void handleCommand(const String& msg, AsyncWebSocketClient* client) {
           String payload = "SNACK:" + type + ":" + text;
           ws.textAll(payload);
       }
-  }  
+  }
+  else if (msg == "HEALTHCHECK") {
+    Serial.println("HEALTHCHECK command received");
+    healthCheckWifi();
+    healthCheckI2C();
+    healthCheckLedMatrix();
+    healthCheckDFR8x8();
+    healthCheckWebServer();
+  } 
 }
 
 // ------------------------------------------------------------
@@ -355,14 +359,20 @@ void setupI2C() {
 }
 
 void setupDFR8x8() {
-  while(tof.begin() != 0){
-    Serial.println("DFR MatrixLidar not found");
+  int count=0;
+  while(tof.begin() != 0 ){
+    Serial.print(".");
+    count++;
+    if(count > 10){
+      Serial.println("DFR MatrixLidar not found. Exiting setupDFR8x8()");
+      return;
+    }
     delay(500);
   }
   Serial.println("DFR MatrixLidar found.");
 
-  int count=0;
   Serial.println("DFR MatrixLidar init starting...");
+  count = 0;
   while(tof.setRangingMode(eMatrix_8X8) != 0){
     Serial.print(count);
     Serial.print(" ");
@@ -503,6 +513,61 @@ void sendBitGrid() {
 
   ws.binaryAll((uint8_t*)&bits, sizeof(bits));
 }
+
+
+// ------------------------------------------------------------
+// HEALTH CHECKS — each sends a snackbar via WebSocket
+// ------------------------------------------------------------
+
+void healthCheckWifi() {
+    if (WiFi.status() == WL_CONNECTED) {
+        ws.textAll("SNACK:success:WiFi OK (" + WiFi.localIP().toString() + ")");
+    } else {
+        ws.textAll("SNACK:error:WiFi NOT connected");
+    }
+}
+
+void healthCheckI2C() {
+    // Simple check: try a transmission on Wire1
+    Wire1.beginTransmission(0x00);
+    uint8_t err = Wire1.endTransmission();
+
+    if (err == 0 || err == 2) {
+        ws.textAll("SNACK:success:I2C Bus OK");
+    } else {
+        ws.textAll("SNACK:error:I2C Bus Error");
+    }
+}
+
+void healthCheckLedMatrix() {
+    // Check if LED driver responded during init
+    if (ledmatrix.begin(IS3741_ADDR_DEFAULT, &Wire1)) {
+        ws.textAll("SNACK:success:LED Matrix OK");
+    } else {
+        ws.textAll("SNACK:error:LED Matrix NOT responding");
+    }
+}
+
+void healthCheckDFR8x8() {
+    uint16_t tempGrid[64];
+
+    if ( tof.begin() == 0 && tof.getAllData(tempGrid) == 0) {
+        ws.textAll("SNACK:success:DFR 8×8 Lidar OK");
+    } else {
+        ws.textAll("SNACK:error:DFR 8×8 Lidar NOT responding");
+    }
+}
+
+void healthCheckWebServer() {
+    // Check if our web page has been loaded into htmlBuffer
+    if(htmlBuffer != nullptr){
+      ws.textAll("SNACK:success:Web Server OK");
+    } else {
+      ws.textAll("SNACK:error:Web Server web page not found");
+    }
+}
+
+
 
 // ------------------------------------------------------------
 // Client Cleanup
