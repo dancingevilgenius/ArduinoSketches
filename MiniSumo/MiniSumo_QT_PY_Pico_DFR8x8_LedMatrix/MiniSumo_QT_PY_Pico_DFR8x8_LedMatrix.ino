@@ -1,11 +1,5 @@
-//  Mini Sumo
-//  Hardware:
-//    DFRobot TOF 8x8 Matrix
-//    Adafruit 13x9 LED Matrix
-//
-//  Other Features:
-//    Send 8x8 matrix data to web page
-//    Load from index_dpad.html file saved on PSRAM.
+//  Mini Sumo Backend — TRUE RGB VERSION
+//  Sends real 0xRRGGBB colors to the front-end
 
 #include "Arduino.h"
 #include "Wire.h"
@@ -37,39 +31,14 @@ String pendingSeverity = "info";
 
 Adafruit_IS31FL3741_QT ledmatrix;
 
-#define TOF_8x8_NUM_ROWS 8
-#define TOF_8x8_NUM_COLS 8
 #define X_OFFSET 2
-#define D_OPP_MIN 1
-#define D_OPP_MAX 30
-#define D_EDGE6_MAX 12
-#define D_EDGE7_MAX 8
-
-uint8_t matrix[TOF_8x8_NUM_ROWS][TOF_8x8_NUM_COLS] = {
-  {0,0,0,0,0,0,0,0},
-  {0,0,0,0,0,0,0,0},
-  {0,0,0,0,0,0,0,0},
-  {0,0,0,20,20,0,0,0},
-  {0,0,0,0,0,0,0,0},
-  {0,0,0,0,0,0,0,0},
-  {10,10,10,10,10,10,10,10},
-  {10,10,10,8,10,10,10,10}
-};
-
-// 8×8 WebSocket grid
-uint16_t colorGrid[8][8];
-
-// ToF Sensor
-DFRobot_MatrixLidar_I2C tof(0x33, &Wire1);
-uint16_t lidarGrid[64];
-
 #define INVALID_VAL 4000
-#define RING_SIZE_MM 770
-#define ROBOT_SIZE_MM 100
 #define MAX_DIST 570
 
-#define SDA_PIN 22
-#define SCL_PIN 23
+uint32_t colorGrid[8][8];
+
+DFRobot_MatrixLidar_I2C tof(0x33, &Wire1);
+uint16_t lidarGrid[64];
 
 // ------------------------------------------------------------
 // Web Server + WebSocket
@@ -79,15 +48,9 @@ AsyncWebSocket ws("/ws");
 
 std::map<uint32_t, String> clientUserAgents;
 
-// ------------------------------------------------------------
-// PSRAM HTML Buffer
-// ------------------------------------------------------------
 char* htmlBuffer = nullptr;
 size_t htmlSize = 0;
 
-// ------------------------------------------------------------
-// Animation / Control State
-// ------------------------------------------------------------
 bool animationRunning = true;
 
 unsigned long lastAnimationTime = 0;
@@ -408,8 +371,7 @@ void setupLedMatrix() {
   ledmatrix.setGlobalCurrent(0xCC);
   ledmatrix.enable(true);
 
-  clearLEDMatrix();
-  clearLEDMatrix();
+  ledmatrix.fill(0);
   delay(2000);
 }
 
@@ -442,47 +404,60 @@ void loopAnimation() {
 }
 
 // ------------------------------------------------------------
-// ToF → LED Matrix → WebSocket Grid
+// MINI-SUMO COLOR LOGIC — TRUE RGB
 // ------------------------------------------------------------
 void loopMiniSumoOpponent() {
-  uint16_t oppColor      = ledmatrix.color565(0, 150, 0);
-  uint16_t edgeColor     = ledmatrix.color565(150, 0, 0);
-  uint16_t edgeWarnColor = ledmatrix.color565(180, 180, 0);
 
   tof.getAllData(lidarGrid);
 
-  for(uint8_t y = 0; y < 8; y++){
-    for(uint8_t x = 0; x < 8; x++){
+  for (uint8_t y = 0; y < 8; y++) {
+    for (uint8_t x = 0; x < 8; x++) {
+
       int d_mm = lidarGrid[y * 8 + x];
 
+      // Invalid or too far → black
       if (d_mm == INVALID_VAL || d_mm > MAX_DIST) {
-        ledmatrix.drawPixel(x+X_OFFSET, y, 0);
+        ledmatrix.drawPixel(x + X_OFFSET, y, 0);
         colorGrid[y][x] = 0;
         continue;
       }
 
-      if (y == 3 || y == 4) {
-        if (d_mm < 500) {
-          ledmatrix.drawPixel(x+X_OFFSET, y, oppColor);
-          colorGrid[y][x] = 8888;
+      // -----------------------------
+      // Rows 0–4: Opponent detection (bright green)
+      // -----------------------------
+      if (y <= 4) {
+        if (d_mm > 0) {
+          ledmatrix.drawPixel(x + X_OFFSET, y, ledmatrix.color565(0,255,0));
+          colorGrid[y][x] = 0x00FF00;
         }
+        continue;
       }
-      else if (y == 6) {
-        if (d_mm > 200) {
-          ledmatrix.drawPixel(x+X_OFFSET, y, edgeWarnColor);
-          colorGrid[y][x] = 999999999;
+
+      // -----------------------------
+      // Row 6: Edge warning (bright yellow)
+      // -----------------------------
+      if (y == 6) {
+        if (d_mm > 0) {
+          ledmatrix.drawPixel(x + X_OFFSET, y, ledmatrix.color565(255,255,0));
+          colorGrid[y][x] = 0xFFFF00;
         }
+        continue;
       }
-      else if (y == 7) {
-        if (d_mm > 170) {
-          ledmatrix.drawPixel(x+X_OFFSET, y, edgeColor);
-          colorGrid[y][x] = 999999999;
+
+      // -----------------------------
+      // Row 7: Edge danger (bright red)
+      // -----------------------------
+      if (y == 7) {
+        if (d_mm > 0) {
+          ledmatrix.drawPixel(x + X_OFFSET, y, ledmatrix.color565(255,0,0));
+          colorGrid[y][x] = 0xFF0000;
         }
+        continue;
       }
-      else {
-        ledmatrix.drawPixel(x+X_OFFSET, y, 0);
-        colorGrid[y][x] = 0;
-      }
+
+      // Row 5 or anything else → black
+      ledmatrix.drawPixel(x + X_OFFSET, y, 0);
+      colorGrid[y][x] = 0;
     }
   }
 }
@@ -509,13 +484,6 @@ void sendBitGrid() {
   }
 
   ws.binaryAll((uint8_t*)&bits, sizeof(bits));
-}
-
-// ------------------------------------------------------------
-// LED Matrix Helpers
-// ------------------------------------------------------------
-void clearLEDMatrix() {
-  ledmatrix.fill(0);
 }
 
 // ------------------------------------------------------------
@@ -587,9 +555,9 @@ String parseDeviceName(const String& ua) {
   if (u.indexOf("mac os") >= 0 || u.indexOf("macintosh") >= 0) return "Mac";
 
   if (u.indexOf("android") >= 0) {
-    if (u.indexOf("sm-s92") >= 0) return "Samsung Galaxy S24 Ultra (Android)";
-    if (u.indexOf("sm-s91") >= 0) return "Samsung Galaxy S24 (Android)";
-    if (u.indexOf("pixel") >= 0) return "Google Pixel (Android)";
+    if (u.indexOf("sm-s92") >= 0) return "Samsung Galaxy S24 Ultra";
+    if (u.indexOf("sm-s91") >= 0) return "Samsung Galaxy S24";
+    if (u.indexOf("pixel") >= 0) return "Google Pixel";
     return "Android Device";
   }
 
@@ -610,3 +578,6 @@ String parseBrowser(const String& ua) {
 
   return "Unknown Browser";
 }
+
+
+

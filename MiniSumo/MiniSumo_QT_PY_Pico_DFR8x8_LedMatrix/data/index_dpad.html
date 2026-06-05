@@ -15,9 +15,7 @@
         text-align: center;
     }
 
-    .center-column {
-        margin-top: 20px;
-    }
+    .center-column { margin-top: 20px; }
 
     select {
         font-size: 20px;
@@ -45,14 +43,9 @@
         line-height: 40px;
     }
 
-    .dpad-container {
-        margin-top: 10px;
-    }
+    .dpad-container { margin-top: 10px; }
 
-    .row {
-        display: flex;
-        justify-content: center;
-    }
+    .row { display: flex; justify-content: center; }
 
     .btn {
         width: 80px;
@@ -66,9 +59,7 @@
         cursor: pointer;
     }
 
-    .btn:active {
-        background: #555;
-    }
+    .btn:active { background: #555; }
 
     .bottom-buttons {
         margin-top: 40px;
@@ -89,19 +80,14 @@
         cursor: pointer;
     }
 
-    .action-btn:active {
-        background: #666;
-    }
+    .action-btn:active { background: #666; }
 
     /* 8×8 grid */
-    .grid-container {
-        margin-top: 20px;
-    }
+    .grid-container { margin-top: 20px; }
 
-    /* CHROME-SAFE WRAPPER */
     .grid-wrapper {
-        display: inline-block;     /* prevents Chrome collapse */
-        width: auto;               /* let grid define width */
+        display: inline-block;
+        width: auto;
         max-width: none;
         margin: 0 auto;
         text-align: center;
@@ -122,7 +108,6 @@
         transition: background 0.1s linear;
     }
 
-    /* Stats */
     #stats {
         margin-bottom: 4px;
         font-size: 9px;
@@ -132,15 +117,10 @@
         text-align: center;
         font-family: monospace;
         letter-spacing: 1px;
-        overflow-wrap: break-word;
     }
 
-    /* Controls */
     .controls-wrapper {
         width: 100%;
-        max-width: 100%;
-        min-width: 100%;
-        box-sizing: border-box;
         margin-top: 12px;
         display: flex;
         flex-direction: column;
@@ -149,21 +129,16 @@
 
     .control-row {
         display: flex;
-        flex-wrap: wrap;
         align-items: center;
         background: #222;
         padding: 6px;
         border-radius: 10px;
         width: 100%;
-        max-width: 100%;
-        min-width: 100%;
         box-sizing: border-box;
     }
 
     .control-row label {
         width: 28%;
-        max-width: 28%;
-        min-width: 28%;
         font-size: 14px;
         text-align: left;
     }
@@ -172,18 +147,12 @@
     .control-row select,
     .control-row button {
         width: 60%;
-        max-width: 60%;
-        min-width: 60%;
         font-size: 13px;
         padding: 6px;
         border-radius: 10px;
         border: 1px solid #555;
         background: #333;
         color: #fff;
-    }
-
-    .control-row button:hover {
-        background: #444;
     }
 </style>
 
@@ -192,13 +161,10 @@
 // Padding helpers
 // -----------------------------
 function pad2(n) { return n.toString().padStart(2, ' '); }
-
 function padLatency(n) {
     let parts = n.toFixed(1).split('.');
-    let whole = parts[0].padStart(4, ' ');
-    return whole + '.' + parts[1];
+    return parts[0].padStart(4, ' ') + '.' + parts[1];
 }
-
 function pad3(n) { return n.toString().padStart(3, ' '); }
 
 // -----------------------------
@@ -300,18 +266,12 @@ function connectWebSocket() {
         frameCount++;
         updateFPS();
 
-        if (buf.byteLength === 128) {
+        // TRUE RGB: 64 cells × 4 bytes = 256 bytes
+        if (buf.byteLength === 256) {
             const view = new DataView(buf);
             for (let i = 0; i < 64; i++) {
-                const val = view.getUint16(i * 2, true);
-                updateCellColor(i, val);
-            }
-        } else if (buf.byteLength === 8) {
-            const view = new DataView(buf);
-            const bits = view.getBigUint64(0, true);
-            for (let i = 0; i < 64; i++) {
-                const on = ((bits >> BigInt(i)) & 1n) ? 1 : 0;
-                updateCellColor(i, on ? 32 : 0);
+                const rgb = view.getUint32(i * 4, true);
+                updateCellColor(i, rgb);
             }
         }
     };
@@ -336,10 +296,17 @@ function updateFPS() {
     }
 }
 
-function updateCellColor(index, value) {
-    const scaled = Math.min(255, Math.floor((value / 32) * 255));
-    cells[index].style.background =
-        scaled === 0 ? "#222" : `rgb(${scaled}, 255, ${scaled})`;
+function updateCellColor(index, rgb) {
+    if (rgb === 0) {
+        cells[index].style.background = "#222";
+        return;
+    }
+
+    let r = (rgb >> 16) & 0xFF;
+    let g = (rgb >> 8) & 0xFF;
+    let b = rgb & 0xFF;
+
+    cells[index].style.background = `rgb(${r},${g},${b})`;
 }
 
 function sendCommand(cmd) {
@@ -399,7 +366,6 @@ function setupControls() {
 <div id="grid8x8" class="grid-container" style="display:none;">
     <div class="grid-wrapper">
 
-        <!-- Stats inside bounding box -->
         <div id="stats">
             FPS: <span id="fps"> 0</span> |
             Latency: <span id="lat">   0.0</span> ms |
@@ -408,14 +374,22 @@ function setupControls() {
 
         <div class="row">
             <div class="grid">
-                <!-- 64 REAL GRID CELLS -->
+                <!-- 64 real grid cells -->
+                <!-- row 1 -->
                 <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+                <!-- row 2 -->
                 <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+                <!-- row 3 -->
                 <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+                <!-- row 4 -->
                 <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+                <!-- row 5 -->
                 <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+                <!-- row 6 -->
                 <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+                <!-- row 7 -->
                 <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+                <!-- row 8 -->
                 <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
             </div>
         </div>
