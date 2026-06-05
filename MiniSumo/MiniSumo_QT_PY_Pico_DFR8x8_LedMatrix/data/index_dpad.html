@@ -194,6 +194,12 @@
     .snackbar-success { background: #2e7d32; }
     .snackbar-warning { background: #b8860b; }
     .snackbar-error   { background: #8b1a1a; }
+	
+	#healthCheckBtn {
+		max-width: 300px;     /* matches your top text fields */
+		width: 100%;          /* fills container */
+		white-space: nowrap;  /* prevents wrapping */
+}	
 </style>
 
 <script>
@@ -486,9 +492,11 @@ function setupControls() {
     </div>
 </div>
 
+
 <div id="healthBtnContainer" style="margin-top:20px;">
-    <button class="action-btn" onclick="runHealthChecks()">Health Check</button>
+    <button id="healthCheckBtn" class="action-btn" onclick="runHealthChecks()">Health Check</button>
 </div>
+
 
 
 
