@@ -82,7 +82,6 @@
 
     .action-btn:active { background: #666; }
 
-    /* 8×8 grid */
     .grid-container { margin-top: 20px; }
 
     .grid-wrapper {
@@ -266,11 +265,35 @@ function connectWebSocket() {
         frameCount++;
         updateFPS();
 
-        // TRUE RGB: 64 cells × 4 bytes = 256 bytes
+        // FULL RGB MODE: 64 cells × 4 bytes = 256 bytes
         if (buf.byteLength === 256) {
             const view = new DataView(buf);
             for (let i = 0; i < 64; i++) {
                 const rgb = view.getUint32(i * 4, true);
+                updateCellColor(i, rgb);
+            }
+        }
+
+        // BITMASK MODE: 64 bits = 8 bytes
+        else if (buf.byteLength === 8) {
+            const view = new DataView(buf);
+            const bits = view.getBigUint64(0, true);
+
+            for (let i = 0; i < 64; i++) {
+                const on = ((bits >> BigInt(i)) & 1n) === 1n;
+
+                if (!on) {
+                    updateCellColor(i, 0);
+                    continue;
+                }
+
+                const row = Math.floor(i / 8);
+                let rgb = 0;
+
+                if (row <= 4)       rgb = 0x00FF00;  // green
+                else if (row === 6) rgb = 0xFFFF00;  // yellow
+                else if (row === 7) rgb = 0xFF0000;  // red
+
                 updateCellColor(i, rgb);
             }
         }
