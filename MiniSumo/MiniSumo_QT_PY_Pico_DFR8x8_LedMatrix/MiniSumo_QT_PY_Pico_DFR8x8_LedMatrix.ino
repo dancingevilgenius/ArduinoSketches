@@ -7,20 +7,19 @@
 //    Send 8x8 matrix data to web page
 //    Load from index_dpad.html file saved on PSRAM.
 
-
 #include "Arduino.h"
-#include "Wire.h"               // I2C communication
-#include "DFRobot_MatrixLidar.h"// 8x8 Lidar Matrix
-#include <Adafruit_IS31FL3741.h>// 13x9 LED Matrix
-#include <WiFi.h>               // Web Server
-#include <AsyncTCP.h>           // Web sockets
-#include <ESPAsyncWebServer.h>  // Web sockets
-#include <LittleFS.h>           // PSRAM local storage
+#include "Wire.h"
+#include "DFRobot_MatrixLidar.h"
+#include <Adafruit_IS31FL3741.h>
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <map>
 
 // ------------------------------------------------------------
-// WiFi Credential Rotation (REORDERED)
+// WiFi Credential Rotation
 // ------------------------------------------------------------
 struct WifiCredential {
   const char* ssid;
@@ -32,68 +31,45 @@ WifiCredential wifiList[3] = {
   { "TheMandalorian",  "6302201111" },
   { "STDL5301",        "library30" }
 };
+
 String pendingMessage = "";
 String pendingSeverity = "info";
 
-
 Adafruit_IS31FL3741_QT ledmatrix;
-// If colors appear wrong on matrix, try invoking constructor like so:
-// Adafruit_IS31FL3741_QT ledmatrix(IS3741_RBG);
 
 #define TOF_8x8_NUM_ROWS 8
 #define TOF_8x8_NUM_COLS 8
-#define X_OFFSET 2        // Screen is 13 rows wide, 8x8 is only 8 wide.
+#define X_OFFSET 2
 #define D_OPP_MIN 1
 #define D_OPP_MAX 30
 #define D_EDGE6_MAX 12
 #define D_EDGE7_MAX 8
 
 uint8_t matrix[TOF_8x8_NUM_ROWS][TOF_8x8_NUM_COLS] = {
-  {0,0, 0, 0, 0, 0, 0 , 0},
-  {0,0, 0, 0, 0, 0, 0 , 0},
-  {0,0, 0, 0, 0, 0, 0 , 0},
-  {0,0, 0, 20, 20, 0, 0 , 0},
-  {0,0, 0, 0, 0, 0, 0 , 0},
-  {0,0, 0, 0, 0, 0, 0 , 0},
-  {10,10, 10, 10, 10, 10, 10 , 10},
-  {10,10, 10, 8, 10, 10, 10,10}
+  {0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0},
+  {0,0,0,20,20,0,0,0},
+  {0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0},
+  {10,10,10,10,10,10,10,10},
+  {10,10,10,8,10,10,10,10}
 };
 
-// 8x8 Text
-char text[] = "ADAFRUIT!";   // A message to scroll
-int text_x = 1; //ledmatrix.width(); // Initial text position = off right edge
-int text_y = 1;
-int text_min;                // Pos. where text resets (calc'd later)
-
-
-// Some boards have just one I2C interface, but some have more...
-//TwoWire *WIRE_I2C = &Wire; // Pro Micro ESP32-C3,
-TwoWire *WIRE_I2C = &Wire1; // QT PY Pico,
-
-
-// ------------------------------------------------------------
-// 8×8 Grid (uint16_t) for WebSocket + demo animation
-// ------------------------------------------------------------
+// 8×8 WebSocket grid
 uint16_t colorGrid[8][8];
 
-
-
-// Start for DFRobot MatrixLidar ----------------
-DFRobot_MatrixLidar_I2C tof(0x33, WIRE_I2C);
+// ToF Sensor
+DFRobot_MatrixLidar_I2C tof(0x33, &Wire1);
 uint16_t lidarGrid[64];
+
 #define INVALID_VAL 4000
 #define RING_SIZE_MM 770
 #define ROBOT_SIZE_MM 100
-#define MAX_DIST 570    // 770 - 100 - 100
-// Thing Plus Pro Micro RP2040
-//#define SDA_PIN 5 
-//#define SCL_PIN 6 
-// QT PY Pico
-#define SDA_PIN 22 
-#define SCL_PIN 23 
+#define MAX_DIST 570
 
-// End for DFRobot MatrixLidar ----------------
-
+#define SDA_PIN 22
+#define SCL_PIN 23
 
 // ------------------------------------------------------------
 // Web Server + WebSocket
@@ -101,9 +77,7 @@ uint16_t lidarGrid[64];
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
-// Store User-Agent strings per WebSocket client ID
 std::map<uint32_t, String> clientUserAgents;
-
 
 // ------------------------------------------------------------
 // PSRAM HTML Buffer
@@ -111,24 +85,22 @@ std::map<uint32_t, String> clientUserAgents;
 char* htmlBuffer = nullptr;
 size_t htmlSize = 0;
 
-
 // ------------------------------------------------------------
-// Animation / Control State (no pattern logic)
+// Animation / Control State
 // ------------------------------------------------------------
 bool animationRunning = true;
 
 unsigned long lastAnimationTime = 0;
 unsigned long lastClientCleanupTime = 0;
 
-unsigned long INTERVAL_ANIMATION = 100;           // ms, default 10 FPS
-unsigned long INTERVAL_CLIENT_CLEANUP = 5000;     // ms, default 5 seconds
+unsigned long INTERVAL_ANIMATION = 100;       // default 10 FPS
+unsigned long INTERVAL_CLIENT_CLEANUP = 5000; // 5 seconds
 
-float brightness = 1.0f;
 enum SendMode { MODE_FULL, MODE_BITMASK };
 SendMode sendMode = MODE_FULL;
 
 // ------------------------------------------------------------
-// D-Pad menu state (from original backend)
+// D-Pad menu state
 // ------------------------------------------------------------
 const char* horizontalMenu[] = { "SPEED", "TURNING", "PROPORTIONAL", "INTEGRAL" };
 int horizontalIndex = 0;
@@ -155,35 +127,25 @@ int verticalCounts[] = {
 
 int verticalIndex = 0;
 
-
-
-
+// ------------------------------------------------------------
+// Setup
+// ------------------------------------------------------------
 void setup() {
   Serial.begin(115200);
-  while(!Serial){
-    delay(10);
-  }
+  while(!Serial) delay(10);
   delay(2000);
 
   Serial.println("MiniSumo QT PY Pico LedMatrix and DFR8x8");
-  
+
   connectToWiFi();
-  //initGrid();
-
-
   setupI2C();
-
   setupLedMatrix();
-
   setupDFR8x8();
-
   setupWebServer();
-
 }
 
-
 // ------------------------------------------------------------
-// Setup Web Server (root + /controller + WebSocket)
+// Setup Web Server
 // ------------------------------------------------------------
 void setupWebServer() {
   if (!LittleFS.begin()) {
@@ -196,7 +158,6 @@ void setupWebServer() {
     Serial.println("FATAL: Could not load /index_dpad.html");
   }
 
-  // Serve HTML
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (!htmlBuffer || htmlSize == 0) {
       request->send(500, "text/plain", "HTML not loaded");
@@ -209,11 +170,11 @@ void setupWebServer() {
     request->send(response);
   });
 
-  // D-Pad /controller endpoint (JSON in, JSON out, no grid)
+  // D-Pad JSON endpoint
   server.on(
     "/controller",
     HTTP_POST,
-    [](AsyncWebServerRequest *request) { /* response sent in body handler */ },
+    [](AsyncWebServerRequest *request) {},
     NULL,
     [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
       String body;
@@ -221,13 +182,11 @@ void setupWebServer() {
       for (size_t i = 0; i < len; i++) body += (char)data[i];
 
       StaticJsonDocument<300> doc;
-      DeserializationError err = deserializeJson(doc, body);
-      if (err) {
+      if (deserializeJson(doc, body)) {
         request->send(400, "application/json", "{\"error\":\"bad json\"}");
         return;
       }
 
-      // direction / action handling (same as original, but no grid)
       if (doc.containsKey("direction")) {
         String direction = doc["direction"];
 
@@ -312,14 +271,12 @@ void setupWebServer() {
   server.begin();
 }
 
-
 // ------------------------------------------------------------
-// Command parsing (no pattern logic)
+// Command parsing
 // ------------------------------------------------------------
 void handleCommand(const String& msg, AsyncWebSocketClient* client) {
   if (msg.startsWith("UA:")) {
     clientUserAgents[client->id()] = msg.substring(3);
-    Serial.printf("UA received` for client %u\n", client->id());
     return;
   }
 
@@ -331,16 +288,11 @@ void handleCommand(const String& msg, AsyncWebSocketClient* client) {
     fps = constrain(fps, 1, 60);
     INTERVAL_ANIMATION = 1000UL / fps;
   }
-  else if (msg.startsWith("BRI:")) {
-    float b = msg.substring(4).toFloat();
-    brightness = constrain(b, 0.0f, 1.0f);
-  }
   else if (msg.startsWith("MODE:")) {
     String m = msg.substring(5);
     sendMode = (m == "BIT") ? MODE_BITMASK : MODE_FULL;
   }
 }
-
 
 // ------------------------------------------------------------
 // Load HTML file from LittleFS → PSRAM
@@ -373,9 +325,6 @@ bool loadHTMLToPSRAM(const char* filename) {
   Serial.printf("Loaded %s (%u bytes)\n", filename, (unsigned)htmlSize);
   return true;
 }
-
-
-
 
 // ------------------------------------------------------------
 // WiFi rotation connect
@@ -417,32 +366,28 @@ bool connectToWiFi() {
   return false;
 }
 
-
-void setupI2C(){
-  // Pro Micro ESP32-C3 needs the next line.
-  //WIRE_I2C->setPins(SDA_PIN, SCL_PIN);
-  WIRE_I2C->begin();
+// ------------------------------------------------------------
+// I2C + Sensor Setup
+// ------------------------------------------------------------
+void setupI2C() {
+  Wire1.begin();
 }
 
-void setupDFR8x8(){
-
-  
+void setupDFR8x8() {
   while(tof.begin() != 0){
     Serial.println("DFR MatrixLidar not found");
     delay(500);
   }
   Serial.println("DFR MatrixLidar found.");
 
-
   int count=0;
-  //config matrix mode
-    Serial.println("DFR MatrixLidar init starting. This may take several seconds");
+  Serial.println("DFR MatrixLidar init starting...");
   while(tof.setRangingMode(eMatrix_8X8) != 0){
     Serial.print(count);
     Serial.print(" ");
     ++count;
     if(count > 10){
-      Serial.println("DFR MatrixLidar not initialized. Leaving setupMatrixLidar()");
+      Serial.println("DFR MatrixLidar not initialized.");
       return;
     }
     delay(250);
@@ -451,79 +396,35 @@ void setupDFR8x8(){
   Serial.println("DFR MatrixLidar initialized!");
 }
 
-
-
-
-void setupLedMatrix(){
-
-  if (! ledmatrix.begin(IS3741_ADDR_DEFAULT, WIRE_I2C)) {
+void setupLedMatrix() {
+  if (! ledmatrix.begin(IS3741_ADDR_DEFAULT, &Wire1)) {
     Serial.println("LED 13x9 Matrix not found");
     return;
   }
 
   Serial.println("LED 13x9 Matrix found!");
 
-  // By default the LED controller communicates over I2C at 400 KHz.
-  // Arduino Uno can usually do 800 KHz, and 32-bit microcontrollers 1 MHz.
-  //WIRE_I2C->setClock(800000);
+  ledmatrix.setLEDscaling(0xAA);
+  ledmatrix.setGlobalCurrent(0xCC);
+  ledmatrix.enable(true);
 
-  // Set brightness to max and bring controller out of shutdown state
-  ledmatrix.setLEDscaling(0xAA); //0xFF
-  ledmatrix.setGlobalCurrent(0xCC); //0xFF
-  Serial.print("Global current set to: ");
-  Serial.println(ledmatrix.getGlobalCurrent());
-  ledmatrix.enable(true); // bring out of shutdown
-
-  // Text Init
-  ledmatrix.setRotation(0);
-  ledmatrix.setTextWrap(false);
-  uint16_t w, h;
-  int16_t ignore;
-  ledmatrix.getTextBounds(text, 0, 0, &ignore, &ignore, &w, &h);
-  text_min = -w; // Off left edge this many pixels
-
-
-  // Set all pixels to black 0x000
   clearLEDMatrix();
   clearLEDMatrix();
   delay(2000);
-
 }
 
-uint16_t hue_offset = 0;
-
-
 // ------------------------------------------------------------
-// Extracted client cleanup loop
+// Main Loop
 // ------------------------------------------------------------
-void loopClientCleanup() {
-  unsigned long now = millis();
-
-  if (now - lastClientCleanupTime > INTERVAL_CLIENT_CLEANUP) {
-    lastClientCleanupTime = now;
-    printClientList();
-    ws.cleanupClients();
-  }
-}
-
-
 void loop() {
-
-    loopMiniSumoOpponent();
-
-    loopAnimation();
-
-    loopClientCleanup();    
-
-    delay(80);
+  loopMiniSumoOpponent();
+  loopAnimation();
+  loopClientCleanup();
+  delay(80);
 }
 
-
-
-
-
 // ------------------------------------------------------------
-// Extracted animation loop
+// Animation Loop
 // ------------------------------------------------------------
 void loopAnimation() {
   unsigned long now = millis();
@@ -532,77 +433,59 @@ void loopAnimation() {
     lastAnimationTime = now;
 
     if (ws.count() > 0) {
-      if (sendMode == MODE_FULL){
+      if (sendMode == MODE_FULL)
         sendFullGrid();
-      } else {
+      else
         sendBitGrid();
-      }
     }
   }
 }
 
-
-
-// 1. Ignore value 4000  (indeterminate)
-// 1. Ignore value > 770  (size of sumo ring)
-void loopMiniSumoOpponent(){
-
-  //clearLEDMatrix();
-  uint16_t oppColor = ledmatrix.color565(0, 150,0);
-  uint16_t edgeColor = ledmatrix.color565(150, 0,0);
-  uint16_t edgeWarnColor = ledmatrix.color565(180, 180, 0); // FFDE21
-
-  uint16_t base = (uint16_t)(32 * brightness);
-  
+// ------------------------------------------------------------
+// ToF → LED Matrix → WebSocket Grid
+// ------------------------------------------------------------
+void loopMiniSumoOpponent() {
+  uint16_t oppColor      = ledmatrix.color565(0, 150, 0);
+  uint16_t edgeColor     = ledmatrix.color565(150, 0, 0);
+  uint16_t edgeWarnColor = ledmatrix.color565(180, 180, 0);
 
   tof.getAllData(lidarGrid);
-  int d_mm = -1;
-  for(uint8_t y = 0; y < TOF_8x8_NUM_ROWS; y++){
-    if(y==3 || y==4){
-      for(uint8_t x = 0; x < TOF_8x8_NUM_COLS; x++){
-        d_mm = lidarGrid[y * 8 + x];
-        if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
-          ledmatrix.drawPixel(x+X_OFFSET, y, 0);
-          colorGrid[y][x] = 0;
-        } else {
-          if(d_mm < 500){
-            ledmatrix.drawPixel(x+X_OFFSET, y, oppColor);
-            colorGrid[y][x] = 8888;
-          }
+
+  for(uint8_t y = 0; y < 8; y++){
+    for(uint8_t x = 0; x < 8; x++){
+      int d_mm = lidarGrid[y * 8 + x];
+
+      if (d_mm == INVALID_VAL || d_mm > MAX_DIST) {
+        ledmatrix.drawPixel(x+X_OFFSET, y, 0);
+        colorGrid[y][x] = 0;
+        continue;
+      }
+
+      if (y == 3 || y == 4) {
+        if (d_mm < 500) {
+          ledmatrix.drawPixel(x+X_OFFSET, y, oppColor);
+          colorGrid[y][x] = 8888;
         }
       }
-    } else if(y==6){
-      for(uint8_t x = 0; x < TOF_8x8_NUM_COLS; x++){
-        d_mm = lidarGrid[y * 8 + x];
-        if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
-          ledmatrix.drawPixel(x+X_OFFSET, y, 0);
-          colorGrid[y][x] = 0;
-        } else {
-          if(d_mm > 200){
-            ledmatrix.drawPixel(x+X_OFFSET, y, edgeWarnColor);
-            colorGrid[y][x] = 999999999;
-          }
+      else if (y == 6) {
+        if (d_mm > 200) {
+          ledmatrix.drawPixel(x+X_OFFSET, y, edgeWarnColor);
+          colorGrid[y][x] = 999999999;
         }
       }
-    }  else if(y==7){
-      for(uint8_t x = 0; x < TOF_8x8_NUM_COLS; x++){
-        d_mm = lidarGrid[y * 8 + x];
-        if(d_mm == INVALID_VAL || d_mm > MAX_DIST){
-          ledmatrix.drawPixel(x+X_OFFSET, y, 0);
-          colorGrid[y][x] = 0;
-        } else {
-          if(d_mm > 170){
-            ledmatrix.drawPixel(x+X_OFFSET, y, edgeColor);
-            colorGrid[y][x] = 999999999;
-          }
+      else if (y == 7) {
+        if (d_mm > 170) {
+          ledmatrix.drawPixel(x+X_OFFSET, y, edgeColor);
+          colorGrid[y][x] = 999999999;
         }
+      }
+      else {
+        ledmatrix.drawPixel(x+X_OFFSET, y, 0);
+        colorGrid[y][x] = 0;
       }
     }
-
-
   }
 }
-
 
 // ------------------------------------------------------------
 // Send full 8×8 grid (128 bytes)
@@ -628,187 +511,28 @@ void sendBitGrid() {
   ws.binaryAll((uint8_t*)&bits, sizeof(bits));
 }
 
-
-
-
-
-void loopSimulateMiniSumo(){
-  uint16_t color565;
-  int d;
-  for (int y=0; y<TOF_8x8_NUM_ROWS ; y++) {
-    for (int x=0; x<TOF_8x8_NUM_COLS; x++) {
-      d = matrix[y][x];
-      if(y<TOF_8x8_NUM_ROWS -2 ){
-        
-        if(d > D_OPP_MIN && d < D_OPP_MAX){
-          color565 = ledmatrix.color565(0, 150,0);
-        } else {
-          color565 = ledmatrix.color565(0, 0, 0);
-        }
-        ledmatrix.drawPixel(x+X_OFFSET, y, color565);
-        colorGrid[y][x] = color565;
-      } else {
-        if(y == 6){
-          if(d > D_EDGE6_MAX){
-            color565 = ledmatrix.color565( 100,0, 0);
-          } else {
-            color565 = ledmatrix.color565( 10,50,50);
-          }
-        } else if(y==7){
-          if(d > D_EDGE7_MAX){
-            color565 = ledmatrix.color565( 100,0, 0);
-          } else {
-            color565 = ledmatrix.color565( 10,50,50);
-          }
-        }
-        ledmatrix.drawPixel(x+X_OFFSET, y, color565);
-        colorGrid[y][x] = color565;
-      }
-    }
-  }
-  delay(2000);
-
-}
-
-void loopReadFromMatrix(){
-  uint8_t scale_factor = 18;
-  uint16_t color565;
-  for (int y=0; y<TOF_8x8_NUM_ROWS ; y++) {
-    for (int x=0; x<TOF_8x8_NUM_COLS; x++) {
-      if(y<TOF_8x8_NUM_ROWS -2 ){
-        if(matrix[y][x] >=20){
-          color565 = ledmatrix.color565(0, matrix[y][x],0);
-        } else {
-          color565 = ledmatrix.color565(0, 0, 0);
-        }
-        ledmatrix.drawPixel(x, y, color565);
-      } else {
-        //color565 = ledmatrix.color565( matrix[y][x],0,0);
-        color565 = ledmatrix.color565( 10,50,50);
-        ledmatrix.drawPixel(x, y, color565);
-      }
-    }
-  }
-  delay(2000);
-}
-
-
-void loopShow8x8Gradients(){
-  uint8_t scale_factor = 18;
-  for (int y=0; y<TOF_8x8_NUM_ROWS ; y++) {
-    for (int x=0; x<TOF_8x8_NUM_COLS; x++) {
-      uint16_t color565 = ledmatrix.color565(0, x*scale_factor,0);
-      if(y<TOF_8x8_NUM_ROWS -1 ){
-        ledmatrix.drawPixel(x, y, color565);
-      } else {
-        color565 = ledmatrix.color565( x*scale_factor,0,0);
-        ledmatrix.drawPixel(x, y, color565);
-      }
-    }
-  }
-  delay(2000);
-}
-
-void loopShow8x8LastRow(){
-
-  for (int y=0; y<TOF_8x8_NUM_ROWS ; y++) {
-    for (int x=0; x<TOF_8x8_NUM_COLS; x++) {
-      uint16_t color565 = ledmatrix.color565(0x00AA00);
-      if(y<TOF_8x8_NUM_ROWS -1){
-        ledmatrix.drawPixel(x, y, color565);
-      } else {
-        color565 = ledmatrix.color565(0xAA0000);
-        ledmatrix.drawPixel(x, y, color565);
-      }
-    }
-  }
-  delay(2000);
-
-}
-
-
-
-void clearLEDMatrix(){
-
+// ------------------------------------------------------------
+// LED Matrix Helpers
+// ------------------------------------------------------------
+void clearLEDMatrix() {
   ledmatrix.fill(0);
-
-  // for (int y=0; y<ledmatrix.height(); y++) {
-  //   for (int x=0; x<ledmatrix.width(); x++) {
-  //     uint16_t color565 = ledmatrix.color565(0x000000);
-  //     ledmatrix.drawPixel(x, y, color565);
-  //   }
-  // }
 }
-
-void loopShowLastRow(){
-
-  for (int y=0; y<ledmatrix.height(); y++) {
-    for (int x=0; x<ledmatrix.width(); x++) {
-      uint16_t color565 = ledmatrix.color565(0x00AA00);
-      if(y<ledmatrix.height() -1){
-        ledmatrix.drawPixel(x, y, color565);
-      } else {
-        color565 = ledmatrix.color565(0xAA0000);
-        ledmatrix.drawPixel(x, y, color565);
-      }
-    }
-  }
-  delay(2000);
-
-}
-
-void loopSameColor() {
-
-
-  for (int y=0; y<ledmatrix.height(); y++) {
-    for (int x=0; x<ledmatrix.width(); x++) {
-      uint16_t color565 = ledmatrix.color565(0xAA0000);
-      ledmatrix.drawPixel(x, y, color565);
-    }
-  }
-  delay(2000);
-
-
-  
-  for (int y=0; y<ledmatrix.height(); y++) {
-    for (int x=0; x<ledmatrix.width(); x++) {
-      uint16_t color565 = ledmatrix.color565(0x00AA00);
-      ledmatrix.drawPixel(x, y, color565);
-    }
-  }
-  delay(2000);
-
-  for (int y=0; y<ledmatrix.height(); y++) {
-    for (int x=0; x<ledmatrix.width(); x++) {
-      uint16_t color565 = ledmatrix.color565(0x0000AA);
-      ledmatrix.drawPixel(x, y, color565);
-    }
-  }
-  delay(2000);
-
-
-
-}
-
-void loopSwirlDemo(){
-  uint32_t i = 0;
-  for (int y=0; y<ledmatrix.height(); y++) {
-    for (int x=0; x<ledmatrix.width(); x++) {
-      uint32_t color888 = ledmatrix.ColorHSV(i * 65536 / 117 + hue_offset);
-      uint16_t color565 = ledmatrix.color565(color888);
-      ledmatrix.drawPixel(x, y, color565);
-      i++;
-    }
-  }
-
-  hue_offset += 256;
-
-  ledmatrix.setGlobalCurrent(hue_offset / 256); // Demonstrate global current
-}
-
 
 // ------------------------------------------------------------
-// Multi-client viewer list + cleanup
+// Client Cleanup
+// ------------------------------------------------------------
+void loopClientCleanup() {
+  unsigned long now = millis();
+
+  if (now - lastClientCleanupTime > INTERVAL_CLIENT_CLEANUP) {
+    lastClientCleanupTime = now;
+    printClientList();
+    ws.cleanupClients();
+  }
+}
+
+// ------------------------------------------------------------
+// Client List Debug
 // ------------------------------------------------------------
 void printClientList() {
   String hostIP = WiFi.localIP().toString();
@@ -852,7 +576,7 @@ void printClientList() {
 }
 
 // ------------------------------------------------------------
-// Device Parsing Helpers (for client list)
+// Device Parsing Helpers
 // ------------------------------------------------------------
 String parseDeviceName(const String& ua) {
   String u = ua;
@@ -886,5 +610,3 @@ String parseBrowser(const String& ua) {
 
   return "Unknown Browser";
 }
-
-

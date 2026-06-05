@@ -98,12 +98,13 @@
         margin-top: 20px;
     }
 
+    /* CHROME-SAFE WRAPPER */
     .grid-wrapper {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: fit-content;
+        display: inline-block;     /* prevents Chrome collapse */
+        width: auto;               /* let grid define width */
+        max-width: none;
         margin: 0 auto;
+        text-align: center;
     }
 
     .grid {
@@ -124,7 +125,7 @@
     /* Stats */
     #stats {
         margin-bottom: 4px;
-        font-size: 9px;          /* reduced even more */
+        font-size: 9px;
         color: #0f0;
         width: 100%;
         box-sizing: border-box;
@@ -136,7 +137,7 @@
 
     /* Controls */
     .controls-wrapper {
-        width: 100%;              /* EXACT width of grid */
+        width: 100%;
         max-width: 100%;
         min-width: 100%;
         box-sizing: border-box;
@@ -188,22 +189,17 @@
 
 <script>
 // -----------------------------
-// Padding helpers for fixed-width stats
+// Padding helpers
 // -----------------------------
-function pad2(n) {
-    return n.toString().padStart(2, ' ');
-}
+function pad2(n) { return n.toString().padStart(2, ' '); }
 
-// Latency must always be 6 chars: "XXXX.X"
 function padLatency(n) {
     let parts = n.toFixed(1).split('.');
     let whole = parts[0].padStart(4, ' ');
-    return whole + '.' + parts[1];  // total length = 6
+    return whole + '.' + parts[1];
 }
 
-function pad3(n) {
-    return n.toString().padStart(3, ' ');
-}
+function pad3(n) { return n.toString().padStart(3, ' '); }
 
 // -----------------------------
 // D-Pad HTTP control
@@ -257,13 +253,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (this.value === '8x8') {
             dpad.style.display = 'none';
             grid8.style.display = 'block';
-
             statusRow.style.display = 'none';
             bottomButtons.style.display = 'none';
         } else {
             dpad.style.display = 'block';
             grid8.style.display = 'none';
-
             statusRow.style.display = 'flex';
             bottomButtons.style.display = 'flex';
         }
@@ -343,10 +337,7 @@ function updateFPS() {
 }
 
 function updateCellColor(index, value) {
-    const briSlider = document.getElementById("briSlider");
-    const brightness = briSlider ? (briSlider.value / 100) : 1.0;
-    const scaled = Math.min(255, Math.floor((value / 32) * brightness * 255));
-
+    const scaled = Math.min(255, Math.floor((value / 32) * 255));
     cells[index].style.background =
         scaled === 0 ? "#222" : `rgb(${scaled}, 255, ${scaled})`;
 }
@@ -360,7 +351,6 @@ function sendCommand(cmd) {
 function setupControls() {
     const btnRun = document.getElementById("btnRun");
     const fpsSlider = document.getElementById("fpsSlider");
-    const briSlider = document.getElementById("briSlider");
     const modeSelect = document.getElementById("modeSelect");
 
     let running = true;
@@ -372,8 +362,6 @@ function setupControls() {
     };
 
     fpsSlider.oninput = () => sendCommand("FPS:" + fpsSlider.value);
-    briSlider.oninput = () =>
-        sendCommand("BRI:" + (briSlider.value / 100).toFixed(2));
     modeSelect.onchange = () => sendCommand("MODE:" + modeSelect.value);
 }
 </script>
@@ -420,7 +408,7 @@ function setupControls() {
 
         <div class="row">
             <div class="grid">
-                <!-- 64 cells -->
+                <!-- 64 REAL GRID CELLS -->
                 <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
                 <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
                 <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
@@ -439,11 +427,6 @@ function setupControls() {
             </div>
 
             <div class="control-row">
-                <label>Brightness</label>
-                <input id="briSlider" type="range" min="0" max="100" value="100">
-            </div>
-
-            <div class="control-row">
                 <label>Animation</label>
                 <button id="btnRun">Pause</button>
             </div>
@@ -457,7 +440,7 @@ function setupControls() {
             </div>
         </div>
 
-    </div> <!-- end grid-wrapper -->
+    </div>
 </div>
 
 <div class="bottom-buttons">
