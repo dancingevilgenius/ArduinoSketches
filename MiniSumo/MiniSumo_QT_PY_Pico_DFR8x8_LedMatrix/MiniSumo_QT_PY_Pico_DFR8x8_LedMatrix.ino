@@ -207,6 +207,12 @@ void setupWebServer() {
       Serial.printf("WS: Client %u connected | IP: %s\n",
                     client->id(),
                     client->remoteIP().toString().c_str());
+
+          client->text("SNACK:success:Message 1");
+          delay(1000);
+          client->text("SNACK:warning:Message 2");
+          delay(1000);
+          client->text("SNACK:error:Message 3");                    
     }
 
     if (type == WS_EVT_DISCONNECT) {
@@ -255,6 +261,18 @@ void handleCommand(const String& msg, AsyncWebSocketClient* client) {
     String m = msg.substring(5);
     sendMode = (m == "BIT") ? MODE_BITMASK : MODE_FULL;
   }
+  else if (msg.startsWith("SNACK:")) {
+      // Format: SNACK:type:message
+      int p1 = msg.indexOf(':', 6);
+      if (p1 > 0) {
+          String type = msg.substring(6, p1);
+          String text = msg.substring(p1 + 1);
+
+          // Forward to all clients
+          String payload = "SNACK:" + type + ":" + text;
+          ws.textAll(payload);
+      }
+  }  
 }
 
 // ------------------------------------------------------------

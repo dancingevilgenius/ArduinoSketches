@@ -82,6 +82,7 @@
 
     .action-btn:active { background: #666; }
 
+    /* 8×8 grid */
     .grid-container { margin-top: 20px; }
 
     .grid-wrapper {
@@ -153,6 +154,46 @@
         background: #333;
         color: #fff;
     }
+
+    /* -----------------------------
+       SNACKBAR SYSTEM
+       ----------------------------- */
+    #snackbar-container {
+        position: fixed;
+        bottom: 20px;
+        left: 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: center;
+        pointer-events: none;
+        z-index: 9999;
+    }
+
+    .snackbar {
+        min-width: 90%;
+        max-width: 90%;
+        padding: 14px 20px;
+        margin-top: 10px;
+        border-radius: 8px;
+        font-size: 18px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        opacity: 0;
+        transform: translateY(30px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        pointer-events: auto;
+        cursor: pointer;
+        color: #fff;
+    }
+
+    .snackbar.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .snackbar-success { background: #2e7d32; }
+    .snackbar-warning { background: #b8860b; }
+    .snackbar-error   { background: #8b1a1a; }
 </style>
 
 <script>
@@ -167,6 +208,37 @@ function padLatency(n) {
 function pad3(n) { return n.toString().padStart(3, ' '); }
 
 // -----------------------------
+// SNACKBAR SYSTEM
+// -----------------------------
+function showSnackbar(message, type = "success") {
+    const container = document.getElementById("snackbar-container");
+
+    const bar = document.createElement("div");
+    bar.className = "snackbar";
+
+    if (type === "success") bar.classList.add("snackbar-success");
+    if (type === "warning") bar.classList.add("snackbar-warning");
+    if (type === "error")   bar.classList.add("snackbar-error");
+
+    bar.textContent = message;
+
+    bar.addEventListener("click", () => {
+        bar.classList.remove("show");
+        setTimeout(() => bar.remove(), 300);
+    });
+
+    container.appendChild(bar);
+
+    void bar.offsetWidth;
+    bar.classList.add("show");
+
+    setTimeout(() => {
+        bar.classList.remove("show");
+        setTimeout(() => bar.remove(), 300);
+    }, 3000);
+}
+
+// -----------------------------
 // D-Pad HTTP control
 // -----------------------------
 function sendDirection(dir) {
@@ -179,7 +251,7 @@ function sendDirection(dir) {
     .then(data => {
         document.getElementById('hStatus').innerText = data.horiz || '';
         document.getElementById('vStatus').innerText = data.vert || '';
-        if (data.message) alert(data.message);
+        if (data.message) showSnackbar(data.message, "success");
     });
 }
 
@@ -193,12 +265,12 @@ function sendAction(action) {
     .then(data => {
         document.getElementById('hStatus').innerText = data.horiz || '';
         document.getElementById('vStatus').innerText = data.vert || '';
-        if (data.message) alert(data.message);
+        if (data.message) showSnackbar(data.message, "success");
     });
 }
 
 // -----------------------------
-// WebSocket grid handling
+// WebSocket grid + snackbar handling
 // -----------------------------
 let socket = null;
 let reconnectTimer = null;
@@ -251,21 +323,35 @@ function connectWebSocket() {
     socket.onerror = () => socket.close();
 
     socket.onmessage = (event) => {
+
+        // TEXT MESSAGES (snackbars)
         if (typeof event.data === "string") {
+
             if (event.data === "PONG") {
                 const latency = performance.now() - lastPing;
                 document.getElementById("lat").textContent = padLatency(latency);
+                return;
             }
+
+            if (event.data.startsWith("SNACK:")) {
+                const parts = event.data.split(":");
+                const type = parts[1];
+                const msg  = parts.slice(2).join(":");
+                showSnackbar(msg, type);
+                return;
+            }
+
             return;
         }
 
+        // BINARY MESSAGES
         const buf = event.data;
         document.getElementById("pkt").textContent = pad3(buf.byteLength);
 
         frameCount++;
         updateFPS();
 
-        // FULL RGB MODE: 64 cells × 4 bytes = 256 bytes
+        // FULL RGB MODE: 256 bytes
         if (buf.byteLength === 256) {
             const view = new DataView(buf);
             for (let i = 0; i < 64; i++) {
@@ -274,7 +360,7 @@ function connectWebSocket() {
             }
         }
 
-        // BITMASK MODE: 64 bits = 8 bytes
+        // BITMASK MODE: 8 bytes
         else if (buf.byteLength === 8) {
             const view = new DataView(buf);
             const bits = view.getBigUint64(0, true);
@@ -290,9 +376,9 @@ function connectWebSocket() {
                 const row = Math.floor(i / 8);
                 let rgb = 0;
 
-                if (row <= 4)       rgb = 0x00FF00;  // green
-                else if (row === 6) rgb = 0xFFFF00;  // yellow
-                else if (row === 7) rgb = 0xFF0000;  // red
+                if (row <= 4)       rgb = 0x00FF00;
+                else if (row === 6) rgb = 0xFFFF00;
+                else if (row === 7) rgb = 0xFF0000;
 
                 updateCellColor(i, rgb);
             }
@@ -395,6 +481,7 @@ function setupControls() {
             Packet: <span id="pkt">  0</span> bytes
         </div>
 
+
         <div class="row">
             <div class="grid">
                 <!-- 64 real grid cells -->
@@ -444,6 +531,9 @@ function setupControls() {
     <button class="action-btn" onclick="sendAction('start')">Start</button>
     <button class="action-btn" onclick="sendAction('stop')">Stop</button>
 </div>
+
+<!-- Snackbar container (overlay on all screens) -->
+<div id="snackbar-container"></div>
 
 </body>
 </html>
