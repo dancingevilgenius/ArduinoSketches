@@ -1,8 +1,12 @@
 #include "Wire.h"
 
+// QT PY Pico:Wire1
+#define WIRE_I2C Wire1
+
 void setup() {
   Serial.begin(115200);
-  Wire1.begin(); // <---------------- QT Py  QWIIC port works off of 2nd I2C part. Use Wire. Carlos
+  WIRE_I2C.setPins(SDA1, SCL1);
+  WIRE_I2C.begin(); 
 }
 
 void loop() {
@@ -13,8 +17,8 @@ void loop() {
 
   Serial.println("Scanning for I2C devices ...");
   for (address = 0x01; address < 0x7f; address++) {
-    Wire1.beginTransmission(address);
-    error = Wire1.endTransmission();
+    WIRE_I2C.beginTransmission(address);
+    error = WIRE_I2C.endTransmission();
     if (error == 0) {
       Serial.printf("I2C device found at address 0x%02X\n", address);
       nDevices++;
