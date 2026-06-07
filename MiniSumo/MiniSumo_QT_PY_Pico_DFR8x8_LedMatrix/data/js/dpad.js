@@ -1,117 +1,221 @@
-// ---------------------- WebSocket ----------------------
-let ws;
+function pad2(n) { return n.toString().padStart(2, ' '); }
+function padLatency(n) {
+    let parts = n.toFixed(1).split('.');
+    return parts[0].padStart(4, ' ') + '.' + parts[1];
+}
+function pad3(n) { return n.toString().padStart(3, ' '); }
 
-function initWS() {
-  ws = new WebSocket(`ws://${location.host}/ws`);
+// Snackbar
+function showSnackbar(message, type = "success") {
+    const container = document.getElementById("snackbar-container");
+    const bar = document.createElement("div");
+    bar.className = "snackbar";
 
-  ws.onopen = () => console.log("WS connected");
-  ws.onclose = () => console.log("WS disconnected");
+    if (type === "success") bar.classList.add("snackbar-success");
+    if (type === "warning") bar.classList.add("snackbar-warning");
+    if (type === "error")   bar.classList.add("snackbar-error");
 
-  ws.onmessage = (event) => {
-    const msg = event.data;
+    bar.textContent = message;
 
-    if (msg.startsWith("SNACK:")) {
-      handleSnackMessage(msg);
-      return;
+    bar.addEventListener("click", () => {
+        bar.classList.remove("show");
+        setTimeout(() => bar.remove(), 300);
+    });
+
+    container.appendChild(bar);
+    void bar.offsetWidth;
+    bar.classList.add("show");
+
+    setTimeout(() => {
+        bar.classList.remove("show");
+        setTimeout(() => bar.remove(), 300);
+    }, 6000);
+}
+
+// D-Pad HTTP
+function sendDirection(dir) {
+    fetch('/controller', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ direction: dir })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('hStatus').innerText = data.horiz || '';
+        document.getElementById('vStatus').innerText = data.vert || '';
+        if (data.message) showSnackbar(data.message, "success");
+    });
+}
+
+function sendAction(action) {
+    fetch('/controller', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: action })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('hStatus').innerText = data.horiz || '';
+        document.getElementById('vStatus').innerText = data.vert || '';
+        if (data.message) showSnackbar(data.message, "success");
+    });
+}
+
+let socket = null;
+let reconnectTimer = null;
+let lastPing = 0;
+let frameCount = 0;
+let lastFPSUpdate = performance.now();
+let cells = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    const dropdown = document.getElementById('dropdown');
+    const dpadBlock = document.getElementById('dpadBlock');
+    const grid8 = document.getElementById('grid8x8');
+    const statusRow = document.querySelector('.status-row');
+    const bottomButtons = document.querySelector('.bottom-buttons');
+    const healthBtnContainer = document.getElementById('healthBtnContainer');
+
+    dropdown.addEventListener('change', function() {
+        if (this.value === '8x8') {
+            dpadBlock.style.display = 'none';
+            grid8.style.display = 'block';
+            statusRow.style.display = 'none';
+            bottomButtons.style.display = 'none';
+            healthBtnContainer.style.display = 'none';
+        } else {
+            dpadBlock.style.display = 'block';
+            grid8.style.display = 'none';
+            statusRow.style.display = 'flex';
+            bottomButtons.style.display = 'flex';
+            healthBtnContainer.style.display = 'block';
+        }
+    });
+
+    cells = Array.from(document.querySelectorAll('.grid-cell'));
+
+    setupControls();
+    connectWebSocket();
+});
+
+function connectWebSocket() {
+    const host = window.location.hostname;
+    socket = new WebSocket(`ws://${host}/ws`);
+    socket.binaryType = "arraybuffer";
+
+    socket.onopen = () => {
+        socket.send("UA:" + navigator.userAgent);
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+    };
+
+    socket.onclose = () => {
+        reconnectTimer = setTimeout(connectWebSocket, 500);
+    };
+
+    socket.onerror = () => socket.close();
+
+    socket.onmessage = (event) => {
+        if (typeof event.data === "string") {
+            if (event.data === "PONG") {
+                const latency = performance.now() - lastPing;
+                document.getElementById("lat").textContent = padLatency(latency);
+                return;
+            }
+
+            if (event.data.startsWith("SNACK:")) {
+                const parts = event.data.split(":");
+                const type = parts[1];
+                const msg  = parts.slice(2).join(":");
+                showSnackbar(msg, type);
+                return;
+            }
+
+            return;
+        }
+
+        const buf = event.data;
+        document.getElementById("pkt").textContent = pad3(buf.byteLength);
+
+        frameCount++;
+        updateFPS();
+
+        if (buf.byteLength === 256) {
+            const view = new DataView(buf);
+            for (let i = 0; i < 64; i++) {
+                const rgb = view.getUint32(i * 4, true);
+                updateCellColor(i, rgb);
+            }
+        }
+
+        else if (buf.byteLength === 8) {
+            const view = new DataView(buf);
+            const bits = view.getBigUint64(0, true);
+
+            for (let i = 0; i < 64; i++) {
+                const on = ((bits >> BigInt(i)) & 1n) === 1n;
+                updateCellColor(i, on ? 0x00FF00 : 0);
+            }
+        }
+    };
+}
+
+setInterval(() => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        lastPing = performance.now();
+        socket.send("PING");
     }
-  };
+}, 2000);
+
+function updateFPS() {
+    const now = performance.now();
+    const elapsed = now - lastFPSUpdate;
+
+    if (elapsed >= 1000) {
+        const fps = Math.round((frameCount / elapsed) * 1000);
+        document.getElementById("fps").textContent = pad2(fps);
+        frameCount = 0;
+        lastFPSUpdate = now;
+    }
 }
 
-window.onload = () => {
-  initWS();
-  buildGrid();
-};
+function updateCellColor(index, rgb) {
+    if (rgb === 0) {
+        cells[index].style.background = "#222";
+        return;
+    }
 
-// ---------------------- FPS ----------------------
-const fpsSlider = document.getElementById("fpsSlider");
-const fpsValue  = document.getElementById("fpsValue");
+    let r = (rgb >> 16) & 0xFF;
+    let g = (rgb >> 8) & 0xFF;
+    let b = rgb & 0xFF;
 
-fpsSlider.oninput = () => {
-  fpsValue.textContent = fpsSlider.value + " FPS";
-  ws.send("FPS:" + fpsSlider.value);
-};
-
-// ---------------------- Animation Toggle ----------------------
-const animToggle = document.getElementById("animToggle");
-let animRunning = true;
-
-animToggle.onclick = () => {
-  animRunning = !animRunning;
-  animToggle.textContent = animRunning ? "Running" : "Stopped";
-  animToggle.classList.toggle("off", !animRunning);
-  ws.send("RUN:" + (animRunning ? 1 : 0));
-};
-
-// ---------------------- Mode Selector ----------------------
-document.getElementById("modeSelect").onchange = (e) => {
-  ws.send("MODE:" + e.target.value);
-};
-
-// ---------------------- D-Pad ----------------------
-function sendDpad(dir) {
-  fetch("/controller", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ direction: dir })
-  });
+    cells[index].style.background = `rgb(${r},${g},${b})`;
 }
 
-document.getElementById("btnUp").onclick    = () => sendDpad("up");
-document.getElementById("btnDown").onclick  = () => sendDpad("down");
-document.getElementById("btnLeft").onclick  = () => sendDpad("left");
-document.getElementById("btnRight").onclick = () => sendDpad("right");
-
-// ---------------------- 8×8 Grid ----------------------
-function buildGrid() {
-  const grid = document.getElementById("grid");
-  for (let i = 0; i < 64; i++) {
-    const cell = document.createElement("div");
-    cell.className = "grid-cell";
-    grid.appendChild(cell);
-  }
+function sendCommand(cmd) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(cmd);
+    }
 }
 
-// ---------------------- Snackbar Engine ----------------------
-function showSnackbar(type, message) {
-  const container = document.getElementById("snackbar-container");
+function setupControls() {
+    const btnRun = document.getElementById("btnRun");
+    const fpsSlider = document.getElementById("fpsSlider");
+    const modeSelect = document.getElementById("modeSelect");
 
-  const bar = document.createElement("div");
-  bar.className = "snackbar " + type;
+    let running = true;
 
-  let icon = "ℹ️";
-  if (type === "success") icon = "✔️";
-  else if (type === "error") icon = "✖️";
-  else if (type === "warn") icon = "⚠️";
+    btnRun.onclick = () => {
+        running = !running;
+        btnRun.textContent = running ? "Pause" : "Resume";
+        sendCommand("RUN:" + (running ? "1" : "0"));
+    };
 
-  bar.innerHTML = `
-    <span class="snackbar-icon">${icon}</span>
-    <span>${message}</span>
-  `;
-
-  container.appendChild(bar);
-
-  void bar.offsetWidth;
-  bar.classList.add("show");
-
-  const autoTimer = setTimeout(() => dismissSnackbar(bar), 3000);
-
-  bar.addEventListener("click", () => {
-    clearTimeout(autoTimer);
-    dismissSnackbar(bar);
-  });
+    fpsSlider.oninput = () => sendCommand("FPS:" + fpsSlider.value);
+    modeSelect.onchange = () => sendCommand("MODE:" + modeSelect.value);
 }
 
-function dismissSnackbar(bar) {
-  bar.classList.remove("show");
-  setTimeout(() => bar.remove(), 250);
-}
-
-function handleSnackMessage(msg) {
-  const parts = msg.split(":");
-  if (parts.length < 3) return;
-
-  const type = parts[1];
-  const text = parts.slice(2).join(":");
-
-  showSnackbar(type, text);
+function runHealthChecks() {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send("HEALTHCHECK");
+    }
 }
