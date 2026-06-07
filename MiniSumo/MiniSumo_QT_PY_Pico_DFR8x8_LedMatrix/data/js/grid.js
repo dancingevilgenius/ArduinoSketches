@@ -1,11 +1,20 @@
-function pad2(n) { return n.toString().padStart(2, ' '); }
-function padLatency(n) {
-    let parts = n.toFixed(1).split('.');
-    return parts[0].padStart(4, ' ') + '.' + parts[1];
-}
-function pad3(n) { return n.toString().padStart(3, ' '); }
+/* ============================================================
+   GRID.JS — WebSocket Grid Controller (v1.1)
+   Clean, separated version for index_grid.html
+   ============================================================ */
 
-// Snackbar
+let socket = null;
+let reconnectTimer = null;
+
+let lastPing = 0;
+let frameCount = 0;
+let lastFPSUpdate = performance.now();
+
+let cells = [];
+
+/* ------------------------------------------------------------
+   Snackbar
+   ------------------------------------------------------------ */
 function showSnackbar(message, type = "success") {
     const container = document.getElementById("snackbar-container");
     const bar = document.createElement("div");
@@ -32,72 +41,41 @@ function showSnackbar(message, type = "success") {
     }, 6000);
 }
 
-// D-Pad HTTP
-function sendDirection(dir) {
-    fetch('/controller', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ direction: dir })
-    })
-    .then(r => r.json())
-    .then(data => {
-        document.getElementById('hStatus').innerText = data.horiz || '';
-        document.getElementById('vStatus').innerText = data.vert || '';
-        if (data.message) showSnackbar(data.message, "success");
-    });
+/* ------------------------------------------------------------
+   Formatting helpers
+   ------------------------------------------------------------ */
+function pad2(n) { return n.toString().padStart(2, ' '); }
+
+function padLatency(n) {
+    let parts = n.toFixed(1).split('.');
+    return parts[0].padStart(4, ' ') + '.' + parts[1];
 }
 
-function sendAction(action) {
-    fetch('/controller', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: action })
-    })
-    .then(r => r.json())
-    .then(data => {
-        document.getElementById('hStatus').innerText = data.horiz || '';
-        document.getElementById('vStatus').innerText = data.vert || '';
-        if (data.message) showSnackbar(data.message, "success");
-    });
-}
+function pad3(n) { return n.toString().padStart(3, ' '); }
 
-let socket = null;
-let reconnectTimer = null;
-let lastPing = 0;
-let frameCount = 0;
-let lastFPSUpdate = performance.now();
-let cells = [];
+/* ------------------------------------------------------------
+   DOM Ready
+   ------------------------------------------------------------ */
+document.addEventListener("DOMContentLoaded", () => {
 
-document.addEventListener('DOMContentLoaded', () => {
-    const dropdown = document.getElementById('dropdown');
-    const dpadBlock = document.getElementById('dpadBlock');
-    const grid8 = document.getElementById('grid8x8');
-    const statusRow = document.querySelector('.status-row');
-    const bottomButtons = document.querySelector('.bottom-buttons');
-    const healthBtnContainer = document.getElementById('healthBtnContainer');
-
-    dropdown.addEventListener('change', function() {
-        if (this.value === '8x8') {
-            dpadBlock.style.display = 'none';
-            grid8.style.display = 'block';
-            statusRow.style.display = 'none';
-            bottomButtons.style.display = 'none';
-            healthBtnContainer.style.display = 'none';
-        } else {
-            dpadBlock.style.display = 'block';
-            grid8.style.display = 'none';
-            statusRow.style.display = 'flex';
-            bottomButtons.style.display = 'flex';
-            healthBtnContainer.style.display = 'block';
+    // Dropdown navigation
+    const dropdown = document.getElementById("modeDropdown");
+    dropdown.onchange = () => {
+        if (dropdown.value === "dpad") {
+            window.location = "/index_dpad.html";
         }
-    });
+    };
 
-    cells = Array.from(document.querySelectorAll('.grid-cell'));
+    // Cache grid cells
+    cells = Array.from(document.querySelectorAll(".grid-cell"));
 
     setupControls();
     connectWebSocket();
 });
 
+/* ------------------------------------------------------------
+   WebSocket Connection
+   ------------------------------------------------------------ */
 function connectWebSocket() {
     const host = window.location.hostname;
     socket = new WebSocket(`ws://${host}/ws`);
@@ -115,7 +93,12 @@ function connectWebSocket() {
     socket.onerror = () => socket.close();
 
     socket.onmessage = (event) => {
+
+        /* ------------------------------
+           TEXT MESSAGES
+           ------------------------------ */
         if (typeof event.data === "string") {
+
             if (event.data === "PONG") {
                 const latency = performance.now() - lastPing;
                 document.getElementById("lat").textContent = padLatency(latency);
@@ -133,12 +116,16 @@ function connectWebSocket() {
             return;
         }
 
+        /* ------------------------------
+           BINARY MESSAGES
+           ------------------------------ */
         const buf = event.data;
         document.getElementById("pkt").textContent = pad3(buf.byteLength);
 
         frameCount++;
         updateFPS();
 
+        // FULL RGB GRID (256 bytes)
         if (buf.byteLength === 256) {
             const view = new DataView(buf);
             for (let i = 0; i < 64; i++) {
@@ -147,6 +134,7 @@ function connectWebSocket() {
             }
         }
 
+        // BITMASK GRID (8 bytes)
         else if (buf.byteLength === 8) {
             const view = new DataView(buf);
             const bits = view.getBigUint64(0, true);
@@ -159,6 +147,9 @@ function connectWebSocket() {
     };
 }
 
+/* ------------------------------------------------------------
+   Ping every 2 seconds
+   ------------------------------------------------------------ */
 setInterval(() => {
     if (socket && socket.readyState === WebSocket.OPEN) {
         lastPing = performance.now();
@@ -166,6 +157,9 @@ setInterval(() => {
     }
 }, 2000);
 
+/* ------------------------------------------------------------
+   FPS Counter
+   ------------------------------------------------------------ */
 function updateFPS() {
     const now = performance.now();
     const elapsed = now - lastFPSUpdate;
@@ -178,6 +172,9 @@ function updateFPS() {
     }
 }
 
+/* ------------------------------------------------------------
+   Update a single grid cell
+   ------------------------------------------------------------ */
 function updateCellColor(index, rgb) {
     if (rgb === 0) {
         cells[index].style.background = "#222";
@@ -191,12 +188,18 @@ function updateCellColor(index, rgb) {
     cells[index].style.background = `rgb(${r},${g},${b})`;
 }
 
+/* ------------------------------------------------------------
+   Send command to backend
+   ------------------------------------------------------------ */
 function sendCommand(cmd) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(cmd);
     }
 }
 
+/* ------------------------------------------------------------
+   Controls (FPS, Mode, Animation)
+   ------------------------------------------------------------ */
 function setupControls() {
     const btnRun = document.getElementById("btnRun");
     const fpsSlider = document.getElementById("fpsSlider");
@@ -211,21 +214,6 @@ function setupControls() {
     };
 
     fpsSlider.oninput = () => sendCommand("FPS:" + fpsSlider.value);
+
     modeSelect.onchange = () => sendCommand("MODE:" + modeSelect.value);
 }
-
-function runHealthChecks() {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send("HEALTHCHECK");
-    }
-}
-
-
-document.addEventListener("DOMContentLoaded", () => {
-    const dropdown = document.getElementById("modeDropdown");
-    dropdown.onchange = () => {
-        if (dropdown.value === "grid") {
-            window.location = "/index_grid.html";
-        }
-    };
-});

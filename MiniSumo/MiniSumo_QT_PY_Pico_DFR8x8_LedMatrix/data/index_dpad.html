@@ -3,26 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>D-Pad + 8×8 WebSocket Grid</title>
+<title>DPad Control</title>
 <link rel="stylesheet" href="/css/dpad.css">
 </head>
 
 <body>
 
-<div class="center-column">
-    <select id="dropdown">
+<div class="topbar">
+    <select id="modeDropdown">
         <option value="dpad" selected>DPad</option>
-        <option value="8x8">8x8</option>
+        <option value="grid">Grid</option>
     </select>
-
-    <div class="status-row">
-        <div id="hStatus" class="status-box"></div>
-        <div id="vStatus" class="status-box"></div>
-    </div>
 </div>
 
-<!-- D-Pad Block -->
-<div class="dpad-container" id="dpadBlock">
+<div class="status-row">
+    <div id="hStatus" class="status-box"></div>
+    <div id="vStatus" class="status-box"></div>
+</div>
+
+<div id="dpadBlock" class="dpad-container">
     <div class="row">
         <button class="btn" onclick="sendDirection('up')">&#9650;</button>
     </div>
@@ -38,79 +37,15 @@
     </div>
 </div>
 
-<!-- Health Check -->
-<div id="healthBtnContainer" style="margin-top:20px;">
+<div id="healthBtnContainer">
     <button id="healthCheckBtn" class="action-btn" onclick="runHealthChecks()">Health Check</button>
 </div>
 
-<!-- 8×8 Grid Block -->
-<div id="grid8x8" class="grid-container" style="display:none;">
-    <div class="grid-wrapper">
-
-        <div id="stats">
-            FPS: <span id="fps"> 0</span> |
-            Latency: <span id="lat">  0.0</span> ms |
-            Packet: <span id="pkt">  0</span> bytes
-        </div>
-
-        <div class="grid">
-            <!-- 64 REAL CELLS (no template expressions) -->
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-        </div>
-
-        <div class="controls-wrapper">
-
-            <div class="control-row">
-                <label>FPS</label>
-                <input id="fpsSlider" type="range" min="1" max="20" value="10">
-            </div>
-
-            <div class="control-row">
-                <label>Animation</label>
-                <button id="btnRun">Pause</button>
-            </div>
-
-            <div class="control-row">
-                <label>Mode</label>
-                <select id="modeSelect">
-                    <option value="FULL">Full Grid</option>
-                    <option value="BIT">Bitmask</option>
-                </select>
-            </div>
-
-        </div>
-    </div>
-</div>
-
-<!-- Start / Stop Buttons -->
 <div class="bottom-buttons">
     <button class="action-btn" onclick="sendAction('start')">Start</button>
     <button class="action-btn" onclick="sendAction('stop')">Stop</button>
 </div>
 
-<!-- Snackbar -->
 <div id="snackbar-container"></div>
 
 <script src="/js/dpad.js"></script>

@@ -1,0 +1,119 @@
+body {
+    background: #111;
+    color: #eee;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+.topbar {
+    margin-top: 15px;
+}
+
+select {
+    font-size: 20px;
+    padding: 8px;
+    border-radius: 8px;
+}
+
+#statsBar {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #0f0;
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    font-family: monospace;
+}
+
+#gridBlock {
+    margin-top: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(8, 36px);
+    grid-template-rows: repeat(8, 36px);
+    gap: 4px;
+    margin: 0 auto;
+}
+
+.grid-cell {
+    width: 36px;
+    height: 36px;
+    background: #000;
+    border-radius: 4px;
+    transition: background 0.1s linear;
+}
+
+#controlsPanel {
+    margin-top: 25px;
+    width: 90%;
+    max-width: 350px;
+    margin-left: auto;
+    margin-right: auto;
+    background: #222;
+    padding: 12px;
+    border-radius: 10px;
+}
+
+.control-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
+}
+
+.control-row label {
+    font-size: 16px;
+}
+
+.control-row input[type=range],
+.control-row select,
+.control-row button {
+    width: 55%;
+    font-size: 16px;
+    padding: 6px;
+    border-radius: 8px;
+    border: 1px solid #555;
+    background: #333;
+    color: #fff;
+}
+
+/* Snackbar */
+#snackbar-container {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.snackbar {
+    min-width: 90%;
+    max-width: 90%;
+    padding: 14px 20px;
+    margin-top: 10px;
+    border-radius: 8px;
+    font-size: 18px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: auto;
+    cursor: pointer;
+    color: #fff;
+}
+
+.snackbar.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.snackbar-success { background: #2e7d32; }
+.snackbar-warning { background: #b8860b; }
+.snackbar-error   { background: #8b1a1a; }
