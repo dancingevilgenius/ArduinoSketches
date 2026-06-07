@@ -1,16 +1,19 @@
 /* ============================================================
-   GRID.JS — WebSocket Grid Controller (v1.1)
-   Clean, separated version for index_grid.html
+   GRID.JS — WebSocket Grid Controller (v1.2)
+   With PING IDs for accurate latency measurement
    ============================================================ */
 
 let socket = null;
 let reconnectTimer = null;
 
-let lastPing = 0;
 let frameCount = 0;
 let lastFPSUpdate = performance.now();
 
 let cells = [];
+
+// Latency tracking
+let pingId = 0;
+let pingTimes = {};
 
 /* ------------------------------------------------------------
    Snackbar
@@ -83,6 +86,12 @@ function connectWebSocket() {
 
     socket.onopen = () => {
         socket.send("UA:" + navigator.userAgent);
+
+        // Send first PING immediately
+        pingId++;
+        pingTimes[pingId] = performance.now();
+        socket.send("PING:" + pingId);
+
         if (reconnectTimer) clearTimeout(reconnectTimer);
     };
 
@@ -99,9 +108,14 @@ function connectWebSocket() {
            ------------------------------ */
         if (typeof event.data === "string") {
 
-            if (event.data === "PONG") {
-                const latency = performance.now() - lastPing;
-                document.getElementById("lat").textContent = padLatency(latency);
+            // PONG:<id>
+            if (event.data.startsWith("PONG:")) {
+                const id = parseInt(event.data.split(":")[1]);
+                if (pingTimes[id]) {
+                    const latency = performance.now() - pingTimes[id];
+                    document.getElementById("lat").textContent = padLatency(latency);
+                    delete pingTimes[id];
+                }
                 return;
             }
 
@@ -148,12 +162,13 @@ function connectWebSocket() {
 }
 
 /* ------------------------------------------------------------
-   Ping every 2 seconds
+   Send PING every 2 seconds
    ------------------------------------------------------------ */
 setInterval(() => {
     if (socket && socket.readyState === WebSocket.OPEN) {
-        lastPing = performance.now();
-        socket.send("PING");
+        pingId++;
+        pingTimes[pingId] = performance.now();
+        socket.send("PING:" + pingId);
     }
 }, 2000);
 
