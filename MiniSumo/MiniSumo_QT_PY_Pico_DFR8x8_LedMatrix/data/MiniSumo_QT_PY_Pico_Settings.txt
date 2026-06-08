@@ -1,0 +1,15 @@
+//  Mini Sumo Backend — TRUE RGB VERSION
+//  Sends real 0xRRGGBB colors to the front-end
+// ESP32 by Espressif 3.3.8
+#include "Arduino.h"
+#include "Wire.h"
+#include "DFRobot_MatrixLidar.h"
+#include <Adafruit_IS31FL3741.h>
+#include <WiFi.h>
+#include <AsyncTCP.h>           // by Async TCP 3.4.10
+#include <ESPAsyncWebServer.h>  // by ESP32  Async 3.11.0
+#include <LittleFS.h>
+#include <ArduinoJson.h>        // by Benoit Blanchon 7.4.3
+#include <map>
+
+// -----------------------------------------------------
