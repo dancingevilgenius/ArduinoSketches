@@ -47,6 +47,7 @@ Distributed as-is; no warranty is given.
 #include "Wire.h"
 #endif
 
+#define WIRE_I2C Wire1	 // Added by Carlos
 
 //****************************************************************************//
 //
@@ -87,7 +88,7 @@ uint8_t SCMD::begin( void )
 	{
 
 	case I2C_MODE:
-		Wire.begin();
+		WIRE_I2C.begin();
 		break;
 
 	default:
@@ -156,8 +157,8 @@ void SCMD::reset( void )
 	*I2C_CTRL1_reg = 0x00;
 	//Waiting seems like a good idea
 	delay(10);
-	Wire.resetBus(); //Strictly resets.  Run .begin() afterwards
-	Wire.begin();
+	WIRE_I2C.resetBus(); //Strictly resets.  Run .begin() afterwards
+	WIRE_I2C.begin();
 #endif
 	
 }
@@ -404,21 +405,21 @@ uint8_t SCMD::readRegister(uint8_t offset)
 	switch (settings.commInterface) {
 
 	case I2C_MODE:
-		Wire.beginTransmission(settings.I2CAddress);
-		Wire.write(offset);
+		WIRE_I2C.beginTransmission(settings.I2CAddress);
+		WIRE_I2C.write(offset);
 #ifdef USE_ALT_I2C
-		if(Wire.endTransmission(I2C_STOP, I2C_FAULT_TIMEOUT)) i2cFaults++;
+		if(WIRE_I2C.endTransmission(I2C_STOP, I2C_FAULT_TIMEOUT)) i2cFaults++;
 #else
-		Wire.endTransmission();
+		WIRE_I2C.endTransmission();
 #endif
 #ifdef USE_ALT_I2C
-		if( Wire.requestFrom(settings.I2CAddress, numBytes, I2C_STOP, I2C_FAULT_TIMEOUT) == 0 )i2cFaults++;
+		if( WIRE_I2C.requestFrom(settings.I2CAddress, numBytes, I2C_STOP, I2C_FAULT_TIMEOUT) == 0 )i2cFaults++;
 #else
-		Wire.requestFrom(settings.I2CAddress, numBytes);
+		WIRE_I2C.requestFrom(settings.I2CAddress, numBytes);
 #endif
-		while ( Wire.available() ) // slave may send less than requested
+		while ( WIRE_I2C.available() ) // slave may send less than requested
 		{
-			result = Wire.read(); // receive a byte as a proper uint8_t
+			result = WIRE_I2C.read(); // receive a byte as a proper uint8_t
 		}
 		break;
 
@@ -448,13 +449,13 @@ void SCMD::writeRegister(uint8_t offset, uint8_t dataToWrite)
 	{
 	case I2C_MODE:
 		//Write the byte
-		Wire.beginTransmission(settings.I2CAddress);
-		Wire.write(offset);
-		Wire.write(dataToWrite);
+		WIRE_I2C.beginTransmission(settings.I2CAddress);
+		WIRE_I2C.write(offset);
+		WIRE_I2C.write(dataToWrite);
 #ifdef USE_ALT_I2C
-		if(Wire.endTransmission(I2C_STOP,I2C_FAULT_TIMEOUT)) i2cFaults++;
+		if(WIRE_I2C.endTransmission(I2C_STOP,I2C_FAULT_TIMEOUT)) i2cFaults++;
 #else
-		Wire.endTransmission();
+		WIRE_I2C.endTransmission();
 #endif
 //		delay(1);
 		break;
