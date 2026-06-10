@@ -587,7 +587,7 @@ void loop() {
   loopMiniSumoOpponent();
   loopAnimation();
   loopClientCleanup();
-  delay(80);
+  delay(20);
 }
 
 
