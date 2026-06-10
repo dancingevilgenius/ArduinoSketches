@@ -3,72 +3,82 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Grid Display</title>
-<link rel="stylesheet" href="./css/grid.css">
+<title>8×8 Grid</title>
+<link rel="stylesheet" href="/css/dpad.css">
 </head>
 
 <body>
 
 <div class="topbar">
     <select id="modeDropdown">
-        <option value="dpad">DPad</option>
         <option value="grid" selected>Grid</option>
+        <option value="dpad">DPad</option>
     </select>
 </div>
 
-<div id="statsBar">
-    <span>FPS: <span id="fps">0</span></span>
-    <span>Latency: <span id="lat">0.0</span> ms</span>
-    <span>Packet: <span id="pkt">0</span> bytes</span>
+<div id="stats">
+    FPS:<span id="fps"> 0</span>
+    &nbsp; PKT:<span id="pkt">  0</span>
+    &nbsp; LAT:<span id="lat"> 0.0</span>
 </div>
 
-<div id="gridBlock">
-    <div class="grid">
-        <!-- 64 real cells -->
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+<div class="grid-container">
+    <div class="grid-wrapper">
+        <div id="grid8x8" class="grid">
 
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <!-- 64 explicit grid cells -->
+            <!-- Row 1 -->
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
 
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <!-- Row 2 -->
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
 
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <!-- Row 3 -->
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
 
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <!-- Row 4 -->
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
 
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <!-- Row 5 -->
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
 
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <!-- Row 6 -->
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
 
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <!-- Row 7 -->
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+
+            <!-- Row 8 -->
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+
+        </div>
     </div>
 </div>
 
-<div id="controlsPanel">
-    <div class="control-row">
-        <label>FPS</label>
-        <input id="fpsSlider" type="range" min="1" max="20" value="10">
-    </div>
+<!-- WebSocket Command Controls BELOW grid -->
+<div class="bottom-buttons" style="margin-top:20px;">
+    <button id="btnRun" class="action-btn">Pause</button>
+</div>
 
-    <div class="control-row">
-        <label>Animation</label>
-        <button id="btnRun">Pause</button>
-    </div>
+<div style="margin-top:20px;">
+    <label style="color:#fff;">FPS:</label>
+    <input id="fpsSlider" type="range" min="1" max="20" value="10">
+</div>
 
-    <div class="control-row">
-        <label>Mode</label>
-        <select id="modeSelect">
-            <option value="FULL">Full Grid</option>
-            <option value="BIT">Bitmask</option>
-        </select>
-    </div>
+<div style="margin-top:20px;">
+    <label style="color:#fff;">Mode:</label>
+    <select id="modeSelect">
+        <option value="0">Full RGB</option>
+        <option value="1">Bitmask</option>
+    </select>
 </div>
 
 <div id="snackbar-container"></div>

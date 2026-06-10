@@ -2,6 +2,8 @@
 //  Sends real 0xRRGGBB colors to the front-end
 
 #include "Arduino.h"
+#include <ArduinoJson.h>
+
 #include "Wire.h"
 #include "DFRobot_MatrixLidar.h"
 #include <Adafruit_IS31FL3741.h>
@@ -9,8 +11,9 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
-#include <ArduinoJson.h>
+//#include <ArduinoJson.h>
 #include <map>
+#include <vector>
 
 // ------------------------------------------------------------
 // WiFi Credential Rotation
@@ -22,20 +25,33 @@ struct WifiCredential {
 
 WifiCredential wifiList[3] = {
   { "TheMandaloriKen", "asdf12346302201111" },
-  { "TheMandalorian",  "6302201111" },
-  { "STDL5301",        "library30" }
+  { "Kajeet SmartSpot 9E7F", "smartspot4033" },
+  { "TheMandalorian",  "6302201111" }
 };
 
 String pendingMessage = "";
 String pendingSeverity = "info";
 
+// cached WiFi state (F2)
+IPAddress cachedIp;
+int cachedRssi = 0;
+wl_status_t cachedStatus = WL_DISCONNECTED;
+
+
+
+
+// ------------------------------------------------------------
+// Hardware
+// ------------------------------------------------------------
 Adafruit_IS31FL3741_QT ledmatrix;
 
 #define X_OFFSET 2
 #define INVALID_VAL 4000
 #define MAX_DIST 570
 
-uint32_t colorGrid[8][8];
+// 8 rows × 10 columns = 80 RGB cells
+uint32_t colorGrid[8][8] = {0};
+
 
 DFRobot_MatrixLidar_I2C tof(0x33, &Wire1);
 uint16_t lidarGrid[64];
@@ -55,6 +71,13 @@ bool animationRunning = true;
 
 unsigned long lastAnimationTime = 0;
 unsigned long lastClientCleanupTime = 0;
+
+
+// NEW TEST animation state
+bool testAnimationActive = false;
+unsigned long testAnimStart = 0;
+int testAnimStep = 0;
+int testAnimCycles = 0;
 
 unsigned long INTERVAL_ANIMATION = 100;       // default 10 FPS
 unsigned long INTERVAL_CLIENT_CLEANUP = 5000; // 5 seconds
@@ -90,197 +113,10 @@ int verticalCounts[] = {
 
 int verticalIndex = 0;
 
-// ------------------------------------------------------------
-// Setup
-// ------------------------------------------------------------
-void setup() {
-  Serial.begin(115200);
-  while(!Serial) delay(10);
-  delay(2000);
 
-  Serial.println("MiniSumo QT PY Pico LedMatrix and DFR8x8");
-
-  connectToWiFi();
-  setupI2C();
-  setupLedMatrix();
-  setupDFR8x8();
-  setupWebServer();
-}
 
 // ------------------------------------------------------------
-// Setup Web Server
-// ------------------------------------------------------------
-void setupWebServer() {
-  if (!LittleFS.begin()) {
-    Serial.println("LittleFS mount failed.");
-  } else {
-    Serial.println("LittleFS mounted.");
-  }
-
-  if (!loadHTMLToPSRAM("/index_dpad.html")) {
-    Serial.println("FATAL: Could not load /index_dpad.html");
-  }
-
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (!htmlBuffer || htmlSize == 0) {
-      request->send(500, "text/plain", "HTML not loaded");
-      return;
-    }
-    AsyncWebServerResponse *response =
-      request->beginResponse(200, "text/html",
-                             (const uint8_t*)htmlBuffer, htmlSize);
-    response->addHeader("Cache-Control", "no-cache");
-    request->send(response);
-  });
-
-  // D-Pad JSON endpoint
-  server.on(
-    "/controller",
-    HTTP_POST,
-    [](AsyncWebServerRequest *request) {},
-    NULL,
-    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-      String body;
-      body.reserve(total);
-      for (size_t i = 0; i < len; i++) body += (char)data[i];
-
-      StaticJsonDocument<300> doc;
-      if (deserializeJson(doc, body)) {
-        request->send(400, "application/json", "{\"error\":\"bad json\"}");
-        return;
-      }
-
-      if (doc.containsKey("direction")) {
-        String direction = doc["direction"];
-
-        if (direction == "left") {
-          horizontalIndex--;
-          if (horizontalIndex < 0) horizontalIndex = horizontalCount - 1;
-          verticalIndex = 0;
-        }
-        else if (direction == "right") {
-          horizontalIndex++;
-          if (horizontalIndex >= horizontalCount) horizontalIndex = 0;
-          verticalIndex = 0;
-        }
-        else if (direction == "up") {
-          verticalIndex--;
-          if (verticalIndex < 0) verticalIndex = verticalCounts[horizontalIndex] - 1;
-        }
-        else if (direction == "down") {
-          verticalIndex++;
-          if (verticalIndex >= verticalCounts[horizontalIndex]) verticalIndex = 0;
-        }
-      }
-
-      if (doc.containsKey("action")) {
-        String action = doc["action"];
-        if (action == "start") animationRunning = true;
-        if (action == "stop")  animationRunning = false;
-      }
-
-      StaticJsonDocument<256> response;
-      response["horiz"] = horizontalMenu[horizontalIndex];
-      response["vert"]  = verticalMenus[horizontalIndex][verticalIndex];
-
-      if (pendingMessage.length() > 0) {
-        response["message"]  = pendingMessage;
-        response["severity"] = pendingSeverity;
-        pendingMessage = "";
-      }
-
-      String out;
-      serializeJson(response, out);
-      request->send(200, "application/json", out);
-    }
-  );
-
-  // WebSocket
-  ws.onEvent([](AsyncWebSocket *server,
-                AsyncWebSocketClient *client,
-                AwsEventType type,
-                void *arg,
-                uint8_t *data,
-                size_t len) {
-
-    if (type == WS_EVT_CONNECT) {
-      Serial.printf("WS: Client %u connected | IP: %s\n",
-                    client->id(),
-                    client->remoteIP().toString().c_str());
-
-
-    }
-
-    if (type == WS_EVT_DISCONNECT) {
-      Serial.printf("WS: Client %u disconnected\n", client->id());
-    }
-
-    if (type == WS_EVT_DATA) {
-      AwsFrameInfo *info = (AwsFrameInfo*)arg;
-
-      if (info->opcode == WS_TEXT) {
-        String msg;
-        for (size_t i = 0; i < len; i++) msg += (char)data[i];
-
-        if (msg == "PING") {
-          client->text("PONG");
-          return;
-        }
-
-        handleCommand(msg, client);
-      }
-    }
-  });
-
-  server.addHandler(&ws);
-  server.begin();
-}
-
-// ------------------------------------------------------------
-// Command parsing
-// ------------------------------------------------------------
-void handleCommand(const String& msg, AsyncWebSocketClient* client) {
-  if (msg.startsWith("UA:")) {
-    clientUserAgents[client->id()] = msg.substring(3);
-    return;
-  }
-
-  if (msg.startsWith("RUN:")) {
-    animationRunning = msg.substring(4).toInt();
-  }
-  else if (msg.startsWith("FPS:")) {
-    int fps = msg.substring(4).toInt();
-    fps = constrain(fps, 1, 60);
-    INTERVAL_ANIMATION = 1000UL / fps;
-  }
-  else if (msg.startsWith("MODE:")) {
-    String m = msg.substring(5);
-    sendMode = (m == "BIT") ? MODE_BITMASK : MODE_FULL;
-  }
-  else if (msg.startsWith("SNACK:")) {
-      // Format: SNACK:type:message
-      int p1 = msg.indexOf(':', 6);
-      if (p1 > 0) {
-          String type = msg.substring(6, p1);
-          String text = msg.substring(p1 + 1);
-
-          // Forward to all clients
-          String payload = "SNACK:" + type + ":" + text;
-          ws.textAll(payload);
-      }
-  }
-  else if (msg == "HEALTHCHECK") {
-    Serial.println("HEALTHCHECK command received");
-    healthCheckWifi();
-    healthCheckI2C();
-    healthCheckLedMatrix();
-    healthCheckDFR8x8();
-    healthCheckWebServer();
-  } 
-}
-
-// ------------------------------------------------------------
-// Load HTML file from LittleFS → PSRAM
+// PSRAM HTML loader
 // ------------------------------------------------------------
 bool loadHTMLToPSRAM(const char* filename) {
   if (!LittleFS.exists(filename)) {
@@ -312,17 +148,26 @@ bool loadHTMLToPSRAM(const char* filename) {
 }
 
 // ------------------------------------------------------------
-// WiFi rotation connect
+// WiFi rotation connect (new version) + cache
 // ------------------------------------------------------------
 bool connectToWiFi() {
   Serial.println("Starting WiFi credential rotation...");
 
+  cachedStatus = WL_DISCONNECTED;
+  cachedIp = IPAddress(0,0,0,0);
+  cachedRssi = 0;
+
   for (int i = 0; i < 3; i++) {
     Serial.print("Trying SSID: ");
-    Serial.println(wifiList[i].ssid);
+    Serial.print(wifiList[i].ssid);
 
+    WiFi.setAutoReconnect(false);
+    WiFi.disconnect();
+    delay(500);
     WiFi.mode(WIFI_STA);
+    delay(500);
     WiFi.begin(wifiList[i].ssid, wifiList[i].password);
+    WiFi.setAutoReconnect(true);
 
     int failCount = 0;
     while (WiFi.status() != WL_CONNECTED && failCount < 20) {
@@ -336,8 +181,12 @@ bool connectToWiFi() {
       pendingMessage = String("Connected to ") + wifiList[i].ssid;
       pendingSeverity = "success";
 
+      cachedIp = WiFi.localIP();
+      cachedRssi = WiFi.RSSI();
+      cachedStatus = WL_CONNECTED;
+
       Serial.print("IP address: ");
-      Serial.println(WiFi.localIP());
+      Serial.println(cachedIp);
       return true;
     }
 
@@ -347,9 +196,61 @@ bool connectToWiFi() {
   pendingMessage = "Failed to connect to any WiFi network";
   pendingSeverity = "error";
 
+  cachedStatus = WL_DISCONNECTED;
+  cachedIp = IPAddress(0,0,0,0);
+  cachedRssi = 0;
+
   Serial.println("ERROR: Could not connect to ANY WiFi network.");
   return false;
 }
+
+/* ------------------------------------------------------------
+   WebSocket Safety Wrappers (B3‑A)
+   ------------------------------------------------------------ */
+
+void safeTextAll(const String& msg) {
+  AsyncWebSocketMessageBuffer *buf = ws.makeBuffer(msg.length() + 1);
+  if (!buf) return;
+  memcpy(buf->get(), msg.c_str(), msg.length());
+  buf->get()[msg.length()] = '\0';
+  ws.textAll(buf);
+}
+
+void safeBinaryAll(const uint8_t* data, size_t len) {
+  AsyncWebSocketMessageBuffer *buf = ws.makeBuffer(len);
+  if (!buf) return;
+  memcpy(buf->get(), data, len);
+  ws.binaryAll(buf);
+}
+
+void safeTextClient(AsyncWebSocketClient* client, const String& msg) {
+  if (!client) return;
+  AsyncWebSocketMessageBuffer *buf = ws.makeBuffer(msg.length() + 1);
+  if (!buf) return;
+  memcpy(buf->get(), msg.c_str(), msg.length());
+  buf->get()[msg.length()] = '\0';
+  client->text(buf);
+}
+
+void safeBinaryClient(AsyncWebSocketClient* client, const uint8_t* data, size_t len) {
+  if (!client) return;
+  AsyncWebSocketMessageBuffer *buf = ws.makeBuffer(len);
+  if (!buf) return;
+  memcpy(buf->get(), data, len);
+  client->binary(buf);
+}
+
+void safeCloseClient(AsyncWebSocketClient* client) {
+  if (!client) return;
+  client->close();
+}
+
+void safeCloseClientWithMessage(AsyncWebSocketClient* client, const String& msg) {
+  if (!client) return;
+  safeTextClient(client, msg);
+  client->close();
+}
+
 
 // ------------------------------------------------------------
 // I2C + Sensor Setup
@@ -404,8 +305,284 @@ void setupLedMatrix() {
 }
 
 // ------------------------------------------------------------
-// Main Loop
+// Command parsing
 // ------------------------------------------------------------
+void healthCheckWifi();
+void healthCheckI2C();
+void healthCheckLedMatrix();
+void healthCheckDFR8x8();
+void healthCheckWebServer();
+
+void handleCommand(const String& msg, AsyncWebSocketClient* client) {
+
+    if (msg == "TEST") {
+        testAnimationActive = true;
+        testAnimStart = millis();
+        testAnimStep = 0;
+        testAnimCycles = 0;
+        Serial.println("Starting test animation");
+        return;
+    }
+
+  if (msg.startsWith("UA:")) {
+    clientUserAgents[client->id()] = msg.substring(3);
+    return;
+  }
+
+  if (msg.startsWith("RUN:")) {
+    animationRunning = msg.substring(4).toInt();
+  }
+  else if (msg.startsWith("FPS:")) {
+    int fps = msg.substring(4).toInt();
+    fps = constrain(fps, 1, 60);
+    INTERVAL_ANIMATION = 1000UL / fps;
+    Serial.print("FPS:");
+    Serial.println(fps);
+  }
+  else if (msg.startsWith("MODE:")) {
+    String m = msg.substring(5);
+    sendMode = (m == "BIT") ? MODE_BITMASK : MODE_FULL;
+    Serial.print("sendMode:");
+    Serial.println(sendMode);
+  }
+  else if (msg.startsWith("SNACK:")) {
+    int p1 = msg.indexOf(':', 6);
+    if (p1 > 0) {
+      String type = msg.substring(6, p1);
+      String text = msg.substring(p1 + 1);
+      String payload = "SNACK:" + type + ":" + text;
+      safeTextAll(payload);
+    }
+  }
+  else if (msg == "HEALTHCHECK") {
+    Serial.println("HEALTHCHECK command received");
+    healthCheckWifi();
+    healthCheckI2C();
+    healthCheckLedMatrix();
+    healthCheckDFR8x8();
+    healthCheckWebServer();
+  } 
+}
+
+// ------------------------------------------------------------
+// Web Server + WebSocket setup
+// ------------------------------------------------------------
+void setupWebServer() {
+
+  // ------------------------------------------------------------
+  // 1. Mount LittleFS
+  // ------------------------------------------------------------
+  if (!LittleFS.begin()) {
+    Serial.println("LittleFS mount failed.");
+  } else {
+    Serial.println("LittleFS mounted.");
+  }
+
+  // ------------------------------------------------------------
+  // 2. Register WebSocket handler FIRST (critical)
+  // ------------------------------------------------------------
+  ws.onEvent([](AsyncWebSocket *server,
+                AsyncWebSocketClient *client,
+                AwsEventType type,
+                void *arg,
+                uint8_t *data,
+                size_t len)
+  {
+      AwsFrameInfo *info = (AwsFrameInfo*)arg;
+
+      if (type == WS_EVT_CONNECT) {
+          Serial.printf("WS: Client %u connected | IP: %s\n",
+                        client->id(),
+                        client->remoteIP().toString().c_str());
+          return;
+      }
+
+      if (type == WS_EVT_DISCONNECT) {
+          Serial.printf("WS: Client %u disconnected\n", client->id());
+          return;
+      }
+
+      if (type == WS_EVT_DATA) {
+
+          // Convert incoming data to string (works for text or binary)
+          String msg;
+          for (size_t i = 0; i < len; i++) msg += (char)data[i];
+
+          // Handle PING:<id> for latency measurement
+          if (msg.startsWith("PING:")) {
+              String id = msg.substring(5);
+              safeTextClient(client, "PONG:" + id);
+              return;
+          }
+          // Respond to plain PING (no ID)
+          if (msg == "PING") {
+              safeTextClient(client, "PONG");
+              return;
+          }
+
+          // Only process commands if this was a text frame
+          if (info->opcode == WS_TEXT) {
+              handleCommand(msg, client);
+          }
+      }
+  });
+
+  // Attach WebSocket handler BEFORE any routes
+  server.addHandler(&ws);
+
+  // ------------------------------------------------------------
+  // 3. Start server BEFORE defining routes (critical)
+  // ------------------------------------------------------------
+  server.begin();
+  Serial.println("Web server started.");
+
+  // ------------------------------------------------------------
+  // 4. Load DPad HTML into PSRAM
+  // ------------------------------------------------------------
+  if (!loadHTMLToPSRAM("/index_dpad.html")) {
+    Serial.println("FATAL: Could not load /index_dpad.html");
+  }
+
+  // ------------------------------------------------------------
+  // 5. Define routes
+  // ------------------------------------------------------------
+
+  // Root → DPad page (PSRAM)
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!htmlBuffer || htmlSize == 0) {
+      request->send(500, "text/plain", "HTML not loaded");
+      return;
+    }
+    AsyncWebServerResponse *response =
+      request->beginResponse(200, "text/html",
+                             (const uint8_t*)htmlBuffer, (size_t)htmlSize);
+    response->addHeader("Cache-Control", "no-cache");
+    request->send(response);
+  });
+
+  // ---------------- DPAD PAGE ----------------
+  server.on("/index_dpad.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+      if (!htmlBuffer || htmlSize == 0) {
+          request->send(500, "text/plain", "HTML not loaded");
+          return;
+      }
+      AsyncWebServerResponse *response =
+          request->beginResponse(200, "text/html",
+                                (const uint8_t*)htmlBuffer, (size_t)htmlSize);
+      response->addHeader("Cache-Control", "no-cache");
+      request->send(response);
+  });
+
+  // ---------------- GRID PAGE ----------------
+  server.on("/index_grid.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/index_grid.html", "text/html");
+  });
+
+  server.on("/css/grid.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/css/grid.css", "text/css");
+  });
+
+  server.on("/js/grid.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/js/grid.js", "application/javascript");
+  });
+
+  // ---------------- DPAD PAGE ----------------
+  server.on("/css/dpad.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/css/dpad.css", "text/css");
+  });
+
+  server.on("/js/dpad.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/js/dpad.js", "application/javascript");
+  });
+
+  // ---------------- CONTROLLER ENDPOINT ----------------
+  server.on(
+    "/controller",
+    HTTP_POST,
+    [](AsyncWebServerRequest *request) {},
+    NULL,
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+
+      String body;
+      body.reserve(total);
+      for (size_t i = 0; i < len; i++) body += (char)data[i];
+
+      JsonDocument doc;
+      if (deserializeJson(doc, body)) {
+        request->send(400, "application/json", "{\"error\":\"bad json\"}");
+        return;
+      }
+
+      if (doc.containsKey("direction")) {
+        String direction = doc["direction"];
+
+        if (direction == "left") {
+          horizontalIndex--;
+          if (horizontalIndex < 0) horizontalIndex = horizontalCount - 1;
+          verticalIndex = 0;
+        }
+        else if (direction == "right") {
+          horizontalIndex++;
+          if (horizontalIndex >= horizontalCount) horizontalIndex = 0;
+          verticalIndex = 0;
+        }
+        else if (direction == "up") {
+          verticalIndex--;
+          if (verticalIndex < 0) verticalIndex = verticalCounts[horizontalIndex] - 1;
+        }
+        else if (direction == "down") {
+          verticalIndex++;
+          if (verticalIndex >= verticalCounts[horizontalIndex]) verticalIndex = 0;
+        }
+      }
+
+      if (doc.containsKey("action")) {
+        String action = doc["action"];
+        if (action == "start") animationRunning = true;
+        if (action == "stop")  animationRunning = false;
+      }
+
+      StaticJsonDocument<256> response;
+      response["horiz"] = horizontalMenu[horizontalIndex];
+      response["vert"]  = verticalMenus[horizontalIndex][verticalIndex];
+
+      if (pendingMessage.length() > 0) {
+        response["message"]  = pendingMessage;
+        response["severity"] = pendingSeverity;
+        pendingMessage = "";
+      }
+
+      String out;
+      serializeJson(response, out);
+      request->send(200, "application/json", out);
+    }
+  );
+}
+
+
+
+// ------------------------------------------------------------
+// Setup + Loop
+// ------------------------------------------------------------
+void loopMiniSumoOpponent();
+void loopAnimation();
+void loopClientCleanup();
+void printClientList();
+
+void setup() {
+  Serial.begin(115200);
+  while(!Serial) delay(10);
+  delay(2000);
+
+  Serial.println("MiniSumo QT PY Pico LedMatrix and DFR8x8");
+
+  connectToWiFi();
+  setupI2C();
+  setupLedMatrix();
+  setupDFR8x8();
+  setupWebServer();
+}
+
 void loop() {
   loopMiniSumoOpponent();
   loopAnimation();
@@ -413,23 +590,7 @@ void loop() {
   delay(80);
 }
 
-// ------------------------------------------------------------
-// Animation Loop
-// ------------------------------------------------------------
-void loopAnimation() {
-  unsigned long now = millis();
 
-  if (animationRunning && now - lastAnimationTime >= INTERVAL_ANIMATION) {
-    lastAnimationTime = now;
-
-    if (ws.count() > 0) {
-      if (sendMode == MODE_FULL)
-        sendFullGrid();
-      else
-        sendBitGrid();
-    }
-  }
-}
 
 // ------------------------------------------------------------
 // MINI-SUMO COLOR LOGIC — TRUE RGB
@@ -443,16 +604,12 @@ void loopMiniSumoOpponent() {
 
       int d_mm = lidarGrid[y * 8 + x];
 
-      // Invalid or too far → black
       if (d_mm == INVALID_VAL || d_mm > MAX_DIST) {
         ledmatrix.drawPixel(x + X_OFFSET, y, 0);
         colorGrid[y][x] = 0;
         continue;
       }
 
-      // -----------------------------
-      // Rows 0–4: Opponent detection (bright green)
-      // -----------------------------
       if (y <= 4) {
         if (d_mm > 0) {
           ledmatrix.drawPixel(x + X_OFFSET, y, ledmatrix.color565(0,255,0));
@@ -461,9 +618,6 @@ void loopMiniSumoOpponent() {
         continue;
       }
 
-      // -----------------------------
-      // Row 6: Edge warning (bright yellow)
-      // -----------------------------
       if (y == 6) {
         if (d_mm > 0) {
           ledmatrix.drawPixel(x + X_OFFSET, y, ledmatrix.color565(255,255,0));
@@ -472,9 +626,6 @@ void loopMiniSumoOpponent() {
         continue;
       }
 
-      // -----------------------------
-      // Row 7: Edge danger (bright red)
-      // -----------------------------
       if (y == 7) {
         if (d_mm > 0) {
           ledmatrix.drawPixel(x + X_OFFSET, y, ledmatrix.color565(255,0,0));
@@ -483,7 +634,6 @@ void loopMiniSumoOpponent() {
         continue;
       }
 
-      // Row 5 or anything else → black
       ledmatrix.drawPixel(x + X_OFFSET, y, 0);
       colorGrid[y][x] = 0;
     }
@@ -493,8 +643,14 @@ void loopMiniSumoOpponent() {
 // ------------------------------------------------------------
 // Send full 8×8 grid (128 bytes)
 // ------------------------------------------------------------
+  
 void sendFullGrid() {
-  ws.binaryAll((uint8_t*)colorGrid, sizeof(colorGrid));
+    // 80 cells × 4 bytes = 320 bytes
+    const size_t frameSize = 64 * 4;
+
+    // Broadcast the entire RGB grid buffer
+    //ws.binaryAll((uint8_t*)colorGrid, frameSize);
+    safeBinaryAll((uint8_t*)colorGrid, frameSize);
 }
 
 // ------------------------------------------------------------
@@ -511,63 +667,79 @@ void sendBitGrid() {
     }
   }
 
-  ws.binaryAll((uint8_t*)&bits, sizeof(bits));
+  safeBinaryAll((uint8_t*)&bits, sizeof(bits));
 }
 
+
+
+// ------------------------------------------------------------
+// Animation Loop
+// ------------------------------------------------------------
+void loopAnimation() {
+  unsigned long now = millis();
+
+  if (animationRunning && now - lastAnimationTime >= INTERVAL_ANIMATION) {
+    lastAnimationTime = now;
+
+    
+    if (ws.count() > 0) {
+      if (sendMode == MODE_FULL)
+        sendFullGrid();
+      else
+        sendBitGrid();
+    }
+  }
+
+}
 
 // ------------------------------------------------------------
 // HEALTH CHECKS — each sends a snackbar via WebSocket
 // ------------------------------------------------------------
 
 void healthCheckWifi() {
-    if (WiFi.status() == WL_CONNECTED) {
-        ws.textAll("SNACK:success:WiFi OK (" + WiFi.localIP().toString() + ")");
-    } else {
-        ws.textAll("SNACK:error:WiFi NOT connected");
-    }
+  if (cachedStatus == WL_CONNECTED) {
+    safeTextAll("SNACK:success:WiFi OK (" + cachedIp.toString() + ")");
+  } else {
+    safeTextAll("SNACK:error:WiFi NOT connected");
+  }
 }
 
 void healthCheckI2C() {
-    // Simple check: try a transmission on Wire1
-    Wire1.beginTransmission(0x00);
-    uint8_t err = Wire1.endTransmission();
+  Wire1.beginTransmission(0x00);
+  uint8_t err = Wire1.endTransmission();
 
-    if (err == 0 || err == 2) {
-        ws.textAll("SNACK:success:I2C Bus OK");
-    } else {
-        ws.textAll("SNACK:error:I2C Bus Error");
-    }
+  if (err == 0 || err == 2) {
+    safeTextAll("SNACK:success:I2C Bus OK");
+  } else {
+    safeTextAll("SNACK:error:I2C Bus Error");
+  }
 }
 
 void healthCheckLedMatrix() {
-    // Check if LED driver responded during init
-    if (ledmatrix.begin(IS3741_ADDR_DEFAULT, &Wire1)) {
-        ws.textAll("SNACK:success:LED Matrix OK");
-    } else {
-        ws.textAll("SNACK:error:LED Matrix NOT responding");
-    }
+  if (ledmatrix.begin(IS3741_ADDR_DEFAULT, &Wire1)) {
+    safeTextAll("SNACK:success:LED Matrix OK");
+  } else {
+    safeTextAll("SNACK:error:LED Matrix NOT responding");
+  }
 }
 
 void healthCheckDFR8x8() {
-    uint16_t tempGrid[64];
+  uint16_t tempGrid[64];
 
-    if ( tof.begin() == 0 && tof.getAllData(tempGrid) == 0) {
-        ws.textAll("SNACK:success:DFR 8×8 Lidar OK");
-    } else {
-        ws.textAll("SNACK:error:DFR 8×8 Lidar NOT responding");
-    }
+  if ( tof.begin() == 0 && tof.getAllData(tempGrid) == 0) {
+    safeTextAll("SNACK:success:DFR 8×8 Lidar OK");
+  } else {
+    safeTextAll("SNACK:error:DFR 8×8 Lidar NOT responding");
+  }
 }
 
 void healthCheckWebServer() {
-    // Check if our web page has been loaded into htmlBuffer
-    if(htmlBuffer != nullptr){
-      ws.textAll("SNACK:success:Web Server OK");
-    } else {
-      ws.textAll("SNACK:error:Web Server web page not found");
-    }
+  if(htmlBuffer != nullptr){
+    safeTextAll("SNACK:success:Web Server OK");
+  } else {
+    safeTextAll("SNACK:error:Web Server web page not found");
+  }
 }
-
-
 
 // ------------------------------------------------------------
 // Client Cleanup
@@ -578,52 +750,8 @@ void loopClientCleanup() {
   if (now - lastClientCleanupTime > INTERVAL_CLIENT_CLEANUP) {
     lastClientCleanupTime = now;
     printClientList();
-    ws.cleanupClients();
+    // IMPORTANT: do NOT call ws.cleanupClients() here (F1)
   }
-}
-
-// ------------------------------------------------------------
-// Client List Debug
-// ------------------------------------------------------------
-void printClientList() {
-  String hostIP = WiFi.localIP().toString();
-  int32_t rssi = WiFi.RSSI();
-
-  Serial.printf("---- WebSocket Clients (Host: %s | RSSI: %d dBm) ----\n",
-                hostIP.c_str(), rssi);
-
-  for (AsyncWebSocketClient& c : ws.getClients()) {
-    AsyncWebSocketClient* client = &c;
-
-    uint32_t cid = client->id();
-    IPAddress ip = client->remoteIP();
-
-    String ua = clientUserAgents.count(cid) ? clientUserAgents[cid] : "Unknown";
-    String device = parseDeviceName(ua);
-    String browser = parseBrowser(ua);
-
-    if (client->status() == WS_CONNECTED) {
-      Serial.printf(
-        "Client %u: CONNECTED | IP: %s | Device: %s | Browser: %s\n",
-        cid,
-        ip.toString().c_str(),
-        device.c_str(),
-        browser.c_str()
-      );
-    } else {
-      Serial.printf(
-        "Client %u: NOT CONNECTED (closing) | IP: %s | Device: %s | Browser: %s\n",
-        cid,
-        ip.toString().c_str(),
-        device.c_str(),
-        browser.c_str()
-      );
-      client->close();
-    }
-  }
-
-  Serial.printf("Active client count: %u\n", ws.count());
-  Serial.println("-------------------------------------------");
 }
 
 // ------------------------------------------------------------
@@ -662,5 +790,48 @@ String parseBrowser(const String& ua) {
   return "Unknown Browser";
 }
 
+// ------------------------------------------------------------
+// Client List Debug
+// ------------------------------------------------------------
+void printClientList() {
+  String hostIP = cachedIp.toString();
+  int32_t rssi = cachedRssi;
+
+  Serial.printf("---- WebSocket Clients (Host: %s | RSSI: %d dBm) ----\n",
+                hostIP.c_str(), rssi);
+
+  for (AsyncWebSocketClient& c : ws.getClients()) {
+    AsyncWebSocketClient* client = &c;
+
+    uint32_t cid = client->id();
+    IPAddress ip = client->remoteIP();
+
+    String ua = clientUserAgents.count(cid) ? clientUserAgents[cid] : "Unknown";
+    String device = parseDeviceName(ua);
+    String browser = parseBrowser(ua);
+
+    if (client->status() == WS_CONNECTED) {
+      Serial.printf(
+        "Client %u: CONNECTED | IP: %s | Device: %s | Browser: %s\n",
+        cid,
+        ip.toString().c_str(),
+        device.c_str(),
+        browser.c_str()
+      );
+    } else {
+      Serial.printf(
+        "Client %u: NOT CONNECTED (closing) | IP: %s | Device: %s | Browser: %s\n",
+        cid,
+        ip.toString().c_str(),
+        device.c_str(),
+        browser.c_str()
+      );
+      safeCloseClient(client);
+    }
+  }
+
+  Serial.printf("Active client count: %u\n", ws.count());
+  Serial.println("-------------------------------------------");
+}
 
 
