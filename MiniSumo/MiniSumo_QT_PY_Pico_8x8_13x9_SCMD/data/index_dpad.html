@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DPad Control</title>
+<link rel="stylesheet" href="/css/dpad.css">
+</head>
+
+<body>
+
+<div class="topbar">
+    <select id="modeDropdown">
+        <option value="dpad" selected>DPad</option>
+        <option value="grid">Grid</option>
+    </select>
+</div>
+
+<div class="status-row">
+    <div id="hStatus" class="status-box"></div>
+    <div id="vStatus" class="status-box"></div>
+</div>
+
+<div id="dpadBlock" class="dpad-container">
+    <div class="row">
+        <button class="btn" onclick="sendDirection('up')">&#9650;</button>
+    </div>
+
+    <div class="row">
+        <button class="btn" onclick="sendDirection('left')">&#9664;</button>
+        <button class="btn" onclick="sendDirection('center')">OK</button>
+        <button class="btn" onclick="sendDirection('right')">&#9654;</button>
+    </div>
+
+    <div class="row">
+        <button class="btn" onclick="sendDirection('down')">&#9660;</button>
+    </div>
+</div>
+
+<div id="healthBtnContainer">
+    <button id="healthCheckBtn" class="action-btn" onclick="runHealthChecks()">Health Check</button>
+</div>
+
+<div class="bottom-buttons">
+    <button class="action-btn" onclick="sendAction('start')">Start</button>
+    <button class="action-btn" onclick="sendAction('stop')">Stop</button>
+</div>
+
+<div id="snackbar-container"></div>
+
+<script src="/js/dpad.js"></script>
+</body>
+</html>
