@@ -114,35 +114,43 @@ void loop()
 void motorsTestForwardAndReverse(){
   //Smoothly drive both motor FWD up to speed and back (drive level 0 to 255)
   Serial.println("Forward Ramp Up");
+
+  float right_fw_factor = 1.0f;
+  float left_fw_factor = 0.94f;
+  float right_rv_factor = 0.94f;
+  float left_rv_factor = 1.0f;
+
   for (int i = 0; i < 256; i++)
   {
-    myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_FW, i);
-    //myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_FW, 20 + (i / 2));
-    delay(15);
+    myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_FW,  (int)(i * left_fw_factor));
+    myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_FW, (int)(i * right_fw_factor));
+    delay(35);
   }
   Serial.println("Forward Ramp Down");
-  for (int i = 255; i >= 0; i--)
-  {
-    myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_FW, i);
-    //myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_FW, 20 + (i / 2));
-    delay(15);
-  }
-  
-  //Smoothly drive both motors REV up to speed and back
-  Serial.println("Reverse Ramp up");
-  for (int i = 0; i < 256; i++)
-  {
-    myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_RV, 20 + (i / 2));
-    //myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_RV, i);
-    delay(15);
-  }
+    for (int i = 255; i >= 0; i--)
+    {
+      myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_FW, (int)(i * left_fw_factor));
+      myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_FW, (int)(i * right_fw_factor));
+      delay(35);
+    }
+    
+    if(true){
+    //Smoothly drive both motors REV up to speed and back
+    Serial.println("Reverse Ramp up");
+    for (int i = 0; i < 256; i++)
+    {
+      myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_RV, (int)(i * left_rv_factor));
+      myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_RV, (int)(i * right_rv_factor));
+      delay(15);
+    }
 
-  Serial.println("Reverse Ramp Down");
-  for (int i = 255; i >= 0; i--)
-  {
-    myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_RV, 20 + (i / 2));
-    //myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_RV, i);
-    delay(15);
+    Serial.println("Reverse Ramp Down");
+    for (int i = 255; i >= 0; i--)
+    {
+      myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_RV, (int)(i * left_rv_factor)); 
+      myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_RV, (int)(i * right_rv_factor));
+      delay(15);
+    }
   }
   Serial.println("Finished motor test cycle. motorsTestForwardAndReverse()");
 }
