@@ -12,16 +12,21 @@
 
 SCMD myMotorDriver; //This creates the main object of one motor driver and connected peripherals.
 
-#define DIR_FW  0
-#define DIR_RV  1
-#define LEFT_MOTOR 0
-#define RIGHT_MOTOR 1
+#define LEFT_DIR_FW   0
+#define LEFT_DIR_RV   1
+#define RIGHT_DIR_FW  0
+#define RIGHT_DIR_RV  1
+
+#define LEFT_MOTOR 1
+#define RIGHT_MOTOR 0
 
 void setup()
 {
-
+  delay(1000);
   Serial.begin(115200);
-  Serial.println("Starting sketch.");
+  delay(1000);
+
+  Serial.println("Starting Sparkfun QWIIC Motor Driver Test.");
 
   // Kind of like a switch. Use to halt motor movement (ground)
   pinMode(8, INPUT_PULLUP); 
@@ -31,6 +36,8 @@ void setup()
 }
 
 void setupQwiicMotorDriver(){
+
+  Serial.println("\nEntering setupQwiicMotorDriver()");  
   //***** Configure the Motor Driver's Settings *****//
   //  .commInter face is I2C_MODE 
   myMotorDriver.settings.commInterface = I2C_MODE;
@@ -66,13 +73,25 @@ void setupQwiicMotorDriver(){
 
   //Uncomment code for motor 1 inversion
   while ( myMotorDriver.busy() ); //Waits until the SCMD is available.
-  myMotorDriver.inversionMode(1, 1); //invert motor 1
+
+  // Mini Sumo Cobra
+  myMotorDriver.inversionMode(LEFT_MOTOR, 1); //  Works:
+  //myMotorDriver.inversionMode(LEFT_MOTOR, 1); //  Works:
+
+  if(false){
+    //myMotorDriver.inversionMode(LEFT_MOTOR, 1); //  Works: No
+   //myMotorDriver.inversionMode(RIGHT_MOTOR, 1); // Works: Yes
+  } else {
+    //myMotorDriver.inversionMode(LEFT_MOTOR, 0); //  Works: 
+    //myMotorDriver.inversionMode(RIGHT_MOTOR, 1); // Works: 
+  }
+
 
   while ( myMotorDriver.busy() )
     ; // Do nothing until driver is available
 
   myMotorDriver.enable(); //Enables the output driver hardware
-
+  Serial.println("Exiting setupQwiicMotorDriver()");
 }
 
 void loop()
@@ -94,32 +113,37 @@ void loop()
 //  It uses .setDrive( motorNum, direction, level ) to drive the motors.
 void motorsTestForwardAndReverse(){
   //Smoothly drive both motor FWD up to speed and back (drive level 0 to 255)
+  Serial.println("Forward Ramp Up");
   for (int i = 0; i < 256; i++)
   {
-    myMotorDriver.setDrive( LEFT_MOTOR, DIR_FW, i);
-    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_FW, 20 + (i / 2));
-    delay(5);
+    myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_FW, i);
+    //myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_FW, 20 + (i / 2));
+    delay(15);
   }
+  Serial.println("Forward Ramp Down");
   for (int i = 255; i >= 0; i--)
   {
-    myMotorDriver.setDrive( LEFT_MOTOR, DIR_FW, i);
-    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_FW, 20 + (i / 2));
-    delay(5);
+    myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_FW, i);
+    //myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_FW, 20 + (i / 2));
+    delay(15);
   }
   
   //Smoothly drive both motors REV up to speed and back
+  Serial.println("Reverse Ramp up");
   for (int i = 0; i < 256; i++)
   {
-    myMotorDriver.setDrive( LEFT_MOTOR, DIR_RV, 20 + (i / 2));
-    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_RV, i);
-    delay(5);
+    myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_RV, 20 + (i / 2));
+    //myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_RV, i);
+    delay(15);
   }
+
+  Serial.println("Reverse Ramp Down");
   for (int i = 255; i >= 0; i--)
   {
-    myMotorDriver.setDrive( LEFT_MOTOR, DIR_RV, 20 + (i / 2));
-    myMotorDriver.setDrive( RIGHT_MOTOR, DIR_RV, i);
-    delay(5);
+    myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_RV, 20 + (i / 2));
+    //myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_RV, i);
+    delay(15);
   }
-  
+  Serial.println("Finished motor test cycle. motorsTestForwardAndReverse()");
 }
 
