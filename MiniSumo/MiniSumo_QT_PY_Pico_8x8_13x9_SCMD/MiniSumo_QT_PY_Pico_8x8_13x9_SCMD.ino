@@ -21,10 +21,19 @@
 // Sparkfun QWIIC Serial Controlled Motor Driver 
 SCMD myMotorDriver; //This creates the main object of one motor driver and connected peripherals.
 
-#define DIR_FW  0
-#define DIR_RV  1
-#define LEFT_MOTOR 0
-#define RIGHT_MOTOR 1
+#define LEFT_DIR_FW   0
+#define LEFT_DIR_RV   1
+#define RIGHT_DIR_FW  0
+#define RIGHT_DIR_RV  1
+
+#define LEFT_MOTOR 1
+#define RIGHT_MOTOR 0
+int leftMotor256=0;
+int rightMotor256=0;
+#define RIGHT_FW_FACTOR   1.0f
+#define LEFT_FW_FACTOR    0.94f
+#define RIGHT_RV_FACTOR   0.94f
+#define LEFT_RV_FACTOR    1.0f
 
 
 // ------------------------------------------------------------
@@ -35,10 +44,13 @@ struct WifiCredential {
   const char* password;
 };
 
-WifiCredential wifiList[3] = {
-  { "TheMandaloriKen", "asdf12346302201111" },
-  { "Kajeet SmartSpot 9E7F", "smartspot4033" },
-  { "TheMandalorian",  "6302201111" }
+#define NUM_NETWORKS 1
+
+WifiCredential wifiList[NUM_NETWORKS] = {
+  { "TheMandalorian",  "6302201111" },
+  //{"2WIRE543", "0058239804"},
+  //{ "TheMandaloriKen", "asdf12346302201111" },
+  //{ "Kajeet SmartSpot 9E7F", "smartspot4033" },
 };
 
 String pendingMessage = "";
@@ -169,7 +181,7 @@ bool connectToWiFi() {
   cachedIp = IPAddress(0,0,0,0);
   cachedRssi = 0;
 
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < NUM_NETWORKS; i++) {
     Serial.print("Trying SSID: ");
     Serial.print(wifiList[i].ssid);
 
@@ -529,29 +541,57 @@ void setupWebServer() {
         String direction = doc["direction"];
 
         if (direction == "left") {
+          Serial.println("Left Button - rotate left");          
           horizontalIndex--;
           if (horizontalIndex < 0) horizontalIndex = horizontalCount - 1;
           verticalIndex = 0;
+          myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_RV,  (int)(100 * LEFT_FW_FACTOR));
+          myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_FW, (int)(100 * RIGHT_FW_FACTOR));
         }
         else if (direction == "right") {
+          Serial.println("Right Button - rotate right");          
           horizontalIndex++;
           if (horizontalIndex >= horizontalCount) horizontalIndex = 0;
           verticalIndex = 0;
+          myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_FW,  (int)(100 * LEFT_FW_FACTOR));
+          myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_RV, (int)(100 * RIGHT_FW_FACTOR));
         }
         else if (direction == "up") {
+          Serial.println("Up Button - straight forward");          
           verticalIndex--;
           if (verticalIndex < 0) verticalIndex = verticalCounts[horizontalIndex] - 1;
+          myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_FW,  (int)(100 * LEFT_FW_FACTOR));
+          myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_FW, (int)(100 * RIGHT_FW_FACTOR));
         }
         else if (direction == "down") {
+          Serial.println("Down Button - reverse straight back");
           verticalIndex++;
           if (verticalIndex >= verticalCounts[horizontalIndex]) verticalIndex = 0;
-        }
+          myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_RV,  (int)(100 * LEFT_FW_FACTOR));
+          myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_RV, (int)(100 * RIGHT_FW_FACTOR));
+        } else if(direction == "center"){
+          Serial.println("OK Button - stop motors");
+          myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_RV,  (int)(0));
+          myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_RV, (int)(0));
+        }        
       }
 
       if (doc.containsKey("action")) {
         String action = doc["action"];
-        if (action == "start") animationRunning = true;
-        if (action == "stop")  animationRunning = false;
+        if (action == "start"){
+          animationRunning = true;
+          leftMotor256=150;
+          rightMotor256=150;
+          myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_FW,  (int)(leftMotor256 * LEFT_FW_FACTOR));
+          myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_FW, (int)(rightMotor256 * RIGHT_FW_FACTOR));
+          Serial.println("Start Button");
+        }
+        if (action == "stop") {
+          animationRunning = false;
+          myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_FW,  (int)(0 * LEFT_FW_FACTOR));
+          myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_FW, (int)(0 * RIGHT_FW_FACTOR));
+          Serial.println("Stop Button");
+        }
       }
 
       StaticJsonDocument<256> response;
@@ -601,19 +641,22 @@ void setupQwiicMotorDriver(){
 
   //*****Set application settings and enable driver*****//
 
-  //Uncomment code for motor 0 inversion
-  //while( myMotorDriver.busy() );
-  //myMotorDriver.inversionMode(0, 1); //invert motor 0
-
   //Uncomment code for motor 1 inversion
   while ( myMotorDriver.busy() ); //Waits until the SCMD is available.
-  myMotorDriver.inversionMode(1, 1); //invert motor 1
+  myMotorDriver.inversionMode(LEFT_MOTOR, 1); //invert motor 1
+  //myMotorDriver.inversionMode(RIGHT_MOTOR, 1); //invert motor 1
 
   while ( myMotorDriver.busy() )
     ; // Do nothing until driver is available
 
   myMotorDriver.enable(); //Enables the output driver hardware
 
+  // Set both motors to zero speed.
+  myMotorDriver.setDrive( LEFT_MOTOR, LEFT_DIR_FW,  (int)(0 * LEFT_FW_FACTOR));
+  myMotorDriver.setDrive( RIGHT_MOTOR, RIGHT_DIR_FW, (int)(0 * RIGHT_FW_FACTOR));
+
+
+  Serial.println("Exiting setupQwiicMotorDriver()");
 }
 
 
@@ -644,6 +687,8 @@ void loop() {
   loopMiniSumoOpponent();
   loopAnimation();
   loopClientCleanup();
+
+
   delay(20);
 }
 
